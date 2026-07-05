@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import SafeToSpend from './SafeToSpend'
 import VaultCard from './VaultCard'
 import AddVaultModal from './AddVaultModal'
-
+import AddBankModal from './AddBankModal'
 
 export default function Dashboard() {
   const { user, signOut } = useAuth()
@@ -14,6 +14,7 @@ export default function Dashboard() {
   const [totalBalance, setTotalBalance] = useState(0)
   const [loading, setLoading] = useState(true)
   const [showAddVault, setShowAddVault] = useState(false)
+  const [showAddBank, setShowAddBank] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -79,7 +80,10 @@ export default function Dashboard() {
 
         <div className="flex gap-4 mb-6">
           <div className="flex-1 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <p className="text-xs text-gray-400 mb-1">{t('totalBalance')}</p>
+            <div className="flex justify-between items-center mb-1">
+              <p className="text-xs text-gray-400">{t('totalBalance')}</p>
+              <button onClick={() => setShowAddBank(true)} className="text-xs text-purple-600 font-medium">+</button>
+            </div>
             <p className="text-lg font-bold text-gray-800">
               {new Intl.NumberFormat('es-CO', {
                 style: 'currency',
@@ -109,7 +113,7 @@ export default function Dashboard() {
           <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
             <p className="text-gray-400 text-sm">{t('noVaults')}</p>
             <button onClick={() => setShowAddVault(true)} className="mt-3 text-purple-600 text-sm font-medium">
-            {t('createFirstVault')}
+              {t('createFirstVault')}
             </button>
           </div>
         ) : (
@@ -119,14 +123,21 @@ export default function Dashboard() {
             ))}
           </div>
         )}
-</div>
+      </div>
 
-{showAddVault && (
-  <AddVaultModal
-    onClose={() => setShowAddVault(false)}
-    onSaved={() => { setShowAddVault(false); fetchData() }}
-  />
-)}
-</div>
-)
+      {showAddVault && (
+        <AddVaultModal
+          onClose={() => setShowAddVault(false)}
+          onSaved={() => { setShowAddVault(false); fetchData() }}
+        />
+      )}
+
+      {showAddBank && (
+        <AddBankModal
+          onClose={() => setShowAddBank(false)}
+          onSaved={() => { setShowAddBank(false); fetchData() }}
+        />
+      )}
+    </div>
+  )
 }
