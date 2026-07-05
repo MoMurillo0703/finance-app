@@ -84,5 +84,12 @@ export default {
       settings: "Configuración",
       language: "Idioma",
       logout: "Cerrar sesión",
+      safeToSpendSubtitle: 'Puedes gastar esto hoy',
+      noVaults: 'No tienes bóvedas todavía.',
+      createFirstVault: '+ Crear primera bóveda',
+      vaultName: 'Nombre',
+      vaultNamePlaceholder: 'Ej: Arriendo, Viajes, Emergencias',
+      vaultTarget: 'Meta (COP)',
+      vaultCurrent: 'Monto actual (COP)',
     }
   }

@@ -84,5 +84,13 @@ export default {
       settings: "Settings",
       language: "Language",
       logout: "Sign out",
+      logout: "Sign out",
+      safeToSpendSubtitle: 'You can spend this today',
+      noVaults: "You don't have any vaults yet.",
+      createFirstVault: '+ Create first vault',
+      vaultName: 'Name',
+      vaultNamePlaceholder: 'e.g. Rent, Travel, Emergency',
+      vaultTarget: 'Goal (COP)',
+      vaultCurrent: 'Current amount (COP)',
     }
   }
