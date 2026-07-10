@@ -29,9 +29,15 @@ const EXPENSE_CATEGORIES = [
 ]
 
 const SKIP_PATTERNS = [
+  /FOREIGN CURRENCY CONVERSION/i,
+]
+
+const PAYMENT_PATTERNS = [
   /ONLINE PAYMENT/i,
   /PAYMENT THANK YOU/i,
-  /FOREIGN CURRENCY CONVERSION/i,
+  /PAYMENT RECEIVED/i,
+  /AUTOPAY/i,
+  /PAYMENT - THANK/i,
 ]
 
 const INTEREST_PATTERN = /INTEREST CHARGED/i
@@ -123,14 +129,60 @@ function detectFormat(headers) {
   return { type: 'unknown', headers }
 }
 
+function isPaymentDescription(description) {
+  return PAYMENT_PATTERNS.some(p => p.test(description))
+}
+
+function isSignedFormat(mapping) {
+  return mapping && ['wellsFargo', 'custom'].includes(mapping.type)
+}
+
+function finalizeRowsForAccount(rows, accountType, mapping) {
+  return rows.map(row => {
+    if (isPaymentDescription(row.description)) {
+      return {
+        ...row,
+        type: 'income',
+        category: 'bills',
+        checked: true,
+      }
+    }
+
+    // Credit card CSVs (Wells Fargo AMOUNT): positive = charge, negative = payment
+    if (accountType === 'card' && isSignedFormat(mapping) && row.rawAmount != null) {
+      const raw = row.rawAmount
+      if (raw > 0) {
+        return {
+          ...row,
+          type: 'expense',
+          amount: raw,
+          category: detectCategory(row.description),
+        }
+      }
+      if (raw < 0) {
+        return {
+          ...row,
+          type: 'income',
+          amount: Math.abs(raw),
+          category: 'bills',
+        }
+      }
+    }
+
+    return row
+  })
+}
+
 function rowFromRecord(record, mapping) {
   const dateRaw = record[mapping.dateCol]
   const description = (record[mapping.descCol] || '').trim()
   let type = 'expense'
   let amount = 0
+  let rawAmount = null
 
   if (mapping.type === 'wellsFargo') {
     const raw = parseAmount(record[mapping.amountCol])
+    rawAmount = raw
     if (raw < 0) {
       type = 'expense'
       amount = Math.abs(raw)
@@ -154,6 +206,7 @@ function rowFromRecord(record, mapping) {
     }
   } else {
     const raw = parseAmount(record[mapping.amountCol])
+    rawAmount = raw
     if (raw < 0) {
       type = 'expense'
       amount = Math.abs(raw)
@@ -169,15 +222,21 @@ function rowFromRecord(record, mapping) {
   if (!isoDate || !description) return null
 
   const interest = isInterestCharge(description)
-  const skip = shouldSkip(description) || interest
+  const isPayment = isPaymentDescription(description)
+  const skip = shouldSkip(description) || (interest && !isPayment)
+
+  if (isPayment) {
+    type = 'income'
+  }
 
   return {
     id: crypto.randomUUID(),
     date: isoDate,
     description,
     amount,
+    rawAmount,
     type,
-    category: type === 'income' ? 'salary' : detectCategory(description),
+    category: type === 'income' ? (isPayment ? 'bills' : 'salary') : detectCategory(description),
     checked: !skip,
     isInterest: interest,
   }
@@ -365,7 +424,11 @@ export default function ImportModal({ onClose, onComplete }) {
       return
     }
 
-    const checked = rows.filter(r => r.checked)
+    const checked = finalizeRowsForAccount(
+      rows.filter(r => r.checked),
+      account.accountType,
+      mapping,
+    )
     if (checked.length === 0) {
       setError(t('importNoRows'))
       return
@@ -799,6 +862,9 @@ export default function ImportModal({ onClose, onComplete }) {
                 )}
               </select>
             </div>
+            {getSelectedAccount()?.accountType === 'card' && (
+              <p className="text-xs text-gray-400">{t('importCardHint')}</p>
+            )}
             <p className="text-sm text-gray-500">
               {t('importReadyCount', { count: rows.filter(r => r.checked).length })}
             </p>
