@@ -105,6 +105,7 @@ export default {
       currentBalance: 'Saldo actual',
       myAccounts: 'Mis cuentas',
       editBank: 'Editar cuenta',
+      deleteAccount: 'Eliminar cuenta',
       noAccounts: 'No hay cuentas todavía.',
       preferences: 'Preferencias',
       accountSection: 'Cuenta',

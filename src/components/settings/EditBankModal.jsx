@@ -6,6 +6,7 @@ export default function EditBankModal({ bank, onClose, onSaved }) {
   const { t } = useTranslation()
   const [balance, setBalance] = useState(String(bank.balance ?? ''))
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
 
   const handleSave = async () => {
@@ -23,6 +24,21 @@ export default function EditBankModal({ bank, onClose, onSaved }) {
     if (dbError) {
       setError(dbError.message)
       setSaving(false)
+    } else {
+      onSaved()
+    }
+  }
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    const { error: dbError } = await supabase
+      .from('banks')
+      .update({ is_active: false })
+      .eq('id', bank.id)
+
+    if (dbError) {
+      setError(dbError.message)
+      setDeleting(false)
     } else {
       onSaved()
     }
@@ -60,12 +76,20 @@ export default function EditBankModal({ bank, onClose, onSaved }) {
           </button>
           <button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || deleting}
             className="flex-1 py-3 rounded-xl bg-purple-600 text-white text-sm font-medium disabled:opacity-50"
           >
             {saving ? '...' : t('save')}
           </button>
         </div>
+
+        <button
+          onClick={handleDelete}
+          disabled={saving || deleting}
+          className="w-full mt-3 py-3 rounded-xl border border-red-200 text-sm text-red-500 font-medium disabled:opacity-50"
+        >
+          {deleting ? '...' : t('deleteAccount')}
+        </button>
       </div>
     </div>
   )
