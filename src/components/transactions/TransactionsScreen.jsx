@@ -183,7 +183,7 @@ export default function TransactionsScreen({
 
       const [txRes, banksRes, cardsRes] = await Promise.all([
         txQuery,
-        fetchBanks(supabase, user.id, { columns: 'id, name' }),
+        fetchBanks(supabase, user.id, { orderByName: true }),
         supabase
           .from('credit_cards')
           .select('id, name')

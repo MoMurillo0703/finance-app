@@ -10,6 +10,7 @@ import MonthSnapshot from './MonthSnapshot'
 import BillsThisWeek from './BillsThisWeek'
 import PaydayWizard from '../payday/PaydayWizard'
 import { formatMoney } from '../../utils/currency'
+import { fetchBanks } from '../../utils/bank'
 
 export default function Dashboard({ refreshKey, onViewReports }) {
   const { user } = useAuth()
@@ -33,11 +34,7 @@ export default function Dashboard({ refreshKey, onViewReports }) {
         .eq('user_id', user.id)
         .eq('is_active', true)
 
-      const { data: banksData } = await supabase
-        .from('banks')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
+      const { data: banksData } = await fetchBanks(supabase, user.id)
 
       if (!active) return
 
