@@ -33,6 +33,8 @@ export default {
       // Transactions
       transactions: "Transactions",
       addTransaction: "New transaction",
+      editTransaction: "Edit transaction",
+      deleteTransaction: "Delete transaction",
       amount: "Amount",
       category: "Category",
       description: "Description",
@@ -104,6 +106,7 @@ export default {
       vaultCurrent: 'Current amount (COP)',
       editVault: 'Edit vault',
       vaultGoal: 'Goal',
+      invalidTargetAmount: 'Enter a valid goal amount',
 
       // Banks
       addBank: 'Add account',

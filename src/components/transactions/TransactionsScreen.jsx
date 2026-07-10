@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import AddTransactionModal from './AddTransactionModal'
+import EditTransactionModal from './EditTransactionModal'
 
 const formatCOP = (value) =>
   new Intl.NumberFormat('es-CO', {
@@ -17,6 +18,7 @@ export default function TransactionsScreen({ onTransactionSaved }) {
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
+  const [editingTransaction, setEditingTransaction] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
@@ -25,7 +27,7 @@ export default function TransactionsScreen({ onTransactionSaved }) {
     ;(async () => {
       const { data } = await supabase
         .from('transactions')
-        .select('id, type, amount, description, transaction_date, banks(name), vaults(name)')
+        .select('id, type, amount, description, transaction_date, category, bank_id, vault_id, banks(name), vaults(name)')
         .eq('user_id', user.id)
         .order('transaction_date', { ascending: false })
 
@@ -71,9 +73,11 @@ export default function TransactionsScreen({ onTransactionSaved }) {
         ) : (
           <div className="space-y-3">
             {transactions.map(tx => (
-              <div
+              <button
                 key={tx.id}
-                className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex justify-between items-center"
+                type="button"
+                onClick={() => setEditingTransaction(tx)}
+                className="w-full bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex justify-between items-center text-left"
               >
                 <div>
                   <p className="text-sm font-medium text-gray-700">
@@ -92,7 +96,7 @@ export default function TransactionsScreen({ onTransactionSaved }) {
                 >
                   {tx.type === 'income' ? '+' : '-'}{formatCOP(tx.amount)}
                 </p>
-              </div>
+              </button>
             ))}
           </div>
         )}
@@ -111,6 +115,18 @@ export default function TransactionsScreen({ onTransactionSaved }) {
           onClose={() => setShowAdd(false)}
           onSaved={() => {
             setShowAdd(false)
+            setRefreshKey(k => k + 1)
+            onTransactionSaved?.()
+          }}
+        />
+      )}
+
+      {editingTransaction && (
+        <EditTransactionModal
+          transaction={editingTransaction}
+          onClose={() => setEditingTransaction(null)}
+          onSaved={() => {
+            setEditingTransaction(null)
             setRefreshKey(k => k + 1)
             onTransactionSaved?.()
           }}

@@ -33,6 +33,8 @@ export default {
       // Transactions
       transactions: "Transacciones",
       addTransaction: "Nueva transacción",
+      editTransaction: "Editar transacción",
+      deleteTransaction: "Eliminar transacción",
       amount: "Monto",
       category: "Categoría",
       description: "Descripción",
@@ -104,6 +106,7 @@ export default {
       vaultCurrent: 'Monto actual (COP)',
       editVault: 'Editar bóveda',
       vaultGoal: 'Meta',
+      invalidTargetAmount: 'Ingresa una meta válida',
 
       // Banks
       addBank: 'Agregar cuenta',

@@ -4,11 +4,16 @@ import { supabase } from '../../lib/supabase'
 
 export default function EditVaultModal({ vault, onClose, onSaved }) {
   const { t } = useTranslation()
+  const [targetAmount, setTargetAmount] = useState(String(vault.target_amount ?? ''))
   const [currentAmount, setCurrentAmount] = useState(String(vault.current_amount ?? ''))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   const handleSave = async () => {
+    if (!targetAmount || isNaN(targetAmount)) {
+      setError(t('invalidTargetAmount'))
+      return
+    }
     if (currentAmount === '' || isNaN(currentAmount)) {
       setError(t('invalidAmount'))
       return
@@ -17,7 +22,10 @@ export default function EditVaultModal({ vault, onClose, onSaved }) {
     setSaving(true)
     const { error: dbError } = await supabase
       .from('vaults')
-      .update({ current_amount: parseFloat(currentAmount) })
+      .update({
+        target_amount: parseFloat(targetAmount),
+        current_amount: parseFloat(currentAmount),
+      })
       .eq('id', vault.id)
 
     if (dbError) {
@@ -39,6 +47,17 @@ export default function EditVaultModal({ vault, onClose, onSaved }) {
         {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
         <div className="space-y-4">
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">{t('vaultTarget')}</label>
+            <input
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              placeholder="500000"
+              type="number"
+              value={targetAmount}
+              onChange={e => setTargetAmount(e.target.value)}
+            />
+          </div>
+
           <div>
             <label className="text-xs text-gray-400 mb-1 block">{t('vaultCurrent')}</label>
             <input
