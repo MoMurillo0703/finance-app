@@ -104,6 +104,15 @@ export default {
       cuotaProgress: "{{paid}} de {{total}}",
       totalCuotas: "Total cuotas",
       remaining: "Restante",
+      estimator: "Estimador",
+      monthlyCommitment: "Cuotas este mes",
+      estNextStatement: "Próximo estado de cuenta",
+      estMinPayment: "Pago mínimo estimado",
+      payoffTimeline: "Cronograma de pago",
+      monthsRemaining: "{{count}} meses restantes",
+      cuotaWarning: "Tus cuotas superan el 40% del balance",
+      viewEstimator: "Ver estimador",
+      hideEstimator: "Ocultar estimador",
   
       // Payday
       payday: "Día de pago",

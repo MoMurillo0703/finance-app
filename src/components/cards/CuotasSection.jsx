@@ -18,8 +18,15 @@ export default function CuotasSection({ card, refreshKey, onUpdated }) {
   const [loading, setLoading] = useState(true)
   const [payingId, setPayingId] = useState(null)
   const [error, setError] = useState('')
+  const [showEstimator, setShowEstimator] = useState(false)
 
   const currency = card.currency || 'COP'
+  const currentBalance = card.current_balance || 0
+  const monthlyCommitment = cuotas.reduce((sum, cuota) => sum + (cuota.cuota_amount || 0), 0)
+  const estMinPayment = currency === 'USD'
+    ? Math.max(currentBalance * 0.02, 25)
+    : Math.max(currentBalance * 0.10, 50000)
+  const showCuotaWarning = currentBalance > 0 && monthlyCommitment > currentBalance * 0.40
 
   useEffect(() => {
     let active = true
@@ -132,6 +139,66 @@ export default function CuotasSection({ card, refreshKey, onUpdated }) {
           })}
         </div>
       )}
+
+      <div className="mt-3 pt-3 border-t border-gray-100">
+        <button
+          type="button"
+          onClick={() => setShowEstimator(prev => !prev)}
+          className="w-full text-left text-[10px] font-medium text-purple-600"
+        >
+          {showEstimator ? t('hideEstimator') : t('viewEstimator')}
+        </button>
+
+        {showEstimator && (
+          <div className="mt-3 space-y-3">
+            <p className="text-[10px] font-medium tracking-wider text-gray-400 uppercase">
+              {t('estimator')}
+            </p>
+
+            {showCuotaWarning && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                <p className="text-[10px] text-amber-800">{t('cuotaWarning')}</p>
+              </div>
+            )}
+
+            <div className="bg-gray-50 border border-gray-100 rounded-lg p-3 space-y-2">
+              <div className="flex justify-between items-center gap-2">
+                <p className="text-[10px] text-gray-500">{t('monthlyCommitment')}</p>
+                <p className="text-xs font-semibold text-gray-800">{formatMoney(monthlyCommitment, currency)}</p>
+              </div>
+              <div className="flex justify-between items-center gap-2">
+                <p className="text-[10px] text-gray-500">{t('estNextStatement')}</p>
+                <p className="text-xs font-semibold text-gray-800">{formatMoney(currentBalance, currency)}</p>
+              </div>
+              <div className="flex justify-between items-center gap-2">
+                <p className="text-[10px] text-gray-500">{t('estMinPayment')}</p>
+                <p className="text-xs font-semibold text-gray-800">{formatMoney(estMinPayment, currency)}</p>
+              </div>
+            </div>
+
+            {cuotas.length > 0 && (
+              <div>
+                <p className="text-[10px] font-medium text-gray-500 mb-2">{t('payoffTimeline')}</p>
+                <div className="space-y-1.5">
+                  {cuotas.map(cuota => {
+                    const monthsLeft = Math.max(0, (cuota.total_cuotas || 0) - (cuota.paid_cuotas || 0))
+
+                    return (
+                      <div
+                        key={cuota.id}
+                        className="flex justify-between items-center gap-2 text-[10px]"
+                      >
+                        <p className="text-gray-600 truncate">{cuota.description}</p>
+                        <p className="text-gray-400 shrink-0">{t('monthsRemaining', { count: monthsLeft })}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
