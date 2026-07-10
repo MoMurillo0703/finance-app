@@ -50,6 +50,8 @@ export default {
       paid: "Paid",
       pending: "Pending",
       addBill: "Add bill",
+      editBill: "Edit bill",
+      deleteBill: "Delete bill",
       billName: "Bill name",
       billNamePlaceholder: "e.g. Rent, Netflix, Internet",
       billNameRequired: "Bill name is required",
@@ -112,6 +114,7 @@ export default {
       vaultCurrent: 'Current amount (COP)',
       editVault: 'Edit vault',
       vaultGoal: 'Goal',
+      vaultReady: 'Ready',
       invalidTargetAmount: 'Enter a valid goal amount',
 
       // Banks

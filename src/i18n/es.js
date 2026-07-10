@@ -50,6 +50,8 @@ export default {
       paid: "Pagado",
       pending: "Pendiente",
       addBill: "Agregar cuenta",
+      editBill: "Editar cuenta",
+      deleteBill: "Eliminar cuenta",
       billName: "Nombre de la cuenta",
       billNamePlaceholder: "Ej: Arriendo, Netflix, Internet",
       billNameRequired: "El nombre es obligatorio",
@@ -112,6 +114,7 @@ export default {
       vaultCurrent: 'Monto actual (COP)',
       editVault: 'Editar bóveda',
       vaultGoal: 'Meta',
+      vaultReady: 'Listo',
       invalidTargetAmount: 'Ingresa una meta válida',
 
       // Banks
