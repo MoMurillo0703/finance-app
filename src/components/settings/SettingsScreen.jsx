@@ -46,7 +46,9 @@ export default function SettingsScreen({ onBankSaved }) {
   }
 
   const toggleLanguage = () => {
-    i18n.changeLanguage(i18n.language === 'es' ? 'en' : 'es')
+    const nextLang = i18n.language === 'es' ? 'en' : 'es'
+    localStorage.setItem('language', nextLang)
+    i18n.changeLanguage(nextLang)
   }
 
   return (
