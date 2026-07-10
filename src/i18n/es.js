@@ -109,10 +109,10 @@ export default {
       expense: 'Gasto',
       income: 'Ingreso',
       descriptionPlaceholder: 'Ej: Mercado, Salario, Netflix',
-      invalidAmount: 'Ingresa un monto válido',
+      invalidAmount: 'Monto inválido',
       selectBank: 'Selecciona una cuenta',
       noBanksHint: 'No hay cuentas — agrega una primero',
-      noTransactions: 'No tienes transacciones todavía.',
+      noTransactions: 'No hay transacciones todavía.',
       addFirstTransaction: '+ Agregar primera transacción',
     }
   }
