@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import AddTransactionModal from './AddTransactionModal'
 import EditTransactionModal from './EditTransactionModal'
+import PaydayWizard from '../payday/PaydayWizard'
 
 const formatCOP = (value) =>
   new Intl.NumberFormat('es-CO', {
@@ -20,6 +21,7 @@ export default function TransactionsScreen({ onTransactionSaved }) {
   const [showAdd, setShowAdd] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [wizardPrefill, setWizardPrefill] = useState(null)
 
   useEffect(() => {
     let active = true
@@ -44,6 +46,16 @@ export default function TransactionsScreen({ onTransactionSaved }) {
       day: 'numeric',
       month: 'short',
     })
+
+  const handleTransactionSaved = () => {
+    setShowAdd(false)
+    setRefreshKey(k => k + 1)
+    onTransactionSaved?.()
+  }
+
+  const handleOpenWizard = (amount, bankId) => {
+    setWizardPrefill({ amount, bankId })
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -113,11 +125,8 @@ export default function TransactionsScreen({ onTransactionSaved }) {
       {showAdd && (
         <AddTransactionModal
           onClose={() => setShowAdd(false)}
-          onSaved={() => {
-            setShowAdd(false)
-            setRefreshKey(k => k + 1)
-            onTransactionSaved?.()
-          }}
+          onSaved={handleTransactionSaved}
+          onOpenWizard={handleOpenWizard}
         />
       )}
 
@@ -127,6 +136,19 @@ export default function TransactionsScreen({ onTransactionSaved }) {
           onClose={() => setEditingTransaction(null)}
           onSaved={() => {
             setEditingTransaction(null)
+            setRefreshKey(k => k + 1)
+            onTransactionSaved?.()
+          }}
+        />
+      )}
+
+      {wizardPrefill && (
+        <PaydayWizard
+          prefillAmount={wizardPrefill.amount}
+          prefillBankId={wizardPrefill.bankId}
+          onClose={() => setWizardPrefill(null)}
+          onComplete={() => {
+            setWizardPrefill(null)
             setRefreshKey(k => k + 1)
             onTransactionSaved?.()
           }}

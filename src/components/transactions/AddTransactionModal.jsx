@@ -7,7 +7,7 @@ import { adjustBankBalance, adjustCardBalance, adjustVaultBalance, bankDelta } f
 const EXPENSE_CATEGORIES = ['essential', 'food', 'travel', 'fun', 'bills', 'debt', 'weeklyLiving', 'emergency']
 const INCOME_CATEGORIES = ['salary', 'commission', 'reimbursement']
 
-export default function AddTransactionModal({ onClose, onSaved }) {
+export default function AddTransactionModal({ onClose, onSaved, onOpenWizard }) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [type, setType] = useState('expense')
@@ -26,6 +26,8 @@ export default function AddTransactionModal({ onClose, onSaved }) {
   const [vaults, setVaults] = useState([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [showDistributePrompt, setShowDistributePrompt] = useState(false)
+  const [savedIncome, setSavedIncome] = useState(null)
 
   useEffect(() => {
     supabase
@@ -148,6 +150,14 @@ export default function AddTransactionModal({ onClose, onSaved }) {
     if (type === 'expense' && vaultId) {
       const vaultError = await adjustVaultBalance(vaultId, parsedAmount)
       if (vaultError) { setError(vaultError.message); setSaving(false); return }
+    }
+
+    setSaving(false)
+
+    if (type === 'income' && onOpenWizard) {
+      setSavedIncome({ amount: parsedAmount, bankId })
+      setShowDistributePrompt(true)
+      return
     }
 
     onSaved()
@@ -358,20 +368,50 @@ export default function AddTransactionModal({ onClose, onSaved }) {
           </div>
         </div>
 
-        <div className="flex gap-3 mt-6">
-          <button
-            onClick={onClose}
-            className="flex-1 py-3 rounded-xl border border-gray-200 text-sm text-gray-500"
-          >
-            {t('cancel')}
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex-1 py-3 rounded-xl bg-purple-600 text-white text-sm font-medium disabled:opacity-50"
-          >
-            {saving ? '...' : t('save')}
-          </button>
+        <div className="mt-6">
+          {showDistributePrompt ? (
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600">{t('distributeVaults')}</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowDistributePrompt(false)
+                    onSaved()
+                  }}
+                  className="flex-1 py-3 rounded-xl border border-gray-200 text-sm text-gray-500"
+                >
+                  {t('skipDistribute')}
+                </button>
+                <button
+                  onClick={() => {
+                    const income = savedIncome
+                    setShowDistributePrompt(false)
+                    onOpenWizard?.(income.amount, income.bankId)
+                    onSaved()
+                  }}
+                  className="flex-1 py-3 rounded-xl bg-purple-600 text-white text-sm font-medium"
+                >
+                  {t('distributeNow')}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                className="flex-1 py-3 rounded-xl border border-gray-200 text-sm text-gray-500"
+              >
+                {t('cancel')}
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 py-3 rounded-xl bg-purple-600 text-white text-sm font-medium disabled:opacity-50"
+              >
+                {saving ? '...' : t('save')}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

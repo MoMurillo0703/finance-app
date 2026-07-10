@@ -8,7 +8,7 @@ import AddVaultModal from './AddVaultModal'
 import AddBankModal from './AddBankModal'
 import EditVaultModal from '../vaults/EditVaultModal'
 import CardRow from '../cards/CardRow'
-import PaydayBanner from '../payday/PaydayBanner'
+import PaydayWizard from '../payday/PaydayWizard'
 
 const sectionHeader = 'text-[10px] font-medium tracking-wider text-gray-400 uppercase'
 
@@ -79,6 +79,7 @@ export default function Dashboard({ refreshKey }) {
   const [creditCards, setCreditCards] = useState([])
   const [payingId, setPayingId] = useState(null)
   const [billError, setBillError] = useState('')
+  const [showPaydayWizard, setShowPaydayWizard] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -265,8 +266,15 @@ export default function Dashboard({ refreshKey }) {
       </div>
 
       <div className="px-5 py-4">
-        <PaydayBanner onComplete={() => setModalRefreshKey(k => k + 1)} />
         <SafeToSpend amount={safeToSpend} />
+
+        <button
+          type="button"
+          onClick={() => setShowPaydayWizard(true)}
+          className="w-full mb-4 py-3 rounded-xl border border-amber-300 bg-gradient-to-r from-amber-100 to-yellow-100 text-sm font-medium text-amber-900"
+        >
+          {t('gotPaid')}
+        </button>
 
         <div className="flex gap-3 mb-4">
           <div className="flex-1 bg-white rounded-xl p-3 border border-gray-100">
@@ -379,6 +387,16 @@ export default function Dashboard({ refreshKey }) {
           vault={editingVault}
           onClose={() => setEditingVault(null)}
           onSaved={() => { setEditingVault(null); setModalRefreshKey(k => k + 1) }}
+        />
+      )}
+
+      {showPaydayWizard && (
+        <PaydayWizard
+          onClose={() => setShowPaydayWizard(false)}
+          onComplete={() => {
+            setShowPaydayWizard(false)
+            setModalRefreshKey(k => k + 1)
+          }}
         />
       )}
     </div>

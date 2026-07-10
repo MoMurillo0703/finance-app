@@ -1,16 +1,3 @@
-/*
--- Run in Supabase SQL editor:
-CREATE TABLE IF NOT EXISTS user_settings (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE NOT NULL,
-  payday_1 integer,
-  payday_2 integer,
-  created_at timestamptz DEFAULT now()
-);
-ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users manage own settings" ON user_settings
-  FOR ALL USING (auth.uid() = user_id);
-*/
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
@@ -24,22 +11,15 @@ const formatCOP = (value) =>
     minimumFractionDigits: 0,
   }).format(value)
 
-const getDueDaysNext15 = () => {
-  const today = new Date().getDate()
-  const days = new Set()
-  for (let i = 0; i <= 15; i++) {
-    const day = ((today - 1 + i) % 31) + 1
-    days.add(day)
-  }
-  return [...days]
-}
-
-export default function PaydayWizard({ onClose, onComplete }) {
+export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefillBankId }) {
   const { t } = useTranslation()
   const { user } = useAuth()
-  const [step, setStep] = useState(1)
-  const [amount, setAmount] = useState('')
-  const [bankId, setBankId] = useState('')
+  const skippedStep1 = prefillAmount != null && prefillAmount > 0
+
+  const [step, setStep] = useState(skippedStep1 ? 2 : 1)
+  const [amount, setAmount] = useState(skippedStep1 ? String(prefillAmount) : '')
+  const [bankId, setBankId] = useState(prefillBankId ?? '')
+  const [incomeRecorded, setIncomeRecorded] = useState(skippedStep1)
   const [banks, setBanks] = useState([])
   const [vaultFills, setVaultFills] = useState([])
   const [summary, setSummary] = useState(null)
@@ -56,40 +36,32 @@ export default function PaydayWizard({ onClose, onComplete }) {
       .then(({ data }) => {
         if (data) {
           setBanks(data)
-          if (data.length > 0) setBankId(data[0].id)
+          if (!prefillBankId && data.length > 0) {
+            setBankId(prev => prev || data[0].id)
+          }
         }
       })
-  }, [user.id])
+  }, [user.id, prefillBankId])
 
-  const loadVaultFills = async () => {
-    const dueDays = getDueDaysNext15()
-    const { data: bills } = await supabase
-      .from('bills')
-      .select('id, amount, due_day, vault_id, vaults(id, name)')
+  const loadVaults = async () => {
+    const { data } = await supabase
+      .from('vaults')
+      .select('id, name, current_amount')
       .eq('user_id', user.id)
       .eq('is_active', true)
-      .not('vault_id', 'is', null)
+      .order('name')
 
-    const upcoming = (bills ?? []).filter(b => dueDays.includes(b.due_day))
-    const byVault = new Map()
-
-    for (const bill of upcoming) {
-      if (!bill.vault_id || !bill.vaults) continue
-      if (!byVault.has(bill.vault_id)) {
-        byVault.set(bill.vault_id, {
-          vaultId: bill.vault_id,
-          vaultName: bill.vaults.name,
-          fillAmount: String(bill.amount),
-        })
-      } else {
-        const existing = byVault.get(bill.vault_id)
-        const total = (parseFloat(existing.fillAmount) || 0) + bill.amount
-        existing.fillAmount = String(total)
-      }
-    }
-
-    setVaultFills([...byVault.values()])
+    setVaultFills((data ?? []).map(vault => ({
+      vaultId: vault.id,
+      vaultName: vault.name,
+      currentAmount: vault.current_amount || 0,
+      fillAmount: '0',
+    })))
   }
+
+  useEffect(() => {
+    if (step === 2) loadVaults()
+  }, [step])
 
   const handleStep1Next = async () => {
     if (!amount || isNaN(amount)) { setError(t('invalidAmount')); return }
@@ -124,8 +96,8 @@ export default function PaydayWizard({ onClose, onComplete }) {
       return
     }
 
+    setIncomeRecorded(true)
     setSaving(false)
-    await loadVaultFills()
     setStep(2)
   }
 
@@ -133,7 +105,9 @@ export default function PaydayWizard({ onClose, onComplete }) {
     setSaving(true)
     setError('')
 
-    let totalFilled = 0
+    const filledVaults = []
+    let totalDistributed = 0
+
     for (const fill of vaultFills) {
       const fillAmount = parseFloat(fill.fillAmount)
       if (!fillAmount || fillAmount <= 0) continue
@@ -144,28 +118,15 @@ export default function PaydayWizard({ onClose, onComplete }) {
         setSaving(false)
         return
       }
-      totalFilled += fillAmount
+
+      filledVaults.push({ name: fill.vaultName, amount: fillAmount })
+      totalDistributed += fillAmount
     }
 
-    const { data: banksData } = await supabase
-      .from('banks')
-      .select('balance')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-
-    const { data: vaultsData } = await supabase
-      .from('vaults')
-      .select('current_amount')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-
-    const totalBalance = (banksData ?? []).reduce((sum, b) => sum + (b.balance || 0), 0)
-    const protectedAmount = (vaultsData ?? []).reduce((sum, v) => sum + (v.current_amount || 0), 0)
-
     setSummary({
-      income: parseFloat(amount),
-      vaultsFilled: totalFilled,
-      safeToSpend: totalBalance - protectedAmount,
+      income: incomeRecorded ? parseFloat(amount) : null,
+      filledVaults,
+      totalDistributed,
     })
 
     setSaving(false)
@@ -178,7 +139,8 @@ export default function PaydayWizard({ onClose, onComplete }) {
     )
   }
 
-  const stepTitle = [t('step1Income'), t('step2Vaults'), t('step3Summary')][step - 1]
+  const stepTitle = [t('wizardIncome'), t('wizardVaults'), t('wizardSummary')][step - 1]
+  const totalSteps = 3
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center">
@@ -189,9 +151,7 @@ export default function PaydayWizard({ onClose, onComplete }) {
       >
         <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
         <h2 className="text-lg font-bold text-gray-800 mb-1">{t('paydayWizard')}</h2>
-        <p className="text-xs text-gray-400 mb-4">
-          {t('payday')} · {step}/3 · {stepTitle}
-        </p>
+        <p className="text-xs text-gray-400 mb-4">{step}/{totalSteps} · {stepTitle}</p>
 
         <div className="flex gap-1 mb-6">
           {[1, 2, 3].map(s => (
@@ -234,16 +194,20 @@ export default function PaydayWizard({ onClose, onComplete }) {
 
         {step === 2 && (
           <div className="space-y-3">
-            <p className="text-xs text-gray-500">{t('suggestedFills')}</p>
             {vaultFills.length === 0 ? (
-              <p className="text-sm text-gray-400 py-4 text-center">{t('noVaultsLinked')}</p>
+              <p className="text-sm text-gray-400 py-4 text-center">{t('noVaults')}</p>
             ) : (
               vaultFills.map(fill => (
                 <div key={fill.vaultId} className="bg-gray-50 border border-gray-100 rounded-xl p-3">
-                  <p className="text-sm font-medium text-gray-700 mb-2">{fill.vaultName}</p>
+                  <div className="flex justify-between items-center mb-2">
+                    <p className="text-sm font-medium text-gray-700">{fill.vaultName}</p>
+                    <p className="text-xs text-gray-400">{formatCOP(fill.currentAmount)}</p>
+                  </div>
                   <input
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
                     type="number"
+                    min="0"
+                    placeholder="0"
                     value={fill.fillAmount}
                     onChange={e => updateFill(fill.vaultId, e.target.value)}
                   />
@@ -255,30 +219,35 @@ export default function PaydayWizard({ onClose, onComplete }) {
 
         {step === 3 && summary && (
           <div className="space-y-3">
-            <div className="bg-green-50 border border-green-100 rounded-xl p-4">
-              <p className="text-xs text-green-600 mb-1">{t('incomeAdded')}</p>
-              <p className="text-lg font-bold text-green-700">{formatCOP(summary.income)}</p>
-            </div>
-            <div className="bg-purple-50 border border-purple-100 rounded-xl p-4">
-              <p className="text-xs text-purple-600 mb-1">{t('vaultsFilled')}</p>
-              <p className="text-lg font-bold text-purple-700">{formatCOP(summary.vaultsFilled)}</p>
-            </div>
+            {summary.income != null && (
+              <div className="bg-green-50 border border-green-100 rounded-xl p-4">
+                <p className="text-xs text-green-600 mb-1">{t('incomeAdded')}</p>
+                <p className="text-lg font-bold text-green-700">{formatCOP(summary.income)}</p>
+              </div>
+            )}
+            {summary.filledVaults.length > 0 ? (
+              <div className="bg-purple-50 border border-purple-100 rounded-xl p-4">
+                <p className="text-xs text-purple-600 mb-2">{t('vaultsFilled')}</p>
+                <div className="space-y-1">
+                  {summary.filledVaults.map(v => (
+                    <div key={v.name} className="flex justify-between text-sm">
+                      <span className="text-gray-700">{v.name}</span>
+                      <span className="font-medium text-purple-700">{formatCOP(v.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400 text-center py-2">{t('noVaults')}</p>
+            )}
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-              <p className="text-xs text-amber-700 mb-1">{t('safeToSpendAfter')}</p>
-              <p className="text-2xl font-bold text-amber-900">{formatCOP(summary.safeToSpend)}</p>
+              <p className="text-xs text-amber-700 mb-1">{t('totalDistributed')}</p>
+              <p className="text-2xl font-bold text-amber-900">{formatCOP(summary.totalDistributed)}</p>
             </div>
           </div>
         )}
 
         <div className="flex gap-3 mt-6">
-          {step > 1 && step < 3 && (
-            <button
-              onClick={() => setStep(s => s - 1)}
-              className="flex-1 py-3 rounded-xl border border-gray-200 text-sm text-gray-500"
-            >
-              {t('cancel')}
-            </button>
-          )}
           {step === 1 && (
             <button
               onClick={onClose}
@@ -300,7 +269,7 @@ export default function PaydayWizard({ onClose, onComplete }) {
               onClick={onComplete}
               className="flex-1 py-3 rounded-xl bg-amber-500 text-white text-sm font-medium"
             >
-              {t('confirm')}
+              {t('allDone')}
             </button>
           )}
         </div>
