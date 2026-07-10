@@ -7,6 +7,9 @@ export default function EditCardModal({ card, onClose, onSaved }) {
   const { t } = useTranslation()
   const [currentBalance, setCurrentBalance] = useState(String(card.current_balance ?? ''))
   const [creditLimit, setCreditLimit] = useState(String(card.credit_limit ?? ''))
+  const [interestRate, setInterestRate] = useState(
+    card.interest_rate != null ? String(card.interest_rate) : '',
+  )
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
@@ -22,12 +25,17 @@ export default function EditCardModal({ card, onClose, onSaved }) {
     }
 
     setSaving(true)
+    const updates = {
+      current_balance: parseFloat(currentBalance),
+      credit_limit: parseFloat(creditLimit),
+      interest_rate: interestRate !== '' && !isNaN(interestRate)
+        ? parseFloat(interestRate)
+        : null,
+    }
+
     const { error: dbError } = await supabase
       .from('credit_cards')
-      .update({
-        current_balance: parseFloat(currentBalance),
-        credit_limit: parseFloat(creditLimit),
-      })
+      .update(updates)
       .eq('id', card.id)
 
     if (dbError) {
@@ -83,6 +91,18 @@ export default function EditCardModal({ card, onClose, onSaved }) {
               type="number"
               value={creditLimit}
               onChange={e => setCreditLimit(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">{t('interestRate')}</label>
+            <input
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              placeholder="e.g. 24.99"
+              type="number"
+              step="0.01"
+              value={interestRate}
+              onChange={e => setInterestRate(e.target.value)}
             />
           </div>
         </div>

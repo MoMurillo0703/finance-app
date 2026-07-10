@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { formatMoney } from '../../utils/currency'
 import { fetchBanks } from '../../utils/bank'
+import { getCardApr } from '../../utils/cards'
 import AddBankModal from '../dashboard/AddBankModal'
 import AddCardModal from '../cards/AddCardModal'
 import EditBankModal from '../settings/EditBankModal'
@@ -171,9 +172,14 @@ export default function AccountsScreen({ onViewCardTransactions, onAccountSaved,
                       className="flex-1 min-w-0 text-left"
                     >
                       <p className="text-sm font-semibold text-gray-800">{card.name}</p>
-                      <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full mt-1 inline-block">
-                        {card.network}
-                      </span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                          {card.network}
+                        </span>
+                        <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                          {t('interestRateShort', { rate: getCardApr(card).toFixed(2) })}
+                        </span>
+                      </div>
                       <div className="mt-3">
                         <div className="flex justify-between text-[10px] text-gray-400 mb-1">
                           <span>{t('utilization')}</span>

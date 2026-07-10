@@ -15,6 +15,7 @@ export default function AddCardModal({ onClose, onSaved }) {
   const [currentBalance, setCurrentBalance] = useState('')
   const [statementDate, setStatementDate] = useState('')
   const [dueDate, setDueDate] = useState('')
+  const [interestRate, setInterestRate] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -28,7 +29,7 @@ export default function AddCardModal({ onClose, onSaved }) {
     if (!validateDay(dueDate)) { setError(t('invalidDueDay')); return }
 
     setSaving(true)
-    const { error: dbError } = await supabase.from('credit_cards').insert({
+    const row = {
       user_id: user.id,
       name: name.trim(),
       network,
@@ -38,7 +39,12 @@ export default function AddCardModal({ onClose, onSaved }) {
       due_date: parseInt(dueDate, 10),
       currency: getUserCurrency(),
       is_active: true,
-    })
+    }
+    if (interestRate !== '' && !isNaN(interestRate)) {
+      row.interest_rate = parseFloat(interestRate)
+    }
+
+    const { error: dbError } = await supabase.from('credit_cards').insert(row)
 
     if (dbError) {
       setError(dbError.message)
@@ -100,6 +106,18 @@ export default function AddCardModal({ onClose, onSaved }) {
               type="number"
               value={currentBalance}
               onChange={e => setCurrentBalance(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">{t('interestRate')}</label>
+            <input
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              placeholder="e.g. 24.99"
+              type="number"
+              step="0.01"
+              value={interestRate}
+              onChange={e => setInterestRate(e.target.value)}
             />
           </div>
 
