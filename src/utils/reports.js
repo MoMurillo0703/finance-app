@@ -12,6 +12,7 @@ export const SPENDING_CATEGORIES = [
   'personal',
   'auto',
   'business',
+  'loan',
   'other',
 ]
 
@@ -59,6 +60,7 @@ const DB_CATEGORY_MAP = {
   pet: 'personal',
   grooming: 'personal',
   interest: 'other',
+  loan: 'loan',
 }
 
 export function detectSpendingCategory(description) {
@@ -216,5 +218,6 @@ export const CATEGORY_EMOJI = {
   personal: '💇',
   auto: '🚗',
   business: '💼',
+  loan: '🏦',
   other: '📦',
 }

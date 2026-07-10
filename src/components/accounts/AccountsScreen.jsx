@@ -9,6 +9,9 @@ import AddCardModal from '../cards/AddCardModal'
 import EditBankModal from '../settings/EditBankModal'
 import EditCardModal from '../cards/EditCardModal'
 import AccountHistoryModal from './AccountHistoryModal'
+import LoansSection from '../loans/LoansSection'
+import AddLoanModal from '../loans/AddLoanModal'
+import EditLoanModal from '../loans/EditLoanModal'
 
 function accountTypeLabel(type, t) {
   if (type === 'checking') return t('checking')
@@ -22,12 +25,15 @@ export default function AccountsScreen({ onViewCardTransactions, onAccountSaved,
   const { user } = useAuth()
   const [banks, setBanks] = useState([])
   const [cards, setCards] = useState([])
+  const [loans, setLoans] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAddChoice, setShowAddChoice] = useState(false)
   const [showAddBank, setShowAddBank] = useState(false)
   const [showAddCard, setShowAddCard] = useState(false)
+  const [showAddLoan, setShowAddLoan] = useState(false)
   const [editingBank, setEditingBank] = useState(null)
   const [editingCard, setEditingCard] = useState(null)
+  const [editingLoan, setEditingLoan] = useState(null)
   const [historyBank, setHistoryBank] = useState(null)
   const [dataRefreshKey, setDataRefreshKey] = useState(0)
 
@@ -35,10 +41,16 @@ export default function AccountsScreen({ onViewCardTransactions, onAccountSaved,
     let active = true
 
     ;(async () => {
-      const [banksRes, cardsRes] = await Promise.all([
+      const [banksRes, cardsRes, loansRes] = await Promise.all([
         fetchBanks(supabase, user.id, { orderByName: true }),
         supabase
           .from('credit_cards')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .order('name'),
+        supabase
+          .from('loans')
           .select('*')
           .eq('user_id', user.id)
           .eq('is_active', true)
@@ -48,6 +60,7 @@ export default function AccountsScreen({ onViewCardTransactions, onAccountSaved,
       if (!active) return
       setBanks(banksRes.data ?? [])
       setCards(cardsRes.data ?? [])
+      setLoans(loansRes.data ?? [])
       setLoading(false)
     })()
 
@@ -57,8 +70,10 @@ export default function AccountsScreen({ onViewCardTransactions, onAccountSaved,
   const handleSaved = () => {
     setShowAddBank(false)
     setShowAddCard(false)
+    setShowAddLoan(false)
     setEditingBank(null)
     setEditingCard(null)
+    setEditingLoan(null)
     setShowAddChoice(false)
     setDataRefreshKey(k => k + 1)
     onAccountSaved?.()
@@ -188,6 +203,17 @@ export default function AccountsScreen({ onViewCardTransactions, onAccountSaved,
             </div>
           )}
         </section>
+
+        <section>
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            {t('loans')}
+          </h2>
+          <LoansSection
+            loans={loans}
+            loading={loading}
+            onEdit={setEditingLoan}
+          />
+        </section>
       </div>
 
       <button
@@ -220,6 +246,13 @@ export default function AccountsScreen({ onViewCardTransactions, onAccountSaved,
               >
                 {t('addCard')}
               </button>
+              <button
+                type="button"
+                onClick={() => { setShowAddChoice(false); setShowAddLoan(true) }}
+                className="w-full py-3 rounded-xl border border-gray-200 text-sm text-gray-700 font-medium"
+              >
+                {t('addLoan')}
+              </button>
             </div>
           </div>
         </div>
@@ -231,6 +264,10 @@ export default function AccountsScreen({ onViewCardTransactions, onAccountSaved,
 
       {showAddCard && (
         <AddCardModal onClose={() => setShowAddCard(false)} onSaved={handleSaved} />
+      )}
+
+      {showAddLoan && (
+        <AddLoanModal onClose={() => setShowAddLoan(false)} onSaved={handleSaved} />
       )}
 
       {editingBank && (
@@ -245,6 +282,14 @@ export default function AccountsScreen({ onViewCardTransactions, onAccountSaved,
         <EditCardModal
           card={editingCard}
           onClose={() => setEditingCard(null)}
+          onSaved={handleSaved}
+        />
+      )}
+
+      {editingLoan && (
+        <EditLoanModal
+          loan={editingLoan}
+          onClose={() => setEditingLoan(null)}
           onSaved={handleSaved}
         />
       )}

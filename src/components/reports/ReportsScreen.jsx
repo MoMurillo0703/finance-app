@@ -21,6 +21,12 @@ import {
   summarizeByCategory,
   PURPLE_SHADES,
 } from '../../utils/reports'
+import {
+  LOAN_EMOJI,
+  calculateLoanStats,
+  loanTypeLabel,
+  summarizeLoans,
+} from '../../utils/loans'
 
 export default function ReportsScreen() {
   const { t, i18n } = useTranslation()
@@ -32,6 +38,7 @@ export default function ReportsScreen() {
   const [recurringTransactions, setRecurringTransactions] = useState([])
   const [interestTransactions, setInterestTransactions] = useState([])
   const [cards, setCards] = useState([])
+  const [loans, setLoans] = useState([])
   const [loading, setLoading] = useState(true)
 
   const { firstDay, lastDay, daysInMonth } = useMemo(
@@ -62,6 +69,7 @@ export default function ReportsScreen() {
         recurringRes,
         interestRes,
         cardsRes,
+        loansRes,
       ] = await Promise.all([
         supabase
           .from('transactions')
@@ -88,6 +96,12 @@ export default function ReportsScreen() {
           .select('id, name')
           .eq('user_id', user.id)
           .eq('is_active', true),
+        supabase
+          .from('loans')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .order('name'),
       ])
 
       if (!active) return
@@ -101,6 +115,7 @@ export default function ReportsScreen() {
       setRecurringTransactions(recurringRes.data ?? [])
       setInterestTransactions(interestRows)
       setCards(cardsRes.data ?? [])
+      setLoans(loansRes.data ?? [])
       setLoading(false)
     })()
 
@@ -160,6 +175,8 @@ export default function ReportsScreen() {
     return acc
   }, {})
   const interestYTD = interestTransactions.reduce((sum, tx) => sum + tx.amount, 0)
+
+  const { active: activeLoans, totalInterestRemaining, totalMonthlyPayments } = summarizeLoans(loans)
 
   return (
     <div className="bg-gray-50 pb-6">
@@ -307,6 +324,55 @@ export default function ReportsScreen() {
                   <p className="font-semibold text-red-600">{formatMoney(info.total)}</p>
                 </div>
               ))}
+            </div>
+          )}
+        </section>
+
+        <section className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+          <h2 className="text-sm font-semibold text-gray-800 mb-3">{t('debtOverview')}</h2>
+          {activeLoans.length === 0 ? (
+            <p className="text-xs text-gray-400">{t('noLoans')}</p>
+          ) : (
+            <div className="space-y-3">
+              {activeLoans.map(loan => {
+                const stats = calculateLoanStats(
+                  loan.current_balance,
+                  loan.interest_rate,
+                  loan.monthly_payment,
+                )
+                return (
+                  <div key={loan.id} className="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">
+                          {LOAN_EMOJI[loan.loan_type] || LOAN_EMOJI.other} {loan.name}
+                        </p>
+                        <p className="text-xs text-gray-400">{loanTypeLabel(loan.loan_type, t)}</p>
+                      </div>
+                      <p className="text-sm font-bold text-gray-800 shrink-0">
+                        {formatMoney(loan.current_balance)}
+                      </p>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-500">
+                      <span>{t('interestRateShort', { rate: loan.interest_rate })}</span>
+                      <span>{t('paymentPerMonth', { amount: formatMoney(loan.monthly_payment) })}</span>
+                      {stats.monthsToPayoff != null && (
+                        <span>{stats.monthsToPayoff} {t('monthsLeft')}</span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+              <div className="border-t border-gray-100 pt-3 space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <p className="text-gray-600">{t('totalInterestLeft')}</p>
+                  <p className="font-bold text-red-600">{formatMoney(totalInterestRemaining)}</p>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <p className="text-gray-600">{t('totalMonthlyLoanCommitment')}</p>
+                  <p className="font-bold text-gray-900">{formatMoney(totalMonthlyPayments)}</p>
+                </div>
+              </div>
             </div>
           )}
         </section>

@@ -11,11 +11,13 @@ import {
   cleanMerchantName,
   CATEGORY_EMOJI,
 } from '../../utils/reports'
+import { summarizeLoans } from '../../utils/loans'
 
 export default function MonthSnapshot({ refreshKey, onViewReports }) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [transactions, setTransactions] = useState([])
+  const [loans, setLoans] = useState([])
   const [loading, setLoading] = useState(true)
 
   const now = new Date()
@@ -29,14 +31,22 @@ export default function MonthSnapshot({ refreshKey, onViewReports }) {
     let active = true
 
     ;(async () => {
-      const { data } = await supabase
-        .from('transactions')
-        .select('id, type, amount, description, transaction_date, category')
-        .eq('user_id', user.id)
-        .gte('transaction_date', fetchStart)
+      const [txRes, loansRes] = await Promise.all([
+        supabase
+          .from('transactions')
+          .select('id, type, amount, description, transaction_date, category')
+          .eq('user_id', user.id)
+          .gte('transaction_date', fetchStart),
+        supabase
+          .from('loans')
+          .select('current_balance, interest_rate, monthly_payment, is_active')
+          .eq('user_id', user.id)
+          .eq('is_active', true),
+      ])
 
       if (!active) return
-      setTransactions(data ?? [])
+      setTransactions(txRes.data ?? [])
+      setLoans(loansRes.data ?? [])
       setLoading(false)
     })()
 
@@ -45,8 +55,9 @@ export default function MonthSnapshot({ refreshKey, onViewReports }) {
 
   if (loading) return null
 
+  const { totalMonthlyPayments: loanPaymentsThisMonth } = summarizeLoans(loans)
   const thisMonth = transactions.filter(tx => tx.transaction_date >= firstDay)
-  if (thisMonth.length === 0) return null
+  if (thisMonth.length === 0 && loanPaymentsThisMonth <= 0) return null
 
   const totalSpent = thisMonth
     .filter(tx => tx.type === 'expense')
@@ -133,6 +144,12 @@ export default function MonthSnapshot({ refreshKey, onViewReports }) {
         >
           🔁 {t('recurringThisMonth', { amount: formatMoney(recurringThisMonth) })}
         </button>
+      )}
+
+      {loanPaymentsThisMonth > 0 && (
+        <p className="mt-3 text-xs text-gray-600 font-medium">
+          {t('loanPaymentsThisMonth', { amount: formatMoney(loanPaymentsThisMonth) })}
+        </p>
       )}
     </div>
   )
