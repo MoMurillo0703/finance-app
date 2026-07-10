@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { adjustBankBalance, adjustCardBalance, bankDelta, cardDelta } from '../../lib/payments'
 import { formatMoney, getUserCurrency } from '../../utils/currency'
-import { getBankDisplayName, fetchBanks } from '../../utils/bank'
+import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
 import { categoryForDb } from '../../utils/categories'
 import { txTypeLabel, txBadgeClass } from '../../utils/transactionType'
 
@@ -320,7 +320,7 @@ export default function ImportModal({ onClose, onComplete }) {
     ]).then(([banksRes, cardsRes]) => {
       const bankAccounts = (banksRes.data ?? []).map(b => ({
         id: b.id,
-        name: getBankDisplayName(b),
+        name: getBankDropdownLabel(b),
         accountType: 'bank',
       }))
       const cardAccounts = (cardsRes.data ?? []).map(c => ({

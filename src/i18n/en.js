@@ -177,7 +177,7 @@ export default {
       bankName: 'Bank name',
       bankNamePlaceholder: 'e.g. Bancolombia, Nequi, Chase',
       accountNickname: 'Nickname (optional)',
-      accountNicknamePlaceholder: 'e.g. Main checking, Rent account',
+      accountNicknamePlaceholder: 'e.g. Main Checking, Rent Account, Emergency Fund',
       accountType: 'Account type',
       savings: 'Savings',
       checking: 'Checking',

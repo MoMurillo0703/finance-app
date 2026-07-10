@@ -177,7 +177,7 @@ export default {
       bankName: 'Nombre del banco',
       bankNamePlaceholder: 'Ej: Bancolombia, Nequi, Chase',
       accountNickname: 'Apodo (opcional)',
-      accountNicknamePlaceholder: 'Ej: Cuenta principal, Arriendo',
+      accountNicknamePlaceholder: 'Ej: Cuenta principal, Arriendo, Fondo de emergencia',
       accountType: 'Tipo de cuenta',
       savings: 'Ahorros',
       checking: 'Corriente',

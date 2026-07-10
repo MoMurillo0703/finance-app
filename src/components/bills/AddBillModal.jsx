@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { getUserCurrency } from '../../utils/currency'
-import { getBankDisplayName, fetchBanks } from '../../utils/bank'
+import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
 
 export default function AddBillModal({ onClose, onSaved }) {
   const { t } = useTranslation()
@@ -108,7 +108,7 @@ export default function AddBillModal({ onClose, onSaved }) {
                 <option value="">{t('noBanksHint')}</option>
               )}
               {banks.map(bank => (
-                <option key={bank.id} value={bank.id}>{getBankDisplayName(bank)}</option>
+                <option key={bank.id} value={bank.id}>{getBankDropdownLabel(bank)}</option>
               ))}
             </select>
           </div>

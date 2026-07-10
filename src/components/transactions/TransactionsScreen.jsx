@@ -10,7 +10,7 @@ import PaydayWizard from '../payday/PaydayWizard'
 
 import { formatMoney } from '../../utils/currency'
 import { formatDate } from '../../utils/date'
-import { getBankDisplayName, fetchBanks } from '../../utils/bank'
+import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
 import { txTypeLabel, txAmountClass, txAmountPrefix } from '../../utils/transactionType'
 
 function enrichTransactions(transactions, banks, cards) {
@@ -115,7 +115,7 @@ export default function TransactionsScreen({
         </p>
         <p className="text-xs text-gray-400 mt-0.5">
           {[
-            !isFiltered && (getBankDisplayName(tx.banks) || tx.credit_cards?.name),
+            !isFiltered && (getBankDropdownLabel(tx.banks) || tx.credit_cards?.name),
             formatDate(tx.transaction_date),
             t(tx.category, { defaultValue: tx.category }),
           ].filter(Boolean).join(' · ')}

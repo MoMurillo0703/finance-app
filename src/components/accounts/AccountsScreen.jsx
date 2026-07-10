@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { formatMoney } from '../../utils/currency'
-import { fetchBanks, getBankDisplayName } from '../../utils/bank'
+import { fetchBanks } from '../../utils/bank'
 import AddBankModal from '../dashboard/AddBankModal'
 import AddCardModal from '../cards/AddCardModal'
 import EditBankModal from '../settings/EditBankModal'
@@ -111,7 +111,7 @@ export default function AccountsScreen({ onViewCardTransactions, onAccountSaved,
                     onClick={() => setHistoryBank(bank)}
                     className="flex-1 min-w-0 text-left"
                   >
-                    <p className="text-sm font-semibold text-gray-800">{getBankDisplayName(bank)}</p>
+                    <p className="text-sm font-semibold text-gray-800">{bank.nickname?.trim() || bank.name}</p>
                     {bank.nickname?.trim() && (
                       <p className="text-xs text-gray-400">{bank.name}</p>
                     )}

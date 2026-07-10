@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import { adjustBankBalance, adjustVaultBalance } from '../../lib/payments'
 
 import { formatMoney, getUserCurrency } from '../../utils/currency'
-import { getBankDisplayName, fetchBanks } from '../../utils/bank'
+import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
 
 export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefillBankId }) {
   const { t } = useTranslation()
@@ -176,7 +176,7 @@ export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefi
               >
                 {banks.length === 0 && <option value="">{t('noBanksHint')}</option>}
                 {banks.map(b => (
-                  <option key={b.id} value={b.id}>{getBankDisplayName(b)}</option>
+                  <option key={b.id} value={b.id}>{getBankDropdownLabel(b)}</option>
                 ))}
               </select>
             </div>

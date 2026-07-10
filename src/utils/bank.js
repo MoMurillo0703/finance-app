@@ -1,8 +1,16 @@
 export const BANK_SELECT = 'id, name, nickname, balance, type'
+export const BANK_SELECT_FALLBACK = 'id, name, balance, type'
 
 export function getBankDisplayName(bank) {
   if (!bank) return ''
   return bank.nickname?.trim() || bank.name || ''
+}
+
+export function getBankDropdownLabel(bank) {
+  if (!bank) return ''
+  const nickname = bank.nickname?.trim()
+  if (nickname) return `${nickname} (${bank.name})`
+  return bank.name || ''
 }
 
 export function isMissingNicknameColumn(error) {
@@ -29,11 +37,19 @@ export async function updateBank(supabase, id, updates) {
 }
 
 export async function fetchBanks(supabase, userId, { orderByName = false } = {}) {
-  let query = supabase
-    .from('banks')
-    .select(BANK_SELECT)
-    .eq('user_id', userId)
-    .eq('is_active', true)
-  if (orderByName) query = query.order('name')
-  return query
+  const buildQuery = (select) => {
+    let query = supabase
+      .from('banks')
+      .select(select)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+    if (orderByName) query = query.order('name')
+    return query
+  }
+
+  let result = await buildQuery(BANK_SELECT)
+  if (result.error && isMissingNicknameColumn(result.error)) {
+    result = await buildQuery(BANK_SELECT_FALLBACK)
+  }
+  return result
 }

@@ -1,14 +1,14 @@
 import { useTranslation } from 'react-i18next'
 import { formatMoney } from '../../utils/currency'
 import { formatDate } from '../../utils/date'
-import { getBankDisplayName } from '../../utils/bank'
+import { getBankDropdownLabel } from '../../utils/bank'
 import { txTypeLabel, txAmountClass, txAmountPrefix } from '../../utils/transactionType'
 
 export default function TransactionDetailModal({ transaction, onClose, onEdit }) {
   const { t } = useTranslation()
 
   const accountName =
-    getBankDisplayName(transaction.banks)
+    getBankDropdownLabel(transaction.banks)
     || transaction.credit_cards?.name
     || t('unknownAccount')
 

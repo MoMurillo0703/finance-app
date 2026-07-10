@@ -6,7 +6,7 @@ import AddBankModal from '../dashboard/AddBankModal'
 import EditBankModal from './EditBankModal'
 import { formatMoney, getUserCurrency, notifyPrefsChanged } from '../../utils/currency'
 import { getUserDateFormat } from '../../utils/date'
-import { getBankDisplayName, fetchBanks } from '../../utils/bank'
+import { fetchBanks } from '../../utils/bank'
 
 export default function SettingsScreen({ onBankSaved, onPrefsChanged, onViewAccount }) {
   const { user } = useAuth()
@@ -119,7 +119,7 @@ export default function SettingsScreen({ onBankSaved, onPrefsChanged, onViewAcco
                     className="flex-1 min-w-0 flex justify-between items-center p-4 text-left"
                   >
                     <div className="min-w-0 pr-2">
-                      <p className="text-sm font-medium text-gray-700 truncate">{getBankDisplayName(bank)}</p>
+                      <p className="text-sm font-semibold text-gray-800 truncate">{bank.nickname?.trim() || bank.name}</p>
                       {bank.nickname?.trim() && (
                         <p className="text-xs text-gray-400 truncate">{bank.name}</p>
                       )}

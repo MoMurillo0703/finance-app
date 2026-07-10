@@ -4,7 +4,6 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { formatMoney } from '../../utils/currency'
 import { formatDate } from '../../utils/date'
-import { getBankDisplayName } from '../../utils/bank'
 import { txTypeLabel, txAmountClass, txAmountPrefix } from '../../utils/transactionType'
 
 function groupByMonth(transactions) {
@@ -78,7 +77,7 @@ export default function AccountHistoryModal({ bank, onClose }) {
       <div className="relative bg-gray-50 w-full max-h-[85vh] rounded-t-3xl flex flex-col" style={{ zIndex: 2 }}>
         <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mt-3 mb-2 shrink-0" />
         <div className="px-5 pb-3 border-b border-gray-100 shrink-0">
-          <p className="text-lg font-bold text-gray-800">{getBankDisplayName(bank)}</p>
+          <p className="text-lg font-bold text-gray-800">{bank.nickname?.trim() || bank.name}</p>
           {bank.nickname?.trim() && (
             <p className="text-xs text-gray-400">{bank.name}</p>
           )}

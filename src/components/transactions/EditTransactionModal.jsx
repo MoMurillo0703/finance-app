@@ -10,7 +10,7 @@ import {
   cardDelta,
 } from '../../lib/payments'
 import { getUserCurrency } from '../../utils/currency'
-import { getBankDisplayName, fetchBanks } from '../../utils/bank'
+import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
 
 const EXPENSE_CATEGORIES = ['essential', 'food', 'travel', 'fun', 'bills', 'debt', 'weeklyLiving', 'emergency']
 const INCOME_CATEGORIES = ['salary', 'commission', 'reimbursement']
@@ -367,7 +367,7 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
                 onChange={e => setBankId(e.target.value)}
               >
                 {banks.map(b => (
-                  <option key={b.id} value={b.id}>{getBankDisplayName(b)}</option>
+                  <option key={b.id} value={b.id}>{getBankDropdownLabel(b)}</option>
                 ))}
               </select>
             </div>
