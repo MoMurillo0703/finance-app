@@ -27,7 +27,7 @@ export default function TransactionsScreen({ onTransactionSaved }) {
     ;(async () => {
       const { data } = await supabase
         .from('transactions')
-        .select('id, type, amount, description, transaction_date, category, bank_id, vault_id, banks(name), vaults(name)')
+        .select('id, type, amount, description, transaction_date, category, bank_id, credit_card_id, vault_id, banks(name), credit_cards(name), vaults(name)')
         .eq('user_id', user.id)
         .order('transaction_date', { ascending: false })
 
@@ -85,7 +85,7 @@ export default function TransactionsScreen({ onTransactionSaved }) {
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5">
                     {[
-                      tx.banks?.name,
+                      tx.credit_cards?.name || tx.banks?.name,
                       tx.vaults?.name,
                       formatDate(tx.transaction_date),
                     ].filter(Boolean).join(' · ')}

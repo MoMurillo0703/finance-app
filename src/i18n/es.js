@@ -42,6 +42,11 @@ export default {
       essential: "Esencial",
       bank: "Banco",
       paymentMethod: "Método de pago",
+      creditCard: "Tarjeta de crédito",
+      selectCard: "Selecciona una tarjeta",
+      noCardsHint: "No hay tarjetas — agrega una primero",
+      payInInstallments: "Pagar en cuotas",
+      invalidNumCuotas: "Ingresa al menos 2 cuotas",
   
       // Bills
       billsTitle: "Mis cuentas",

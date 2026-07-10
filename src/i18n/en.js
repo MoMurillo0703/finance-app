@@ -42,6 +42,11 @@ export default {
       essential: "Essential",
       bank: "Bank",
       paymentMethod: "Payment method",
+      creditCard: "Credit card",
+      selectCard: "Select a credit card",
+      noCardsHint: "No credit cards — add one first",
+      payInInstallments: "Pay in installments",
+      invalidNumCuotas: "Enter at least 2 installments",
   
       // Bills
       billsTitle: "My bills",

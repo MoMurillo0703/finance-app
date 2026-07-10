@@ -2,45 +2,16 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import {
+  adjustBankBalance,
+  adjustCardBalance,
+  adjustVaultBalance,
+  bankDelta,
+  cardDelta,
+} from '../../lib/payments'
 
 const EXPENSE_CATEGORIES = ['essential', 'food', 'travel', 'fun', 'bills', 'debt', 'weeklyLiving', 'emergency']
 const INCOME_CATEGORIES = ['salary', 'commission', 'reimbursement']
-
-const bankDelta = (type, amount) => (type === 'income' ? amount : -amount)
-
-async function adjustBankBalance(bankId, delta) {
-  const { data, error: fetchError } = await supabase
-    .from('banks')
-    .select('balance')
-    .eq('id', bankId)
-    .single()
-
-  if (fetchError) return fetchError
-
-  const { error: updateError } = await supabase
-    .from('banks')
-    .update({ balance: (Number(data.balance) || 0) + delta })
-    .eq('id', bankId)
-
-  return updateError
-}
-
-async function adjustVaultBalance(vaultId, delta) {
-  const { data, error: fetchError } = await supabase
-    .from('vaults')
-    .select('current_amount')
-    .eq('id', vaultId)
-    .single()
-
-  if (fetchError) return fetchError
-
-  const { error: updateError } = await supabase
-    .from('vaults')
-    .update({ current_amount: Math.max(0, (Number(data.current_amount) || 0) + delta) })
-    .eq('id', vaultId)
-
-  return updateError
-}
 
 export default function EditTransactionModal({ transaction, onClose, onSaved }) {
   const { t } = useTranslation()
@@ -50,9 +21,13 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
   const [amount, setAmount] = useState(String(transaction.amount))
   const [description, setDescription] = useState(transaction.description ?? '')
   const [date, setDate] = useState(transaction.transaction_date)
-  const [bankId, setBankId] = useState(transaction.bank_id)
+  const [paymentMethod, setPaymentMethod] = useState(transaction.credit_card_id ? 'card' : 'bank')
+  const [bankId, setBankId] = useState(transaction.bank_id ?? '')
+  const [creditCardId, setCreditCardId] = useState(transaction.credit_card_id ?? '')
   const [vaultId, setVaultId] = useState(transaction.vault_id ?? '')
+  const [linkedCuota, setLinkedCuota] = useState(null)
   const [banks, setBanks] = useState([])
+  const [creditCards, setCreditCards] = useState([])
   const [vaults, setVaults] = useState([])
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -70,6 +45,16 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
       })
 
     supabase
+      .from('credit_cards')
+      .select('id, name')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .order('name')
+      .then(({ data }) => {
+        if (data) setCreditCards(data)
+      })
+
+    supabase
       .from('vaults')
       .select('id, name')
       .eq('user_id', user.id)
@@ -78,12 +63,32 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
       .then(({ data }) => {
         if (data) setVaults(data)
       })
-  }, [user.id])
+
+    if (transaction.credit_card_id) {
+      supabase
+        .from('cuotas')
+        .select('id, total_cuotas, paid_cuotas, cuota_amount')
+        .eq('transaction_id', transaction.id)
+        .eq('is_active', true)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) setLinkedCuota(data)
+        })
+    }
+  }, [user.id, transaction.id, transaction.credit_card_id])
 
   const handleSave = async () => {
     if (!amount || isNaN(amount)) { setError(t('invalidAmount')); return }
-    if (!bankId) { setError(t('selectBank')); return }
     if (!category) { setError(t('selectCategory')); return }
+
+    const isCardExpense = type === 'expense' && paymentMethod === 'card'
+
+    if (isCardExpense) {
+      if (!creditCardId) { setError(t('selectCard')); return }
+    } else if (!bankId) {
+      setError(t('selectBank'))
+      return
+    }
 
     setSaving(true)
 
@@ -91,13 +96,15 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
     const oldAmount = Number(transaction.amount)
     const oldType = transaction.type
     const oldBankId = transaction.bank_id
-    const oldVaultId = transaction.vault_id
+    const oldCardId = transaction.credit_card_id
     const newVaultId = type === 'expense' && vaultId ? vaultId : null
+    const oldVaultId = transaction.vault_id
 
     const { error: txError } = await supabase
       .from('transactions')
       .update({
-        bank_id: bankId,
+        bank_id: isCardExpense ? null : bankId,
+        credit_card_id: isCardExpense ? creditCardId : null,
         type,
         category,
         amount: parsedAmount,
@@ -109,14 +116,39 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
 
     if (txError) { setError(txError.message); setSaving(false); return }
 
-    if (oldBankId === bankId) {
+    const wasCard = Boolean(oldCardId)
+    const isCard = isCardExpense
+
+    if (wasCard && isCard) {
+      if (oldCardId === creditCardId) {
+        const netDelta = -cardDelta(oldType, oldAmount) + cardDelta(type, parsedAmount)
+        if (netDelta !== 0) {
+          const cardError = await adjustCardBalance(creditCardId, netDelta)
+          if (cardError) { setError(cardError.message); setSaving(false); return }
+        }
+      } else {
+        const reverseError = await adjustCardBalance(oldCardId, -cardDelta(oldType, oldAmount))
+        if (reverseError) { setError(reverseError.message); setSaving(false); return }
+        const applyError = await adjustCardBalance(creditCardId, cardDelta(type, parsedAmount))
+        if (applyError) { setError(applyError.message); setSaving(false); return }
+      }
+    } else if (wasCard && !isCard) {
+      const reverseCardError = await adjustCardBalance(oldCardId, -cardDelta(oldType, oldAmount))
+      if (reverseCardError) { setError(reverseCardError.message); setSaving(false); return }
+      const applyBankError = await adjustBankBalance(bankId, bankDelta(type, parsedAmount))
+      if (applyBankError) { setError(applyBankError.message); setSaving(false); return }
+    } else if (!wasCard && isCard) {
+      const reverseBankError = await adjustBankBalance(oldBankId, -bankDelta(oldType, oldAmount))
+      if (reverseBankError) { setError(reverseBankError.message); setSaving(false); return }
+      const applyCardError = await adjustCardBalance(creditCardId, cardDelta(type, parsedAmount))
+      if (applyCardError) { setError(applyCardError.message); setSaving(false); return }
+    } else if (oldBankId === bankId) {
       const netDelta = -bankDelta(oldType, oldAmount) + bankDelta(type, parsedAmount)
       const bankError = await adjustBankBalance(bankId, netDelta)
       if (bankError) { setError(bankError.message); setSaving(false); return }
     } else {
       const reverseError = await adjustBankBalance(oldBankId, -bankDelta(oldType, oldAmount))
       if (reverseError) { setError(reverseError.message); setSaving(false); return }
-
       const applyError = await adjustBankBalance(bankId, bankDelta(type, parsedAmount))
       if (applyError) { setError(applyError.message); setSaving(false); return }
     }
@@ -148,11 +180,24 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
 
     const txAmount = Number(transaction.amount)
 
-    const bankError = await adjustBankBalance(
-      transaction.bank_id,
-      -bankDelta(transaction.type, txAmount),
-    )
-    if (bankError) { setError(bankError.message); setDeleting(false); return }
+    if (transaction.credit_card_id) {
+      const cardError = await adjustCardBalance(
+        transaction.credit_card_id,
+        -cardDelta(transaction.type, txAmount),
+      )
+      if (cardError) { setError(cardError.message); setDeleting(false); return }
+
+      await supabase
+        .from('cuotas')
+        .update({ is_active: false })
+        .eq('transaction_id', transaction.id)
+    } else {
+      const bankError = await adjustBankBalance(
+        transaction.bank_id,
+        -bankDelta(transaction.type, txAmount),
+      )
+      if (bankError) { setError(bankError.message); setDeleting(false); return }
+    }
 
     if (transaction.vault_id && transaction.type === 'expense') {
       const vaultError = await adjustVaultBalance(transaction.vault_id, -txAmount)
@@ -178,7 +223,10 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
   const handleTypeChange = (nextType) => {
     setType(nextType)
     setCategory(nextType === 'income' ? 'salary' : 'essential')
-    if (nextType === 'income') setVaultId('')
+    if (nextType === 'income') {
+      setVaultId('')
+      setPaymentMethod('bank')
+    }
   }
 
   return (
@@ -263,18 +311,71 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
             />
           </div>
 
-          <div>
-            <label className="text-xs text-gray-400 mb-1 block">{t('bank')}</label>
-            <select
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-              value={bankId}
-              onChange={e => setBankId(e.target.value)}
-            >
-              {banks.map(b => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </select>
-          </div>
+          {type === 'expense' && (
+            <div>
+              <label className="text-xs text-gray-400 mb-1 block">{t('paymentMethod')}</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('bank')}
+                  className={`flex-1 py-2.5 rounded-xl text-xs border ${
+                    paymentMethod === 'bank'
+                      ? 'bg-purple-600 text-white border-purple-600'
+                      : 'border-gray-200 text-gray-500'
+                  }`}
+                >
+                  {t('bank')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('card')}
+                  className={`flex-1 py-2.5 rounded-xl text-xs border ${
+                    paymentMethod === 'card'
+                      ? 'bg-purple-600 text-white border-purple-600'
+                      : 'border-gray-200 text-gray-500'
+                  }`}
+                >
+                  {t('creditCard')}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {type === 'expense' && paymentMethod === 'card' ? (
+            <div>
+              <label className="text-xs text-gray-400 mb-1 block">{t('creditCard')}</label>
+              <select
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                value={creditCardId}
+                onChange={e => setCreditCardId(e.target.value)}
+              >
+                {creditCards.map(card => (
+                  <option key={card.id} value={card.id}>{card.name}</option>
+                ))}
+              </select>
+              {linkedCuota && (
+                <p className="text-xs text-gray-500 mt-2">
+                  {t('cuotaProgress', {
+                    paid: linkedCuota.paid_cuotas || 0,
+                    total: linkedCuota.total_cuotas || 0,
+                  })}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div>
+              <label className="text-xs text-gray-400 mb-1 block">{t('bank')}</label>
+              <select
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                value={bankId}
+                onChange={e => setBankId(e.target.value)}
+              >
+                {banks.map(b => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="text-xs text-gray-400 mb-1 block">{t('date')}</label>
