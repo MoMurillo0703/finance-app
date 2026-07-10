@@ -7,6 +7,7 @@ export default function AddBankModal({ onClose, onSaved }) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [name, setName] = useState('')
+  const [accountType, setAccountType] = useState('savings')
   const [balance, setBalance] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -19,6 +20,7 @@ export default function AddBankModal({ onClose, onSaved }) {
     const { error: dbError } = await supabase.from('banks').insert({
       user_id: user.id,
       name: name.trim(),
+      type: accountType,
       balance: parseFloat(balance),
       is_active: true,
     })
@@ -49,6 +51,18 @@ export default function AddBankModal({ onClose, onSaved }) {
               value={name}
               onChange={e => setName(e.target.value)}
             />
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">{t('accountType')}</label>
+            <select
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              value={accountType}
+              onChange={e => setAccountType(e.target.value)}
+            >
+              <option value="savings">{t('savings')}</option>
+              <option value="checking">{t('checking')}</option>
+            </select>
           </div>
 
           <div>

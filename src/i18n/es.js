@@ -84,6 +84,7 @@ export default {
       settings: "Configuración",
       language: "Idioma",
       logout: "Cerrar sesión",
+      loading: 'Cargando...',
       safeToSpendSubtitle: 'Puedes gastar esto hoy',
       noVaults: 'No tienes bóvedas todavía.',
       createFirstVault: '+ Crear primera bóveda',
@@ -113,8 +114,5 @@ export default {
       noBanksHint: 'No hay cuentas — agrega una primero',
       noTransactions: 'No tienes transacciones todavía.',
       addFirstTransaction: '+ Agregar primera transacción',
-
-      // General
-      loading: 'Cargando...',
     }
   }
