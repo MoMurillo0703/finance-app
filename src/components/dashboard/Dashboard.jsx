@@ -8,6 +8,59 @@ import AddVaultModal from './AddVaultModal'
 import AddBankModal from './AddBankModal'
 import EditVaultModal from '../vaults/EditVaultModal'
 
+const formatCOP = (value) =>
+  new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    minimumFractionDigits: 0,
+  }).format(value)
+
+const getCurrentBillingMonth = () => {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+}
+
+const isBillPaidThisMonth = (bill) => {
+  const currentMonth = getCurrentBillingMonth()
+
+  if (bill.billing_month != null) {
+    return bill.is_paid && bill.billing_month === currentMonth
+  }
+
+  if (bill.paid_at) {
+    const paidDate = new Date(bill.paid_at)
+    const now = new Date()
+    return bill.is_paid
+      && paidDate.getFullYear() === now.getFullYear()
+      && paidDate.getMonth() === now.getMonth()
+  }
+
+  if (typeof bill.category === 'string' && bill.category.startsWith('paid:')) {
+    return bill.category === `paid:${currentMonth}`
+  }
+
+  return false
+}
+
+const getDueDaysThisWeek = () => {
+  const now = new Date()
+  const today = now.getDate()
+  const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  const days = []
+  for (let i = 0; i < 7; i++) {
+    const day = today + i
+    if (day <= lastDayOfMonth) days.push(day)
+  }
+  return days
+}
+
+const isBillDueThisWeek = (bill) => {
+  const currentMonth = getCurrentBillingMonth()
+  const dueDays = getDueDaysThisWeek()
+  const unpaid = !bill.is_paid || bill.billing_month !== currentMonth
+  return dueDays.includes(bill.due_day) && unpaid && !isBillPaidThisMonth(bill)
+}
+
 export default function Dashboard({ refreshKey }) {
   const { user, signOut } = useAuth()
   const { t, i18n } = useTranslation()
@@ -18,6 +71,9 @@ export default function Dashboard({ refreshKey }) {
   const [showAddBank, setShowAddBank] = useState(false)
   const [editingVault, setEditingVault] = useState(null)
   const [modalRefreshKey, setModalRefreshKey] = useState(0)
+  const [dueBills, setDueBills] = useState([])
+  const [payingId, setPayingId] = useState(null)
+  const [billError, setBillError] = useState('')
 
   useEffect(() => {
     let active = true
@@ -35,10 +91,18 @@ export default function Dashboard({ refreshKey }) {
         .eq('user_id', user.id)
         .eq('is_active', true)
 
+      const { data: billsData } = await supabase
+        .from('bills')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('due_day')
+
       if (!active) return
 
       setVaults(vaultsData ?? [])
       setTotalBalance((banksData ?? []).reduce((sum, bank) => sum + (bank.balance || 0), 0))
+      setDueBills((billsData ?? []).filter(isBillDueThisWeek))
       setLoading(false)
     })()
 
@@ -50,6 +114,116 @@ export default function Dashboard({ refreshKey }) {
 
   const toggleLanguage = () => {
     i18n.changeLanguage(i18n.language === 'es' ? 'en' : 'es')
+  }
+
+  const formatDueDate = (dueDay) => {
+    const now = new Date()
+    const date = new Date(now.getFullYear(), now.getMonth(), dueDay)
+    return date.toLocaleDateString(i18n.language === 'es' ? 'es-CO' : 'en-US', {
+      month: 'short',
+      day: 'numeric',
+    })
+  }
+
+  const handleMarkPaid = async (bill) => {
+    setPayingId(bill.id)
+    setBillError('')
+
+    let bankId = bill.bank_id
+
+    if (!bankId) {
+      const { data: banks } = await supabase
+        .from('banks')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('name')
+        .limit(1)
+
+      bankId = banks?.[0]?.id
+    }
+
+    if (!bankId) {
+      setBillError(t('noBanksHint'))
+      setPayingId(null)
+      return
+    }
+
+    const today = new Date().toISOString().split('T')[0]
+    const currentMonth = getCurrentBillingMonth()
+
+    const { error: txError } = await supabase.from('transactions').insert({
+      user_id: user.id,
+      bank_id: bankId,
+      type: 'expense',
+      category: 'bills',
+      amount: bill.amount,
+      description: bill.name,
+      transaction_date: today,
+    })
+
+    if (txError) {
+      setBillError(txError.message)
+      setPayingId(null)
+      return
+    }
+
+    const { data: bankData, error: bankFetchError } = await supabase
+      .from('banks')
+      .select('balance')
+      .eq('id', bankId)
+      .single()
+
+    if (bankFetchError) {
+      setBillError(bankFetchError.message)
+      setPayingId(null)
+      return
+    }
+
+    const newBalance = (Number(bankData.balance) || 0) - bill.amount
+    const { error: bankUpdateError } = await supabase
+      .from('banks')
+      .update({ balance: newBalance })
+      .eq('id', bankId)
+
+    if (bankUpdateError) {
+      setBillError(bankUpdateError.message)
+      setPayingId(null)
+      return
+    }
+
+    let { error: billUpdateError } = await supabase
+      .from('bills')
+      .update({
+        is_paid: true,
+        paid_at: new Date().toISOString(),
+        billing_month: currentMonth,
+      })
+      .eq('id', bill.id)
+
+    if (billUpdateError) {
+      const fallback = await supabase
+        .from('bills')
+        .update({ category: `paid:${currentMonth}` })
+        .eq('id', bill.id)
+      billUpdateError = fallback.error
+    }
+
+    if (billUpdateError) {
+      setBillError(billUpdateError.message)
+      setPayingId(null)
+      return
+    }
+
+    if (bill.vault_id) {
+      await supabase
+        .from('vaults')
+        .update({ current_amount: 0 })
+        .eq('id', bill.vault_id)
+    }
+
+    setPayingId(null)
+    setModalRefreshKey(k => k + 1)
   }
 
   if (loading) {
@@ -127,6 +301,35 @@ export default function Dashboard({ refreshKey }) {
                 onClick={() => setEditingVault(vault)}
               />
             ))}
+          </div>
+        )}
+
+        {dueBills.length > 0 && (
+          <div className="mt-8">
+            <h2 className="text-base font-semibold text-gray-700 mb-3">{t('billsDueThisWeek')}</h2>
+            {billError && <p className="text-red-500 text-sm mb-3">{billError}</p>}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-100">
+              {dueBills.map(bill => (
+                <div key={bill.id} className="p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">{bill.name}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {t('dueDate')}: {formatDueDate(bill.due_day)}
+                      </p>
+                    </div>
+                    <p className="text-sm font-bold text-gray-800">{formatCOP(bill.amount)}</p>
+                  </div>
+                  <button
+                    onClick={() => handleMarkPaid(bill)}
+                    disabled={payingId === bill.id}
+                    className="w-full py-2 rounded-xl bg-purple-600 text-white text-xs font-medium disabled:opacity-50"
+                  >
+                    {payingId === bill.id ? '...' : t('markAsPaid')}
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

@@ -55,6 +55,7 @@ export default {
       billNameRequired: "Bill name is required",
       invalidDueDay: "Enter a valid day (1-31)",
       markAsPaid: "Mark as paid",
+      billsDueThisWeek: "Bills due this week",
       noBills: "No bills yet.",
       addFirstBill: "+ Add first bill",
       deductFrom: "Deduct from",
