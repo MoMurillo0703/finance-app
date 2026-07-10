@@ -38,7 +38,7 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
   useEffect(() => {
     supabase
       .from('banks')
-      .select('id, name, nickname')
+      .select('id, name, type, balance, is_active')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .order('name')

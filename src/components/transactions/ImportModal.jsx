@@ -315,7 +315,7 @@ export default function ImportModal({ onClose, onComplete }) {
 
   useEffect(() => {
     Promise.all([
-      supabase.from('banks').select('id, name, nickname').eq('user_id', user.id).eq('is_active', true).order('name'),
+      supabase.from('banks').select('id, name, type, balance, is_active').eq('user_id', user.id).eq('is_active', true).order('name'),
       supabase.from('credit_cards').select('id, name').eq('user_id', user.id).eq('is_active', true).order('name'),
     ]).then(([banksRes, cardsRes]) => {
       const bankAccounts = (banksRes.data ?? []).map(b => ({

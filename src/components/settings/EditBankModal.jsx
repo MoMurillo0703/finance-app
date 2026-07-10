@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { getUserCurrency } from '../../utils/currency'
+import { updateBank } from '../../utils/bank'
 
 export default function EditBankModal({ bank, onClose, onSaved }) {
   const { t } = useTranslation()
@@ -23,14 +24,11 @@ export default function EditBankModal({ bank, onClose, onSaved }) {
     }
 
     setSaving(true)
-    const { error: dbError } = await supabase
-      .from('banks')
-      .update({
-        name: name.trim(),
-        nickname: nickname.trim() || null,
-        balance: parseFloat(balance),
-      })
-      .eq('id', bank.id)
+    const { error: dbError } = await updateBank(supabase, bank.id, {
+      name: name.trim(),
+      nickname: nickname.trim() || null,
+      balance: parseFloat(balance),
+    })
 
     if (dbError) {
       setError(dbError.message)

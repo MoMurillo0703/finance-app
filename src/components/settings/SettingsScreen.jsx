@@ -32,7 +32,7 @@ export default function SettingsScreen({ onBankSaved, onPrefsChanged }) {
     ;(async () => {
       const { data } = await supabase
         .from('banks')
-        .select('id, name, nickname, balance')
+        .select('id, name, balance, type, is_active')
         .eq('user_id', user.id)
         .eq('is_active', true)
         .order('name')

@@ -34,7 +34,7 @@ export default function AddTransactionModal({ onClose, onSaved, onOpenWizard }) 
   useEffect(() => {
     supabase
       .from('banks')
-      .select('id, name, nickname')
+      .select('id, name, type, balance, is_active')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .then(({ data }) => {

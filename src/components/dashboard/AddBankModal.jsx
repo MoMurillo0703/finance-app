@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { getUserCurrency } from '../../utils/currency'
+import { insertBank } from '../../utils/bank'
 
 export default function AddBankModal({ onClose, onSaved }) {
   const { t } = useTranslation()
@@ -19,7 +20,7 @@ export default function AddBankModal({ onClose, onSaved }) {
     if (!balance || isNaN(balance)) { setError('Enter a valid balance'); return }
 
     setSaving(true)
-    const { error: dbError } = await supabase.from('banks').insert({
+    const { error: dbError } = await insertBank(supabase, {
       user_id: user.id,
       name: name.trim(),
       nickname: nickname.trim() || null,
