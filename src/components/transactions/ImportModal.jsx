@@ -324,7 +324,6 @@ export default function ImportModal({ onClose, onComplete }) {
       description: row.description,
       category: row.category,
       transaction_date: row.date,
-      source: 'import',
     }))
 
     const { error: insertError } = await supabase.from('transactions').insert(inserts)
@@ -436,7 +435,6 @@ export default function ImportModal({ onClose, onComplete }) {
       description: 'Interest charge',
       category: 'debt',
       transaction_date: today,
-      source: 'import',
     })
 
     if (insertError) {
