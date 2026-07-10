@@ -304,8 +304,10 @@ export default {
 
       // Onboarding
       welcomeOnboardingTitle: 'Welcome to Lala',
-      welcomeOnboardingBody: 'Start by adding a bank account to see your safe-to-spend balance.',
+      welcomeOnboardingBody: 'Add a bank account to see your real balance.',
       onboardingAddBank: '+ Add Bank Account',
+
+      nothingDueThisWeek: 'Nothing due this week 🎉',
 
       // Month snapshot
       thisMonth: 'This Month',

@@ -83,7 +83,7 @@ export default function MonthSnapshot({ refreshKey, onViewReports }) {
     .reduce((sum, tx) => sum + tx.amount, 0)
 
   return (
-    <div className="mt-4 bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+    <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
       <div className="flex justify-between items-center mb-3">
         <h2 className="text-sm font-semibold text-gray-800">{t('thisMonth')}</h2>
         <button

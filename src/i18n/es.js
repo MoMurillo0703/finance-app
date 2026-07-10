@@ -307,6 +307,8 @@ export default {
       welcomeOnboardingBody: 'Comienza agregando una cuenta bancaria para ver tu saldo disponible.',
       onboardingAddBank: '+ Agregar cuenta bancaria',
 
+      nothingDueThisWeek: 'Nada pendiente esta semana 🎉',
+
       // Month snapshot
       thisMonth: 'Este mes',
       seeAll: 'Ver todo',

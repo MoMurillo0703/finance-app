@@ -2,64 +2,14 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import SafeToSpend from './SafeToSpend'
-import VaultCard from './VaultCard'
+import VaultMiniCard from './VaultMiniCard'
 import AddVaultModal from './AddVaultModal'
 import AddBankModal from './AddBankModal'
 import EditVaultModal from '../vaults/EditVaultModal'
-import CardRow from '../cards/CardRow'
 import MonthSnapshot from './MonthSnapshot'
+import BillsThisWeek from './BillsThisWeek'
 import PaydayWizard from '../payday/PaydayWizard'
 import { formatMoney } from '../../utils/currency'
-import { formatDate } from '../../utils/date'
-
-const sectionHeader = 'text-[10px] font-medium tracking-wider text-gray-400 uppercase'
-
-const getCurrentBillingMonth = () => {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-}
-
-const isBillPaidThisMonth = (bill) => {
-  const currentMonth = getCurrentBillingMonth()
-
-  if (bill.billing_month != null) {
-    return bill.is_paid && bill.billing_month === currentMonth
-  }
-
-  if (bill.paid_at) {
-    const paidDate = new Date(bill.paid_at)
-    const now = new Date()
-    return bill.is_paid
-      && paidDate.getFullYear() === now.getFullYear()
-      && paidDate.getMonth() === now.getMonth()
-  }
-
-  if (typeof bill.category === 'string' && bill.category.startsWith('paid:')) {
-    return bill.category === `paid:${currentMonth}`
-  }
-
-  return false
-}
-
-const getDueDaysThisWeek = () => {
-  const now = new Date()
-  const today = now.getDate()
-  const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
-  const days = []
-  for (let i = 0; i < 7; i++) {
-    const day = today + i
-    if (day <= lastDayOfMonth) days.push(day)
-  }
-  return days
-}
-
-const isBillDueThisWeek = (bill) => {
-  const currentMonth = getCurrentBillingMonth()
-  const dueDays = getDueDaysThisWeek()
-  const unpaid = !bill.is_paid || bill.billing_month !== currentMonth
-  return dueDays.includes(bill.due_day) && unpaid && !isBillPaidThisMonth(bill)
-}
 
 export default function Dashboard({ refreshKey, onViewReports }) {
   const { user } = useAuth()
@@ -71,10 +21,6 @@ export default function Dashboard({ refreshKey, onViewReports }) {
   const [showAddBank, setShowAddBank] = useState(false)
   const [editingVault, setEditingVault] = useState(null)
   const [modalRefreshKey, setModalRefreshKey] = useState(0)
-  const [dueBills, setDueBills] = useState([])
-  const [creditCards, setCreditCards] = useState([])
-  const [payingId, setPayingId] = useState(null)
-  const [billError, setBillError] = useState('')
   const [showPaydayWizard, setShowPaydayWizard] = useState(false)
 
   useEffect(() => {
@@ -93,26 +39,10 @@ export default function Dashboard({ refreshKey, onViewReports }) {
         .eq('user_id', user.id)
         .eq('is_active', true)
 
-      const { data: billsData } = await supabase
-        .from('bills')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .order('due_day')
-
-      const { data: cardsData } = await supabase
-        .from('credit_cards')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .order('name')
-
       if (!active) return
 
       setVaults(vaultsData ?? [])
       setTotalBalance((banksData ?? []).reduce((sum, bank) => sum + (bank.balance || 0), 0))
-      setDueBills((billsData ?? []).filter(isBillDueThisWeek))
-      setCreditCards(cardsData ?? [])
       setLoading(false)
     })()
 
@@ -121,112 +51,7 @@ export default function Dashboard({ refreshKey, onViewReports }) {
 
   const protectedAmount = vaults.reduce((sum, v) => sum + (v.current_amount || 0), 0)
   const safeToSpend = totalBalance - protectedAmount
-
-  const formatDueDate = (dueDay) => {
-    const now = new Date()
-    return formatDate(new Date(now.getFullYear(), now.getMonth(), dueDay))
-  }
-
-  const handleMarkPaid = async (bill) => {
-    setPayingId(bill.id)
-    setBillError('')
-
-    let bankId = bill.bank_id
-
-    if (!bankId) {
-      const { data: banks } = await supabase
-        .from('banks')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .order('name')
-        .limit(1)
-
-      bankId = banks?.[0]?.id
-    }
-
-    if (!bankId) {
-      setBillError(t('noBanksHint'))
-      setPayingId(null)
-      return
-    }
-
-    const today = new Date().toISOString().split('T')[0]
-    const currentMonth = getCurrentBillingMonth()
-
-    const { error: txError } = await supabase.from('transactions').insert({
-      user_id: user.id,
-      bank_id: bankId,
-      type: 'expense',
-      category: 'bills',
-      amount: bill.amount,
-      description: bill.name,
-      transaction_date: today,
-    })
-
-    if (txError) {
-      setBillError(txError.message)
-      setPayingId(null)
-      return
-    }
-
-    const { data: bankData, error: bankFetchError } = await supabase
-      .from('banks')
-      .select('balance')
-      .eq('id', bankId)
-      .single()
-
-    if (bankFetchError) {
-      setBillError(bankFetchError.message)
-      setPayingId(null)
-      return
-    }
-
-    const newBalance = (Number(bankData.balance) || 0) - bill.amount
-    const { error: bankUpdateError } = await supabase
-      .from('banks')
-      .update({ balance: newBalance })
-      .eq('id', bankId)
-
-    if (bankUpdateError) {
-      setBillError(bankUpdateError.message)
-      setPayingId(null)
-      return
-    }
-
-    let { error: billUpdateError } = await supabase
-      .from('bills')
-      .update({
-        is_paid: true,
-        paid_at: new Date().toISOString(),
-        billing_month: currentMonth,
-      })
-      .eq('id', bill.id)
-
-    if (billUpdateError) {
-      const fallback = await supabase
-        .from('bills')
-        .update({ category: `paid:${currentMonth}` })
-        .eq('id', bill.id)
-      billUpdateError = fallback.error
-    }
-
-    if (billUpdateError) {
-      setBillError(billUpdateError.message)
-      setPayingId(null)
-      return
-    }
-
-    if (bill.vault_id) {
-      await supabase
-        .from('vaults')
-        .update({ current_amount: 0 })
-        .eq('id', bill.vault_id)
-    }
-
-    setPayingId(null)
-    setModalRefreshKey(k => k + 1)
-  }
+  const dataRefreshKey = `${refreshKey}-${modalRefreshKey}`
 
   if (loading) {
     return (
@@ -237,70 +62,44 @@ export default function Dashboard({ refreshKey, onViewReports }) {
   }
 
   return (
-    <div className="bg-gray-50">
-      <div className="px-5 py-4">
-        <SafeToSpend amount={safeToSpend} />
-
-        <button
-          type="button"
-          onClick={() => setShowPaydayWizard(true)}
-          className="w-full mb-6 py-3 rounded-2xl bg-amber-500 text-white font-semibold text-sm shadow-md hover:bg-amber-600 transition-colors"
-        >
-          {t('gotPaid')}
-        </button>
-
-        <div className="flex gap-3 mb-4">
-          <div className="flex-1 bg-white rounded-xl p-3 border border-gray-100">
-            <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">{t('totalBalance')}</p>
-            <p className="text-base font-bold text-gray-800">
-              {formatMoney(totalBalance)}
-            </p>
-          </div>
-          <div className="flex-1 bg-white rounded-xl p-3 border border-gray-100">
-            <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">{t('protected')}</p>
-            <p className="text-base font-bold text-gray-800">
-              {formatMoney(protectedAmount)}
-            </p>
+    <div className="min-h-screen bg-gray-50">
+      <div className="px-4 pt-4 pb-6 space-y-4">
+        <div className="bg-gradient-to-br from-purple-600 to-purple-800 rounded-3xl p-5 text-white shadow-lg">
+          <p className="text-xs font-medium text-purple-200 uppercase tracking-wider mb-1">{t('safeToSpend')}</p>
+          <p className="text-4xl font-bold mb-1">{formatMoney(safeToSpend)}</p>
+          <p className="text-xs text-purple-200 mb-4">{t('safeToSpendSubtitle')}</p>
+          <div className="flex gap-4 pt-3 border-t border-purple-500">
+            <div>
+              <p className="text-[10px] text-purple-300">{t('totalBalance')}</p>
+              <p className="text-sm font-semibold">{formatMoney(totalBalance)}</p>
+            </div>
+            <div className="w-px bg-purple-500" />
+            <div>
+              <p className="text-[10px] text-purple-300">{t('protected')}</p>
+              <p className="text-sm font-semibold">{formatMoney(protectedAmount)}</p>
+            </div>
           </div>
         </div>
 
-        {dueBills.length > 0 && (
-          <div className="mb-4">
-            <div className="flex justify-between items-center mb-2">
-              <h2 className={sectionHeader}>{t('sectionDueThisWeek')}</h2>
-            </div>
-            {billError && <p className="text-red-500 text-xs mb-2">{billError}</p>}
-            <div className="-mx-5 px-5 flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory">
-              {dueBills.map(bill => (
-                <div
-                  key={bill.id}
-                  className="flex-shrink-0 snap-start w-[148px] rounded-2xl border border-gray-100 bg-white px-3 py-2.5 shadow-sm"
-                >
-                  <p className="text-xs font-medium text-gray-800 truncate">{bill.name}</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">{formatDueDate(bill.due_day)}</p>
-                  <p className="text-xs font-semibold text-gray-800 mt-1">{formatMoney(bill.amount)}</p>
-                  <button
-                    onClick={() => handleMarkPaid(bill)}
-                    disabled={payingId === bill.id}
-                    className="mt-2 w-full py-1 rounded-full bg-purple-600 text-white text-[10px] font-medium disabled:opacity-50"
-                  >
-                    {payingId === bill.id ? '...' : t('pay')}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="mb-2 flex justify-between items-center">
-          <h2 className={sectionHeader}>{t('sectionVaults')}</h2>
-          <button onClick={() => setShowAddVault(true)} className="text-[10px] text-purple-600 font-medium uppercase tracking-wide">
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => setShowPaydayWizard(true)}
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-amber-500 text-white font-semibold text-sm shadow-sm hover:bg-amber-600 transition-colors"
+          >
+            💰 {t('gotPaid')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAddVault(true)}
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-white border border-gray-200 text-purple-600 font-semibold text-sm shadow-sm"
+          >
             + {t('addVault')}
           </button>
         </div>
 
-        {totalBalance === 0 && vaults.length === 0 ? (
-          <div className="bg-purple-50 border border-purple-100 rounded-2xl p-5 text-center mb-4">
+        {totalBalance === 0 && vaults.length === 0 && (
+          <div className="bg-purple-50 border border-purple-100 rounded-2xl p-5 text-center">
             <p className="text-2xl mb-2">👋</p>
             <p className="text-sm font-semibold text-purple-700 mb-1">{t('welcomeOnboardingTitle')}</p>
             <p className="text-xs text-purple-500 mb-4">{t('welcomeOnboardingBody')}</p>
@@ -312,36 +111,31 @@ export default function Dashboard({ refreshKey, onViewReports }) {
               {t('onboardingAddBank')}
             </button>
           </div>
-        ) : vaults.length === 0 ? (
-          <div className="bg-white rounded-xl p-4 text-center border border-gray-100">
-            <p className="text-gray-400 text-xs">{t('noVaults')}</p>
-            <button onClick={() => setShowAddVault(true)} className="mt-2 text-purple-600 text-xs font-medium">
-              {t('createFirstVault')}
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-1.5">
-            {vaults.map(vault => (
-              <VaultCard
-                key={vault.id}
-                vault={vault}
-                onClick={() => setEditingVault(vault)}
-              />
-            ))}
-          </div>
         )}
 
-        <MonthSnapshot
-          refreshKey={`${refreshKey}-${modalRefreshKey}`}
-          onViewReports={onViewReports}
-        />
+        <MonthSnapshot refreshKey={dataRefreshKey} onViewReports={onViewReports} />
 
-        {creditCards.length > 0 && (
-          <div className="mt-4">
-            <h2 className={`${sectionHeader} mb-2`}>{t('sectionCards')}</h2>
-            <div>
-              {creditCards.map(card => (
-                <CardRow key={card.id} card={card} utilizationLabel={t('utilization')} />
+        <BillsThisWeek refreshKey={dataRefreshKey} />
+
+        {vaults.length > 0 && (
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('vaults')}</p>
+              <button
+                type="button"
+                onClick={() => setShowAddVault(true)}
+                className="text-xs text-purple-600 font-medium"
+              >
+                + {t('addVault')}
+              </button>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {vaults.map(vault => (
+                <VaultMiniCard
+                  key={vault.id}
+                  vault={vault}
+                  onClick={() => setEditingVault(vault)}
+                />
               ))}
             </div>
           </div>
