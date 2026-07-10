@@ -299,6 +299,13 @@ export default {
       categoryInsurance: 'Insurance',
       categoryPersonal: 'Personal',
       categoryOther: 'Other',
+      categoryAuto: 'Auto',
+      categoryBusiness: 'Business',
+
+      // Onboarding
+      welcomeOnboardingTitle: 'Welcome to Lala',
+      welcomeOnboardingBody: 'Start by adding a bank account to see your safe-to-spend balance.',
+      onboardingAddBank: '+ Add Bank Account',
 
       // Month snapshot
       thisMonth: 'This Month',

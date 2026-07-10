@@ -21,11 +21,16 @@ const RULES = [
   { pattern: /arco|shell|chevron|exxon|mobil|bp|gas/i, category: 'gas' },
   { pattern: /insurance/i, category: 'insurance' },
   { pattern: /supercuts|salon|haircut|barber/i, category: 'personal' },
+  { pattern: /ccoc|car\s?payment|auto\s?loan|auto\s?pay|motor/i, category: 'auto' },
+  { pattern: /xcel|solutions|consulting/i, category: 'business' },
+  { pattern: /napa\s?benefits|mvq\*/i, category: 'health' },
+  { pattern: /chestnut|pediatric|medical|clinic|hospital/i, category: 'health' },
+  { pattern: /kendel|rodas|stylist|spa/i, category: 'personal' },
 ]
 
 const EXPENSE_CATEGORIES = [
   'transport', 'shopping', 'dining', 'subscriptions', 'utilities', 'health',
-  'travel', 'entertainment', 'gas', 'insurance', 'personal', 'other',
+  'travel', 'entertainment', 'gas', 'insurance', 'personal', 'auto', 'business', 'other',
   'essential', 'food', 'fun', 'bills', 'debt', 'weeklyLiving', 'emergency',
 ]
 

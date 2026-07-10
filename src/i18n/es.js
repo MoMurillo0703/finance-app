@@ -299,6 +299,13 @@ export default {
       categoryInsurance: 'Seguros',
       categoryPersonal: 'Personal',
       categoryOther: 'Otros',
+      categoryAuto: 'Auto',
+      categoryBusiness: 'Negocios',
+
+      // Onboarding
+      welcomeOnboardingTitle: 'Bienvenido a Lala',
+      welcomeOnboardingBody: 'Comienza agregando una cuenta bancaria para ver tu saldo disponible.',
+      onboardingAddBank: '+ Agregar cuenta bancaria',
 
       // Month snapshot
       thisMonth: 'Este mes',

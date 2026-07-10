@@ -11,6 +11,8 @@ export const IMPORT_CATEGORY_MAP = {
   gas: 'essential',
   insurance: 'bills',
   personal: 'fun',
+  auto: 'essential',
+  business: 'essential',
   other: 'essential',
 }
 

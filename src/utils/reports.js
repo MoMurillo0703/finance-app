@@ -10,6 +10,8 @@ export const SPENDING_CATEGORIES = [
   'gas',
   'insurance',
   'personal',
+  'auto',
+  'business',
   'other',
 ]
 
@@ -25,6 +27,11 @@ const CATEGORY_RULES = [
   { pattern: /arco|shell|chevron|exxon|mobil|bp|gas/i, category: 'gas' },
   { pattern: /insurance/i, category: 'insurance' },
   { pattern: /supercuts|salon|haircut|barber/i, category: 'personal' },
+  { pattern: /ccoc|car\s?payment|auto\s?loan|auto\s?pay|motor/i, category: 'auto' },
+  { pattern: /xcel|solutions|consulting/i, category: 'business' },
+  { pattern: /napa\s?benefits|mvq\*/i, category: 'health' },
+  { pattern: /chestnut|pediatric|medical|clinic|hospital/i, category: 'health' },
+  { pattern: /kendel|rodas|stylist|spa/i, category: 'personal' },
 ]
 
 const DB_CATEGORY_MAP = {
@@ -41,6 +48,8 @@ const DB_CATEGORY_MAP = {
   gas: 'gas',
   insurance: 'insurance',
   personal: 'personal',
+  auto: 'auto',
+  business: 'business',
   other: 'other',
   bills: 'utilities',
   essential: 'other',
@@ -205,5 +214,7 @@ export const CATEGORY_EMOJI = {
   gas: '⛽',
   insurance: '🛡️',
   personal: '💇',
+  auto: '🚗',
+  business: '💼',
   other: '📦',
 }

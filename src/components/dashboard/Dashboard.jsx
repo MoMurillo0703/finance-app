@@ -244,17 +244,14 @@ export default function Dashboard({ refreshKey, onViewReports }) {
         <button
           type="button"
           onClick={() => setShowPaydayWizard(true)}
-          className="w-full mb-4 py-3 rounded-xl border border-amber-300 bg-gradient-to-r from-amber-100 to-yellow-100 text-sm font-medium text-amber-900"
+          className="w-full mb-6 py-3 rounded-2xl bg-amber-500 text-white font-semibold text-sm shadow-md hover:bg-amber-600 transition-colors"
         >
           {t('gotPaid')}
         </button>
 
         <div className="flex gap-3 mb-4">
           <div className="flex-1 bg-white rounded-xl p-3 border border-gray-100">
-            <div className="flex justify-between items-center mb-0.5">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide">{t('totalBalance')}</p>
-              <button onClick={() => setShowAddBank(true)} className="text-xs text-purple-600 font-medium">+</button>
-            </div>
+            <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">{t('totalBalance')}</p>
             <p className="text-base font-bold text-gray-800">
               {formatMoney(totalBalance)}
             </p>
@@ -302,7 +299,20 @@ export default function Dashboard({ refreshKey, onViewReports }) {
           </button>
         </div>
 
-        {vaults.length === 0 ? (
+        {totalBalance === 0 && vaults.length === 0 ? (
+          <div className="bg-purple-50 border border-purple-100 rounded-2xl p-5 text-center mb-4">
+            <p className="text-2xl mb-2">👋</p>
+            <p className="text-sm font-semibold text-purple-700 mb-1">{t('welcomeOnboardingTitle')}</p>
+            <p className="text-xs text-purple-500 mb-4">{t('welcomeOnboardingBody')}</p>
+            <button
+              type="button"
+              onClick={() => setShowAddBank(true)}
+              className="px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium"
+            >
+              {t('onboardingAddBank')}
+            </button>
+          </div>
+        ) : vaults.length === 0 ? (
           <div className="bg-white rounded-xl p-4 text-center border border-gray-100">
             <p className="text-gray-400 text-xs">{t('noVaults')}</p>
             <button onClick={() => setShowAddVault(true)} className="mt-2 text-purple-600 text-xs font-medium">
