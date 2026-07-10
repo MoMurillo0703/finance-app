@@ -205,6 +205,7 @@ export default {
       assignVault: 'Assign to vault',
       noVault: 'No vault',
       noVaultsHint: 'No vaults — create one first',
+      unknownAccount: 'Unknown account',
 
       // Import CSV
       importCsv: 'Import CSV',

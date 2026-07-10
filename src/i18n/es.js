@@ -205,6 +205,7 @@ export default {
       assignVault: 'Asignar a bóveda',
       noVault: 'Sin bóveda',
       noVaultsHint: 'No hay bóvedas — crea una primero',
+      unknownAccount: 'Cuenta desconocida',
 
       // Import CSV
       importCsv: 'Importar CSV',

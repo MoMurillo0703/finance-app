@@ -387,60 +387,69 @@ export default function ImportModal({ onClose, onComplete }) {
       transaction_date: row.date,
     }))
 
-    const { error: insertError } = await supabase.from('transactions').insert(inserts)
-    if (insertError) {
-      setError(insertError.message)
-      setImporting(false)
-      return
-    }
-
-    let incomeTotal = 0
-    let expenseTotal = 0
-    checked.forEach(row => {
-      if (row.type === 'income') incomeTotal += row.amount
-      else expenseTotal += row.amount
-    })
-
-    if (bankId) {
-      const delta = checked.reduce((sum, row) => sum + bankDelta(row.type, row.amount), 0)
-      const balanceError = await adjustBankBalance(bankId, delta)
-      if (balanceError) {
-        setError(balanceError.message)
+    try {
+      const { error: insertError } = await supabase.from('transactions').insert(inserts)
+      if (insertError) {
+        console.error('Import insert failed:', insertError)
+        setError(insertError.message)
         setImporting(false)
         return
       }
-    }
 
-    if (cardId) {
-      const delta = checked.reduce((sum, row) => sum + cardDelta(row.type, row.amount), 0)
-      const balanceError = await adjustCardBalance(cardId, delta)
-      if (balanceError) {
-        setError(balanceError.message)
-        setImporting(false)
-        return
+      let incomeTotal = 0
+      let expenseTotal = 0
+      checked.forEach(row => {
+        if (row.type === 'income') incomeTotal += row.amount
+        else expenseTotal += row.amount
+      })
+
+      if (bankId) {
+        const delta = checked.reduce((sum, row) => sum + bankDelta(row.type, row.amount), 0)
+        const balanceError = await adjustBankBalance(bankId, delta)
+        if (balanceError) {
+          console.error('Import bank balance update failed:', balanceError)
+          setError(balanceError.message)
+          setImporting(false)
+          return
+        }
       }
-    }
 
-    const summaryData = buildSummary(checked)
-    setPendingSummary({
-      count: checked.length,
-      incomeTotal,
-      expenseTotal,
-      ...summaryData,
-    })
+      if (cardId) {
+        const delta = checked.reduce((sum, row) => sum + cardDelta(row.type, row.amount), 0)
+        const balanceError = await adjustCardBalance(cardId, delta)
+        if (balanceError) {
+          console.error('Import card balance update failed:', balanceError)
+          setError(balanceError.message)
+          setImporting(false)
+          return
+        }
+      }
 
-    setImporting(false)
-
-    if (interestAmount && interestAmount > 0) {
-      setShowInterestPrompt(true)
-    } else {
-      setSummary({
+      const summaryData = buildSummary(checked)
+      setPendingSummary({
         count: checked.length,
         incomeTotal,
         expenseTotal,
         ...summaryData,
       })
-      setStep(4)
+
+      setImporting(false)
+
+      if (interestAmount && interestAmount > 0) {
+        setShowInterestPrompt(true)
+      } else {
+        setSummary({
+          count: checked.length,
+          incomeTotal,
+          expenseTotal,
+          ...summaryData,
+        })
+        setStep(4)
+      }
+    } catch (err) {
+      console.error('Import failed:', err)
+      setError(err.message || String(err))
+      setImporting(false)
     }
   }
 
@@ -490,28 +499,34 @@ export default function ImportModal({ onClose, onComplete }) {
     const cardId = account.accountType === 'card' ? account.id : null
     const today = new Date().toISOString().split('T')[0]
 
-    const { error: insertError } = await supabase.from('transactions').insert({
-      user_id: user.id,
-      bank_id: bankId,
-      credit_card_id: cardId,
-      type: 'expense',
-      amount: interestAmount,
-      description: 'Interest charge',
-      category: 'debt',
-      transaction_date: today,
-    })
+    try {
+      const { error: insertError } = await supabase.from('transactions').insert({
+        user_id: user.id,
+        bank_id: bankId,
+        credit_card_id: cardId,
+        type: 'expense',
+        amount: interestAmount,
+        description: 'Interest charge',
+        category: 'debt',
+        transaction_date: today,
+      })
 
-    if (insertError) {
-      setError(insertError.message)
-      return
+      if (insertError) {
+        console.error('Interest charge insert failed:', insertError)
+        setError(insertError.message)
+        return
+      }
+
+      if (bankId) await adjustBankBalance(bankId, -interestAmount)
+      if (cardId) await adjustCardBalance(cardId, interestAmount)
+
+      setShowInterestPrompt(false)
+      setSummary(pendingSummary)
+      setStep(4)
+    } catch (err) {
+      console.error('Interest charge import failed:', err)
+      setError(err.message || String(err))
     }
-
-    if (bankId) await adjustBankBalance(bankId, -interestAmount)
-    if (cardId) await adjustCardBalance(cardId, interestAmount)
-
-    setShowInterestPrompt(false)
-    setSummary(pendingSummary)
-    setStep(4)
   }
 
   const handleInterestNo = () => {
