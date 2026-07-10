@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase'
 export default function EditCardModal({ card, onClose, onSaved }) {
   const { t } = useTranslation()
   const [currentBalance, setCurrentBalance] = useState(String(card.current_balance ?? ''))
+  const [creditLimit, setCreditLimit] = useState(String(card.credit_limit ?? ''))
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
@@ -14,11 +15,18 @@ export default function EditCardModal({ card, onClose, onSaved }) {
       setError(t('invalidAmount'))
       return
     }
+    if (!creditLimit || isNaN(creditLimit)) {
+      setError(t('invalidAmount'))
+      return
+    }
 
     setSaving(true)
     const { error: dbError } = await supabase
       .from('credit_cards')
-      .update({ current_balance: parseFloat(currentBalance) })
+      .update({
+        current_balance: parseFloat(currentBalance),
+        credit_limit: parseFloat(creditLimit),
+      })
       .eq('id', card.id)
 
     if (dbError) {
@@ -63,6 +71,17 @@ export default function EditCardModal({ card, onClose, onSaved }) {
               type="number"
               value={currentBalance}
               onChange={e => setCurrentBalance(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">{t('creditLimit')} (COP)</label>
+            <input
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              placeholder="0"
+              type="number"
+              value={creditLimit}
+              onChange={e => setCreditLimit(e.target.value)}
             />
           </div>
         </div>
