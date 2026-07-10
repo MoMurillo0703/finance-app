@@ -230,14 +230,14 @@ export default function Dashboard({ refreshKey, onViewReports }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="bg-gray-50 flex items-center justify-center py-20">
         <p className="text-gray-400">{t('loading')}</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="bg-gray-50">
       <div className="px-5 py-4">
         <SafeToSpend amount={safeToSpend} />
 

@@ -175,7 +175,7 @@ export default function BillsScreen({ onBillPaid }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="bg-gray-50">
       <div className="px-5 py-4">
         {error && <p className="text-red-500 text-xs mb-3">{error}</p>}
 

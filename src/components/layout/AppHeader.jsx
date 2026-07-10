@@ -18,7 +18,7 @@ export default function AppHeader({ activeTab }) {
   const title = titleKey ? t(titleKey) : 'Lala'
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-100 flex items-center justify-between px-5 h-14 safe-area-top">
+    <header className="fixed top-0 left-0 right-0 z-[100] bg-white border-b border-gray-100 flex items-center justify-between px-5 h-14">
       <span className={`text-lg font-bold ${activeTab === 'home' ? 'text-purple-600' : 'text-gray-800'}`}>
         {title}
       </span>
@@ -33,6 +33,6 @@ export default function AppHeader({ activeTab }) {
         </svg>
         {t('logout')}
       </button>
-    </div>
+    </header>
   )
 }

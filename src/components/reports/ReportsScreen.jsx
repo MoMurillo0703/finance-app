@@ -162,7 +162,7 @@ export default function ReportsScreen() {
   const interestYTD = interestTransactions.reduce((sum, tx) => sum + tx.amount, 0)
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-6">
+    <div className="bg-gray-50 pb-6">
       <div className="px-6 py-6 space-y-6">
         <section className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between">

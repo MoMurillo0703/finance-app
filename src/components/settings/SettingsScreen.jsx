@@ -86,7 +86,7 @@ export default function SettingsScreen({ onBankSaved, onPrefsChanged }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="bg-gray-50">
       <div className="px-6 py-6 space-y-8">
         <section>
           <div className="flex justify-between items-center mb-3">

@@ -215,7 +215,7 @@ export default function TransactionsScreen({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="bg-gray-50">
       <div className="bg-white px-6 py-3 border-b border-gray-100">
         {filterCreditCardId && (
           <button

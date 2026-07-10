@@ -42,15 +42,15 @@ function AppContent() {
   }
 
   return (
-    <div>
+    <div className="min-h-screen bg-gray-50">
       <AppHeader activeTab={activeTab} />
-      <div className="pt-14 pb-20">
-        <div className={activeTab === 'home' ? '' : 'hidden'}>
+      <main className="pt-14 pb-20 relative z-0">
+        {activeTab === 'home' && (
           <Dashboard
             refreshKey={`${dashboardRefreshKey}-${prefsVersion}`}
             onViewReports={() => handleTabChange('reports')}
           />
-        </div>
+        )}
         {activeTab === 'transactions' && (
           <TransactionsScreen
             key={prefsVersion}
@@ -79,7 +79,7 @@ function AppContent() {
             onPrefsChanged={bumpPrefs}
           />
         )}
-      </div>
+      </main>
       <BottomNav active={activeTab} onChange={handleTabChange} />
     </div>
   )

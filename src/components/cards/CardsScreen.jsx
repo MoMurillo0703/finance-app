@@ -52,7 +52,7 @@ export default function CardsScreen({ onCardSaved, onViewTransactions }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="bg-gray-50">
       <div className="px-5 py-4">
         {loading ? (
           <p className="text-gray-400 text-xs text-center py-8">{t('loading')}</p>
