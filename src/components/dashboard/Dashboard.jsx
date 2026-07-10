@@ -7,7 +7,7 @@ import VaultCard from './VaultCard'
 import AddVaultModal from './AddVaultModal'
 import AddBankModal from './AddBankModal'
 
-export default function Dashboard() {
+export default function Dashboard({ refreshKey }) {
   const { user, signOut } = useAuth()
   const { t, i18n } = useTranslation()
   const [vaults, setVaults] = useState([])
@@ -15,7 +15,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [showAddVault, setShowAddVault] = useState(false)
   const [showAddBank, setShowAddBank] = useState(false)
-  const [refreshKey, setRefreshKey] = useState(0)
+  const [modalRefreshKey, setModalRefreshKey] = useState(0)
 
   useEffect(() => {
     let active = true
@@ -35,18 +35,13 @@ export default function Dashboard() {
 
       if (!active) return
 
-      if (vaultsData) setVaults(vaultsData)
-
-      if (banksData) {
-        const total = banksData.reduce((sum, bank) => sum + (bank.balance || 0), 0)
-        setTotalBalance(total)
-      }
-
+      setVaults(vaultsData ?? [])
+      setTotalBalance((banksData ?? []).reduce((sum, bank) => sum + (bank.balance || 0), 0))
       setLoading(false)
     })()
 
     return () => { active = false }
-  }, [user.id, refreshKey])
+  }, [user.id, refreshKey, modalRefreshKey])
 
   const protectedAmount = vaults.reduce((sum, v) => sum + (v.current_amount || 0), 0)
   const safeToSpend = totalBalance - protectedAmount
@@ -133,14 +128,14 @@ export default function Dashboard() {
       {showAddVault && (
         <AddVaultModal
           onClose={() => setShowAddVault(false)}
-          onSaved={() => { setShowAddVault(false); setRefreshKey(k => k + 1) }}
+          onSaved={() => { setShowAddVault(false); setModalRefreshKey(k => k + 1) }}
         />
       )}
 
       {showAddBank && (
         <AddBankModal
           onClose={() => setShowAddBank(false)}
-          onSaved={() => { setShowAddBank(false); setRefreshKey(k => k + 1) }}
+          onSaved={() => { setShowAddBank(false); setModalRefreshKey(k => k + 1) }}
         />
       )}
     </div>

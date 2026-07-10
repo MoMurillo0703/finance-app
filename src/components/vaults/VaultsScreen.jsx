@@ -6,7 +6,7 @@ import VaultCard from '../dashboard/VaultCard'
 import AddVaultModal from '../dashboard/AddVaultModal'
 import EditVaultModal from './EditVaultModal'
 
-export default function VaultsScreen() {
+export default function VaultsScreen({ onVaultSaved }) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [vaults, setVaults] = useState([])
@@ -83,7 +83,11 @@ export default function VaultsScreen() {
       {showAdd && (
         <AddVaultModal
           onClose={() => setShowAdd(false)}
-          onSaved={() => { setShowAdd(false); setRefreshKey(k => k + 1) }}
+          onSaved={() => {
+            setShowAdd(false)
+            setRefreshKey(k => k + 1)
+            onVaultSaved?.()
+          }}
         />
       )}
 
@@ -91,7 +95,11 @@ export default function VaultsScreen() {
         <EditVaultModal
           vault={editingVault}
           onClose={() => setEditingVault(null)}
-          onSaved={() => { setEditingVault(null); setRefreshKey(k => k + 1) }}
+          onSaved={() => {
+            setEditingVault(null)
+            setRefreshKey(k => k + 1)
+            onVaultSaved?.()
+          }}
         />
       )}
     </div>

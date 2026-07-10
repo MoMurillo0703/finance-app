@@ -111,8 +111,12 @@ export default {
       descriptionPlaceholder: 'Ej: Mercado, Salario, Netflix',
       invalidAmount: 'Monto inválido',
       selectBank: 'Selecciona una cuenta',
+      selectCategory: 'Selecciona una categoría',
       noBanksHint: 'No hay cuentas — agrega una primero',
       noTransactions: 'No hay transacciones todavía.',
       addFirstTransaction: '+ Agregar primera transacción',
+      assignVault: 'Asignar a bóveda',
+      noVault: 'Sin bóveda',
+      noVaultsHint: 'No hay bóvedas — crea una primero',
     }
   }

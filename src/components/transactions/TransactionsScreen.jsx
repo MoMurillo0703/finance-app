@@ -11,7 +11,7 @@ const formatCOP = (value) =>
     minimumFractionDigits: 0,
   }).format(value)
 
-export default function TransactionsScreen() {
+export default function TransactionsScreen({ onTransactionSaved }) {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const [transactions, setTransactions] = useState([])
@@ -25,9 +25,9 @@ export default function TransactionsScreen() {
     ;(async () => {
       const { data } = await supabase
         .from('transactions')
-        .select('id, type, amount, description, date, banks(name)')
+        .select('id, type, amount, description, transaction_date, banks(name), vaults(name)')
         .eq('user_id', user.id)
-        .order('date', { ascending: false })
+        .order('transaction_date', { ascending: false })
 
       if (!active) return
       if (data) setTransactions(data)
@@ -80,7 +80,11 @@ export default function TransactionsScreen() {
                     {tx.description || (tx.type === 'income' ? t('income') : t('expense'))}
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {tx.banks?.name ? `${tx.banks.name} · ` : ''}{formatDate(tx.date)}
+                    {[
+                      tx.banks?.name,
+                      tx.vaults?.name,
+                      formatDate(tx.transaction_date),
+                    ].filter(Boolean).join(' · ')}
                   </p>
                 </div>
                 <p
@@ -105,7 +109,11 @@ export default function TransactionsScreen() {
       {showAdd && (
         <AddTransactionModal
           onClose={() => setShowAdd(false)}
-          onSaved={() => { setShowAdd(false); setRefreshKey(k => k + 1) }}
+          onSaved={() => {
+            setShowAdd(false)
+            setRefreshKey(k => k + 1)
+            onTransactionSaved?.()
+          }}
         />
       )}
     </div>

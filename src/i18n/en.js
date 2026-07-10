@@ -111,8 +111,12 @@ export default {
       descriptionPlaceholder: 'e.g. Groceries, Salary, Netflix',
       invalidAmount: 'Enter a valid amount',
       selectBank: 'Select an account',
+      selectCategory: 'Select a category',
       noBanksHint: 'No accounts — add one first',
       noTransactions: "You don't have any transactions yet.",
       addFirstTransaction: '+ Add first transaction',
+      assignVault: 'Assign to vault',
+      noVault: 'No vault',
+      noVaultsHint: 'No vaults — create one first',
     }
   }

@@ -11,6 +11,14 @@ function AppContent() {
   const { user } = useAuth()
   const [showSignup, setShowSignup] = useState(false)
   const [activeTab, setActiveTab] = useState('home')
+  const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0)
+
+  const bumpDashboard = () => setDashboardRefreshKey(k => k + 1)
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab)
+    if (tab === 'home') bumpDashboard()
+  }
 
   if (!user) {
     return showSignup
@@ -20,15 +28,19 @@ function AppContent() {
 
   return (
     <div className="pb-20">
-      {activeTab === 'home' && <Dashboard />}
-      {activeTab === 'transactions' && <TransactionsScreen />}
-      {activeTab === 'vaults' && <VaultsScreen />}
+      <div className={activeTab === 'home' ? '' : 'hidden'}>
+        <Dashboard refreshKey={dashboardRefreshKey} />
+      </div>
+      {activeTab === 'transactions' && (
+        <TransactionsScreen onTransactionSaved={bumpDashboard} />
+      )}
+      {activeTab === 'vaults' && <VaultsScreen onVaultSaved={bumpDashboard} />}
       {activeTab === 'settings' && (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <p className="text-gray-400">Ajustes — próximamente</p>
         </div>
       )}
-      <BottomNav active={activeTab} onChange={setActiveTab} />
+      <BottomNav active={activeTab} onChange={handleTabChange} />
     </div>
   )
 }
