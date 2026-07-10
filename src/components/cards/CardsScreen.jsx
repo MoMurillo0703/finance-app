@@ -4,6 +4,8 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import AddCardModal from './AddCardModal'
 import EditCardModal from './EditCardModal'
+import AddCuotaModal from './AddCuotaModal'
+import CuotasSection from './CuotasSection'
 
 const formatMoney = (value, currency = 'COP') =>
   new Intl.NumberFormat('es-CO', {
@@ -19,6 +21,8 @@ export default function CardsScreen({ onCardSaved }) {
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
   const [editingCard, setEditingCard] = useState(null)
+  const [expandedCardId, setExpandedCardId] = useState(null)
+  const [addCuotaCard, setAddCuotaCard] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
@@ -43,8 +47,13 @@ export default function CardsScreen({ onCardSaved }) {
   const handleSaved = () => {
     setShowAdd(false)
     setEditingCard(null)
+    setAddCuotaCard(null)
     setRefreshKey(k => k + 1)
     onCardSaved?.()
+  }
+
+  const toggleExpand = (cardId) => {
+    setExpandedCardId(prev => (prev === cardId ? null : cardId))
   }
 
   return (
@@ -73,38 +82,68 @@ export default function CardsScreen({ onCardSaved }) {
               const balance = card.current_balance || 0
               const limit = card.credit_limit || 0
               const utilization = limit > 0 ? Math.min((balance / limit) * 100, 100) : 0
+              const isExpanded = expandedCardId === card.id
 
               return (
-                <button
+                <div
                   key={card.id}
-                  type="button"
-                  onClick={() => setEditingCard(card)}
-                  className="w-full text-left bg-white border border-gray-100 rounded-xl p-4 shadow-sm"
+                  className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm"
                 >
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <p className="text-sm font-medium text-gray-700">{card.name}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{card.network}</p>
+                  <button
+                    type="button"
+                    onClick={() => toggleExpand(card.id)}
+                    className="w-full text-left"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">{card.name}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{card.network}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-gray-800">{formatMoney(balance, currency)}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {t('limit')}: {formatMoney(limit, currency)}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-gray-800">{formatMoney(balance, currency)}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {t('limit')}: {formatMoney(limit, currency)}
+                    <div className="w-full bg-gray-100 rounded-full h-1">
+                      <div
+                        className="bg-purple-400 h-1 rounded-full"
+                        style={{ width: `${utilization}%` }}
+                      />
+                    </div>
+                    {limit > 0 && (
+                      <p className="text-[10px] text-gray-400 mt-1">
+                        {t('utilization')}: {Math.round(utilization)}%
                       </p>
-                    </div>
+                    )}
+                  </button>
+
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setAddCuotaCard(card)}
+                      className="flex-1 py-1.5 rounded-lg border border-purple-200 text-purple-600 text-[10px] font-medium"
+                    >
+                      + {t('addCuota')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingCard(card)}
+                      className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 text-[10px] font-medium"
+                    >
+                      {t('edit')}
+                    </button>
                   </div>
-                  <div className="w-full bg-gray-100 rounded-full h-1">
-                    <div
-                      className="bg-purple-400 h-1 rounded-full"
-                      style={{ width: `${utilization}%` }}
+
+                  {isExpanded && (
+                    <CuotasSection
+                      card={card}
+                      refreshKey={refreshKey}
+                      onUpdated={handleSaved}
                     />
-                  </div>
-                  {limit > 0 && (
-                    <p className="text-[10px] text-gray-400 mt-1">
-                      {t('utilization')}: {Math.round(utilization)}%
-                    </p>
                   )}
-                </button>
+                </div>
               )
             })}
           </div>
@@ -130,6 +169,14 @@ export default function CardsScreen({ onCardSaved }) {
         <EditCardModal
           card={editingCard}
           onClose={() => setEditingCard(null)}
+          onSaved={handleSaved}
+        />
+      )}
+
+      {addCuotaCard && (
+        <AddCuotaModal
+          card={addCuotaCard}
+          onClose={() => setAddCuotaCard(null)}
           onSaved={handleSaved}
         />
       )}

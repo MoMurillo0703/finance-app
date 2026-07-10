@@ -86,9 +86,19 @@ export default {
   
       // Cuotas
       cuotas: "Cuotas",
-      totalCuotas: "Total cuotas",
+      addCuota: "Cuota",
+      payCuota: "Pagar cuota",
+      cuotaDescription: "Descripción",
+      totalAmount: "Monto total",
+      numCuotas: "Número de cuotas",
+      cuotaAmount: "Cuota mensual",
+      startDate: "Fecha de inicio",
       paidCuotas: "Cuotas pagadas",
-      remaining: "Restantes",
+      remainingCuotas: "Saldo restante",
+      noCuotas: "No hay cuotas todavía.",
+      cuotaProgress: "{{paid}} de {{total}}",
+      totalCuotas: "Total cuotas",
+      remaining: "Restante",
   
       // Payday
       payday: "Día de pago",

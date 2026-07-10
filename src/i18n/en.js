@@ -86,8 +86,18 @@ export default {
   
       // Cuotas
       cuotas: "Installments",
-      totalCuotas: "Total installments",
+      addCuota: "Cuota",
+      payCuota: "Pay installment",
+      cuotaDescription: "Description",
+      totalAmount: "Total amount",
+      numCuotas: "Number of installments",
+      cuotaAmount: "Monthly payment",
+      startDate: "Start date",
       paidCuotas: "Paid installments",
+      remainingCuotas: "Remaining balance",
+      noCuotas: "No installments yet.",
+      cuotaProgress: "{{paid}} of {{total}}",
+      totalCuotas: "Total installments",
       remaining: "Remaining",
   
       // Payday
