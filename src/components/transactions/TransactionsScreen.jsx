@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -24,13 +24,45 @@ function enrichTransactions(transactions, banks, cards) {
   }))
 }
 
+function groupByMonth(transactions) {
+  const groups = {}
+  for (const tx of transactions) {
+    const monthKey = tx.transaction_date?.slice(0, 7)
+    if (!monthKey) continue
+    if (!groups[monthKey]) groups[monthKey] = []
+    groups[monthKey].push(tx)
+  }
+  return Object.entries(groups)
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([monthKey, items]) => ({ monthKey, items }))
+}
+
+function formatMonthLabel(monthKey, language) {
+  const [yyyy, mm] = monthKey.split('-')
+  const date = new Date(Number(yyyy), Number(mm) - 1, 1)
+  return date.toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', {
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
+function monthSummary(items) {
+  let charges = 0
+  let payments = 0
+  for (const tx of items) {
+    if (tx.type === 'expense') charges += tx.amount
+    else payments += tx.amount
+  }
+  return { charges, payments, count: items.length }
+}
+
 export default function TransactionsScreen({
   onTransactionSaved,
   filterCreditCardId,
   filterCardName,
   onClearFilter,
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
@@ -40,6 +72,93 @@ export default function TransactionsScreen({
   const [refreshKey, setRefreshKey] = useState(0)
   const [wizardPrefill, setWizardPrefill] = useState(null)
   const [showImport, setShowImport] = useState(false)
+  const [expandedMonths, setExpandedMonths] = useState(new Set())
+
+  const monthGroups = useMemo(() => groupByMonth(transactions), [transactions])
+  const listKey = `${filterCreditCardId ?? 'all'}-${refreshKey}`
+
+  useEffect(() => {
+    if (monthGroups.length === 0) {
+      setExpandedMonths(new Set())
+      return
+    }
+    setExpandedMonths(new Set([monthGroups[0].monthKey]))
+  }, [listKey, monthGroups.length, monthGroups[0]?.monthKey])
+
+  const toggleMonth = (monthKey) => {
+    setExpandedMonths(prev => {
+      const next = new Set(prev)
+      if (next.has(monthKey)) next.delete(monthKey)
+      else next.add(monthKey)
+      return next
+    })
+  }
+
+  const renderTransactionRow = (tx, nested = false) => (
+    <button
+      key={tx.id}
+      type="button"
+      onClick={() => setSelectedTransaction(tx)}
+      className={`w-full border border-gray-100 flex justify-between items-center text-left ${
+        nested
+          ? 'bg-gray-50 rounded-xl p-3'
+          : 'bg-white rounded-2xl p-4 shadow-sm'
+      }`}
+    >
+      <div className="min-w-0 pr-2">
+        <p className="text-sm font-medium text-gray-700 truncate">
+          {tx.description || txTypeLabel(tx.type, t)}
+        </p>
+        <p className="text-xs text-gray-400 mt-0.5">
+          {[
+            !filterCreditCardId && (getBankDisplayName(tx.banks) || tx.credit_cards?.name),
+            formatDate(tx.transaction_date),
+            t(tx.category, { defaultValue: tx.category }),
+          ].filter(Boolean).join(' · ')}
+        </p>
+      </div>
+      <p className={`text-sm font-bold shrink-0 ${txAmountClass(tx.type)}`}>
+        {txAmountPrefix(tx.type)}{formatMoney(tx.amount)}
+      </p>
+    </button>
+  )
+
+  const renderMonthGroups = () => (
+    <div className="space-y-3">
+      {monthGroups.map(({ monthKey, items }) => {
+        const summary = monthSummary(items)
+        const isExpanded = expandedMonths.has(monthKey)
+
+        return (
+          <div key={monthKey} className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+            <button
+              type="button"
+              onClick={() => toggleMonth(monthKey)}
+              className="w-full px-4 py-3 flex justify-between items-center text-left"
+            >
+              <div>
+                <p className="text-sm font-semibold text-gray-800 capitalize">
+                  {formatMonthLabel(monthKey, i18n.language)}
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {t('monthTransactionCount', { count: summary.count })}
+                  {summary.charges > 0 && ` · ${t('monthCharges')}: ${formatMoney(summary.charges)}`}
+                  {summary.payments > 0 && ` · ${t('monthPayments')}: ${formatMoney(summary.payments)}`}
+                </p>
+              </div>
+              <span className="text-gray-400 text-sm ml-2">{isExpanded ? '▾' : '▸'}</span>
+            </button>
+            {isExpanded && (
+              <div className="px-3 pb-3 space-y-2 border-t border-gray-50 pt-2">
+                {items.map(tx => renderTransactionRow(tx, true))}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+
 
   useEffect(() => {
     let active = true
@@ -156,32 +275,7 @@ export default function TransactionsScreen({
             )}
           </div>
         ) : (
-          <div className="space-y-3">
-            {transactions.map(tx => (
-              <button
-                key={tx.id}
-                type="button"
-                onClick={() => setSelectedTransaction(tx)}
-                className="w-full bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex justify-between items-center text-left"
-              >
-                <div>
-                  <p className="text-sm font-medium text-gray-700">
-                    {tx.description || txTypeLabel(tx.type, t)}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {[
-                      !filterCreditCardId && (getBankDisplayName(tx.banks) || tx.credit_cards?.name),
-                      formatDate(tx.transaction_date),
-                      t(tx.category, { defaultValue: tx.category }),
-                    ].filter(Boolean).join(' · ')}
-                  </p>
-                </div>
-                <p className={`text-sm font-bold ${txAmountClass(tx.type)}`}>
-                  {txAmountPrefix(tx.type)}{formatMoney(tx.amount)}
-                </p>
-              </button>
-            ))}
-          </div>
+          renderMonthGroups()
         )}
       </div>
 
