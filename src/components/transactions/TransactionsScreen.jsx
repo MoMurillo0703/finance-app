@@ -11,6 +11,17 @@ import { formatMoney } from '../../utils/currency'
 import { formatDate } from '../../utils/date'
 import { getBankDisplayName } from '../../utils/bank'
 
+function enrichTransactions(transactions, banks, cards) {
+  const bankMap = Object.fromEntries(banks.map(b => [b.id, b]))
+  const cardMap = Object.fromEntries(cards.map(c => [c.id, c]))
+
+  return transactions.map(tx => ({
+    ...tx,
+    banks: tx.bank_id ? bankMap[tx.bank_id] ?? null : null,
+    credit_cards: tx.credit_card_id ? cardMap[tx.credit_card_id] ?? null : null,
+  }))
+}
+
 export default function TransactionsScreen({ onTransactionSaved }) {
   const { t } = useTranslation()
   const { user } = useAuth()
@@ -26,17 +37,31 @@ export default function TransactionsScreen({ onTransactionSaved }) {
     let active = true
 
     ;(async () => {
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('*, banks(name, nickname), credit_cards(name), vaults(name)')
-        .eq('user_id', user.id)
-        .order('transaction_date', { ascending: false })
+      const [txRes, banksRes, cardsRes] = await Promise.all([
+        supabase
+          .from('transactions')
+          .select('id, type, amount, description, transaction_date, category, bank_id, credit_card_id, vault_id')
+          .eq('user_id', user.id)
+          .order('transaction_date', { ascending: false }),
+        supabase
+          .from('banks')
+          .select('id, name')
+          .eq('user_id', user.id)
+          .eq('is_active', true),
+        supabase
+          .from('credit_cards')
+          .select('id, name')
+          .eq('user_id', user.id)
+          .eq('is_active', true),
+      ])
 
       if (!active) return
-      if (error) {
-        console.error('Failed to fetch transactions:', error)
+
+      if (txRes.error) {
+        console.error('Failed to fetch transactions:', txRes.error)
       }
-      setTransactions(data ?? [])
+
+      setTransactions(enrichTransactions(txRes.data ?? [], banksRes.data ?? [], cardsRes.data ?? []))
       setLoading(false)
     })()
 
@@ -45,6 +70,7 @@ export default function TransactionsScreen({ onTransactionSaved }) {
 
   const handleTransactionSaved = () => {
     setShowAdd(false)
+    setShowImport(false)
     setRefreshKey(k => k + 1)
     onTransactionSaved?.()
   }
@@ -102,7 +128,7 @@ export default function TransactionsScreen({ onTransactionSaved }) {
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5">
                     {[
-                      getBankDisplayName(tx.banks) || tx.credit_cards?.name || tx.banks?.name || t('unknownAccount'),
+                      getBankDisplayName(tx.banks) || tx.credit_cards?.name || t('unknownAccount'),
                       tx.vaults?.name,
                       formatDate(tx.transaction_date),
                     ].filter(Boolean).join(' · ')}

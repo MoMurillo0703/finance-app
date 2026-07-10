@@ -235,6 +235,7 @@ export default {
       importReadyCount: 'Listo para importar {{count}} transacciones',
       importNoRows: 'No hay filas seleccionadas',
       importButton: 'Importar transacciones',
+      importInsertFailed: 'La importación falló — no se guardaron filas. Revisa los permisos de tu cuenta.',
       importInterestDetected: '⚠️ Cargo por interés detectado: {{amount}}. Se rastreará por separado.',
       importInterestPrompt: '¿Agregar {{amount}} de interés a {{account}}? Se registrará como gasto y actualizará tu balance.',
       importSummary: '✓ Importadas {{count}} transacciones. Gastos totales: {{expenses}}. Ingresos totales: {{income}}.',
@@ -257,5 +258,9 @@ export default {
       insurance: 'Seguros',
       personal: 'Personal',
       other: 'Otros',
+
+      // Card transactions
+      cardTransactions: 'Transacciones',
+      noCardTransactions: 'No hay transacciones en esta tarjeta todavía.',
     }
   }

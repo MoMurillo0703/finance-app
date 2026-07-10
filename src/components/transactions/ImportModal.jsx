@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 import { adjustBankBalance, adjustCardBalance, bankDelta, cardDelta } from '../../lib/payments'
 import { formatMoney, getUserCurrency } from '../../utils/currency'
 import { getBankDisplayName } from '../../utils/bank'
+import { categoryForDb } from '../../utils/categories'
 
 const RULES = [
   { pattern: /uber|lyft|taxi/i, category: 'transport' },
@@ -383,15 +384,26 @@ export default function ImportModal({ onClose, onComplete }) {
       type: row.type,
       amount: row.amount,
       description: row.description,
-      category: row.category,
+      category: categoryForDb(row.category),
       transaction_date: row.date,
     }))
 
     try {
-      const { error: insertError } = await supabase.from('transactions').insert(inserts)
+      const { data: inserted, error: insertError } = await supabase
+        .from('transactions')
+        .insert(inserts)
+        .select('id')
+
       if (insertError) {
         console.error('Import insert failed:', insertError)
         setError(insertError.message)
+        setImporting(false)
+        return
+      }
+
+      if (!inserted || inserted.length === 0) {
+        console.error('Import insert returned no rows — check RLS policies')
+        setError(t('importInsertFailed'))
         setImporting(false)
         return
       }
@@ -446,6 +458,8 @@ export default function ImportModal({ onClose, onComplete }) {
         })
         setStep(4)
       }
+
+      onComplete?.()
     } catch (err) {
       console.error('Import failed:', err)
       setError(err.message || String(err))
@@ -523,6 +537,7 @@ export default function ImportModal({ onClose, onComplete }) {
       setShowInterestPrompt(false)
       setSummary(pendingSummary)
       setStep(4)
+      onComplete?.()
     } catch (err) {
       console.error('Interest charge import failed:', err)
       setError(err.message || String(err))

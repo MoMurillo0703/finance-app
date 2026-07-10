@@ -235,6 +235,7 @@ export default {
       importReadyCount: 'Ready to import {{count}} transactions',
       importNoRows: 'No rows selected for import',
       importButton: 'Import transactions',
+      importInsertFailed: 'Import failed — no rows were saved. Check your account permissions.',
       importInterestDetected: '⚠️ Interest charge detected: {{amount}}. This will be tracked separately.',
       importInterestPrompt: 'Add {{amount}} interest charge to {{account}}? This will be recorded as an expense and update your balance.',
       importSummary: '✓ Imported {{count}} transactions. Total expenses: {{expenses}}. Total income: {{income}}.',
@@ -257,5 +258,9 @@ export default {
       insurance: 'Insurance',
       personal: 'Personal',
       other: 'Other',
+
+      // Card transactions
+      cardTransactions: 'Transactions',
+      noCardTransactions: 'No transactions on this card yet.',
     }
   }

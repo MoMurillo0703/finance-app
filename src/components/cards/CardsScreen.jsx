@@ -6,6 +6,7 @@ import AddCardModal from './AddCardModal'
 import EditCardModal from './EditCardModal'
 import AddCuotaModal from './AddCuotaModal'
 import CuotasSection from './CuotasSection'
+import CardTransactionsSection from './CardTransactionsSection'
 
 import { formatMoney } from '../../utils/currency'
 
@@ -132,11 +133,17 @@ export default function CardsScreen({ onCardSaved }) {
                   </div>
 
                   {isExpanded && (
-                    <CuotasSection
-                      card={card}
-                      refreshKey={refreshKey}
-                      onUpdated={handleSaved}
-                    />
+                    <>
+                      <CardTransactionsSection
+                        card={card}
+                        refreshKey={refreshKey}
+                      />
+                      <CuotasSection
+                        card={card}
+                        refreshKey={refreshKey}
+                        onUpdated={handleSaved}
+                      />
+                    </>
                   )}
                 </div>
               )
