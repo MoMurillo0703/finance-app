@@ -84,7 +84,7 @@ export default {
       settings: "Settings",
       language: "Language",
       logout: "Sign out",
-      logout: "Sign out",
+      loading: 'Loading...',
       safeToSpendSubtitle: 'You can spend this today',
       noVaults: "You don't have any vaults yet.",
       createFirstVault: '+ Create first vault',
@@ -92,6 +92,10 @@ export default {
       vaultNamePlaceholder: 'e.g. Rent, Travel, Emergency',
       vaultTarget: 'Goal (COP)',
       vaultCurrent: 'Current amount (COP)',
+      editVault: 'Edit vault',
+      vaultGoal: 'Goal',
+
+      // Banks
       addBank: 'Add account',
       bankName: 'Bank name',
       bankNamePlaceholder: 'e.g. Bancolombia, Nequi, Davivienda',
@@ -100,13 +104,15 @@ export default {
       checking: 'Checking',
       currentBalance: 'Current balance',
       myAccounts: 'My accounts',
-      addBank: 'Agregar cuenta',
-      bankName: 'Nombre del banco',
-      bankNamePlaceholder: 'Ej: Bancolombia, Nequi, Davivienda',
-      accountType: 'Tipo de cuenta',
-      savings: 'Ahorros',
-      checking: 'Corriente',
-      currentBalance: 'Saldo actual',
-      myAccounts: 'Mis cuentas',
+
+      // Transactions screen
+      expense: 'Expense',
+      income: 'Income',
+      descriptionPlaceholder: 'e.g. Groceries, Salary, Netflix',
+      invalidAmount: 'Enter a valid amount',
+      selectBank: 'Select an account',
+      noBanksHint: 'No accounts — add one first',
+      noTransactions: "You don't have any transactions yet.",
+      addFirstTransaction: '+ Add first transaction',
     }
   }

@@ -3,6 +3,8 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import Login from './components/auth/Login'
 import Signup from './components/auth/Signup'
 import Dashboard from './components/dashboard/Dashboard'
+import TransactionsScreen from './components/transactions/TransactionsScreen'
+import VaultsScreen from './components/vaults/VaultsScreen'
 import BottomNav from './components/layout/BottomNav'
 
 function AppContent() {
@@ -19,16 +21,8 @@ function AppContent() {
   return (
     <div className="pb-20">
       {activeTab === 'home' && <Dashboard />}
-      {activeTab === 'transactions' && (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <p className="text-gray-400">Transacciones — próximamente</p>
-        </div>
-      )}
-      {activeTab === 'vaults' && (
-        <div className="min-h-screbg-gray-50 flex items-center justify-center">
-          <p className="text-gray-400">Bóvedas — próximamente</p>
-        </div>
-      )}
+      {activeTab === 'transactions' && <TransactionsScreen />}
+      {activeTab === 'vaults' && <VaultsScreen />}
       {activeTab === 'settings' && (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <p className="text-gray-400">Ajustes — próximamente</p>

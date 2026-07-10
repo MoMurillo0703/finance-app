@@ -15,33 +15,38 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [showAddVault, setShowAddVault] = useState(false)
   const [showAddBank, setShowAddBank] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
-    fetchData()
-  }, [])
+    let active = true
 
-  const fetchData = async () => {
-    const { data: vaultsData } = await supabase
-      .from('vaults')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
+    ;(async () => {
+      const { data: vaultsData } = await supabase
+        .from('vaults')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
 
-    const { data: banksData } = await supabase
-      .from('banks')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
+      const { data: banksData } = await supabase
+        .from('banks')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
 
-    if (vaultsData) setVaults(vaultsData)
+      if (!active) return
 
-    if (banksData) {
-      const total = banksData.reduce((sum, bank) => sum + (bank.balance || 0), 0)
-      setTotalBalance(total)
-    }
+      if (vaultsData) setVaults(vaultsData)
 
-    setLoading(false)
-  }
+      if (banksData) {
+        const total = banksData.reduce((sum, bank) => sum + (bank.balance || 0), 0)
+        setTotalBalance(total)
+      }
+
+      setLoading(false)
+    })()
+
+    return () => { active = false }
+  }, [user.id, refreshKey])
 
   const protectedAmount = vaults.reduce((sum, v) => sum + (v.current_amount || 0), 0)
   const safeToSpend = totalBalance - protectedAmount
@@ -53,7 +58,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-400">Cargando...</p>
+        <p className="text-gray-400">{t('loading')}</p>
       </div>
     )
   }
@@ -128,14 +133,14 @@ export default function Dashboard() {
       {showAddVault && (
         <AddVaultModal
           onClose={() => setShowAddVault(false)}
-          onSaved={() => { setShowAddVault(false); fetchData() }}
+          onSaved={() => { setShowAddVault(false); setRefreshKey(k => k + 1) }}
         />
       )}
 
       {showAddBank && (
         <AddBankModal
           onClose={() => setShowAddBank(false)}
-          onSaved={() => { setShowAddBank(false); fetchData() }}
+          onSaved={() => { setShowAddBank(false); setRefreshKey(k => k + 1) }}
         />
       )}
     </div>

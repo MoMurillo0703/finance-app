@@ -91,5 +91,30 @@ export default {
       vaultNamePlaceholder: 'Ej: Arriendo, Viajes, Emergencias',
       vaultTarget: 'Meta (COP)',
       vaultCurrent: 'Monto actual (COP)',
+      editVault: 'Editar bóveda',
+      vaultGoal: 'Meta',
+
+      // Banks
+      addBank: 'Agregar cuenta',
+      bankName: 'Nombre del banco',
+      bankNamePlaceholder: 'Ej: Bancolombia, Nequi, Davivienda',
+      accountType: 'Tipo de cuenta',
+      savings: 'Ahorros',
+      checking: 'Corriente',
+      currentBalance: 'Saldo actual',
+      myAccounts: 'Mis cuentas',
+
+      // Transactions screen
+      expense: 'Gasto',
+      income: 'Ingreso',
+      descriptionPlaceholder: 'Ej: Mercado, Salario, Netflix',
+      invalidAmount: 'Ingresa un monto válido',
+      selectBank: 'Selecciona una cuenta',
+      noBanksHint: 'No hay cuentas — agrega una primero',
+      noTransactions: 'No tienes transacciones todavía.',
+      addFirstTransaction: '+ Agregar primera transacción',
+
+      // General
+      loading: 'Cargando...',
     }
   }
