@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { getUserCurrency } from '../../utils/currency'
 
 const NETWORKS = ['Visa', 'Mastercard', 'Amex', 'Other']
 
@@ -35,7 +36,7 @@ export default function AddCardModal({ onClose, onSaved }) {
       current_balance: parseFloat(currentBalance),
       statement_date: parseInt(statementDate, 10),
       due_date: parseInt(dueDate, 10),
-      currency: 'COP',
+      currency: getUserCurrency(),
       is_active: true,
     })
 
@@ -81,7 +82,7 @@ export default function AddCardModal({ onClose, onSaved }) {
           </div>
 
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">{t('creditLimit')} (COP)</label>
+            <label className="text-xs text-gray-400 mb-1 block">{t('creditLimit')} ({getUserCurrency()})</label>
             <input
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
               placeholder="0"
@@ -92,7 +93,7 @@ export default function AddCardModal({ onClose, onSaved }) {
           </div>
 
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">{t('balance')} (COP)</label>
+            <label className="text-xs text-gray-400 mb-1 block">{t('balance')} ({getUserCurrency()})</label>
             <input
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
               placeholder="0"

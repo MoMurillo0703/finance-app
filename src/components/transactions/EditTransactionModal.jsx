@@ -9,6 +9,8 @@ import {
   bankDelta,
   cardDelta,
 } from '../../lib/payments'
+import { getUserCurrency } from '../../utils/currency'
+import { getBankDisplayName } from '../../utils/bank'
 
 const EXPENSE_CATEGORIES = ['essential', 'food', 'travel', 'fun', 'bills', 'debt', 'weeklyLiving', 'emergency']
 const INCOME_CATEGORIES = ['salary', 'commission', 'reimbursement']
@@ -36,7 +38,7 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
   useEffect(() => {
     supabase
       .from('banks')
-      .select('id, name')
+      .select('id, name, nickname')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .order('name')
@@ -291,7 +293,7 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
           )}
 
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">{t('amount')} (COP)</label>
+            <label className="text-xs text-gray-400 mb-1 block">{t('amount')} ({getUserCurrency()})</label>
             <input
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
               placeholder="0"
@@ -371,7 +373,7 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
                 onChange={e => setBankId(e.target.value)}
               >
                 {banks.map(b => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
+                  <option key={b.id} value={b.id}>{getBankDisplayName(b)}</option>
                 ))}
               </select>
             </div>

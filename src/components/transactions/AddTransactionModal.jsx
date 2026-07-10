@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { adjustBankBalance, adjustCardBalance, adjustVaultBalance, bankDelta } from '../../lib/payments'
-import { formatMoney } from '../../utils/currency'
+import { formatMoney, getUserCurrency } from '../../utils/currency'
+import { getBankDisplayName } from '../../utils/bank'
 
 const EXPENSE_CATEGORIES = ['essential', 'food', 'travel', 'fun', 'bills', 'debt', 'weeklyLiving', 'emergency']
 const INCOME_CATEGORIES = ['salary', 'commission', 'reimbursement']
@@ -33,7 +34,7 @@ export default function AddTransactionModal({ onClose, onSaved, onOpenWizard }) 
   useEffect(() => {
     supabase
       .from('banks')
-      .select('id, name')
+      .select('id, name, nickname')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .then(({ data }) => {
@@ -241,7 +242,7 @@ export default function AddTransactionModal({ onClose, onSaved, onOpenWizard }) 
           )}
 
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">{t('amount')} (COP)</label>
+            <label className="text-xs text-gray-400 mb-1 block">{t('amount')} ({getUserCurrency()})</label>
             <input
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
               placeholder="0"
@@ -348,7 +349,7 @@ export default function AddTransactionModal({ onClose, onSaved, onOpenWizard }) 
                   <option value="">{t('noBanksHint')}</option>
                 )}
                 {banks.map(b => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
+                  <option key={b.id} value={b.id}>{getBankDisplayName(b)}</option>
                 ))}
               </select>
             </div>

@@ -1,15 +1,22 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
+import { getUserCurrency } from '../../utils/currency'
 
 export default function EditBankModal({ bank, onClose, onSaved }) {
   const { t } = useTranslation()
+  const [name, setName] = useState(bank.name ?? '')
+  const [nickname, setNickname] = useState(bank.nickname ?? '')
   const [balance, setBalance] = useState(String(bank.balance ?? ''))
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
 
   const handleSave = async () => {
+    if (!name.trim()) {
+      setError(t('billNameRequired'))
+      return
+    }
     if (balance === '' || isNaN(balance)) {
       setError(t('invalidAmount'))
       return
@@ -18,7 +25,11 @@ export default function EditBankModal({ bank, onClose, onSaved }) {
     setSaving(true)
     const { error: dbError } = await supabase
       .from('banks')
-      .update({ balance: parseFloat(balance) })
+      .update({
+        name: name.trim(),
+        nickname: nickname.trim() || null,
+        balance: parseFloat(balance),
+      })
       .eq('id', bank.id)
 
     if (dbError) {
@@ -49,14 +60,33 @@ export default function EditBankModal({ bank, onClose, onSaved }) {
       <div className="absolute inset-0 bg-black opacity-40" onClick={onClose} style={{ zIndex: 1 }} />
       <div className="relative bg-white w-full rounded-t-3xl p-6 pb-10" style={{ zIndex: 2 }}>
         <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-6" />
-        <h2 className="text-lg font-bold text-gray-800 mb-1">{t('editBank')}</h2>
-        <p className="text-sm text-gray-500 mb-6">{bank.name}</p>
+        <h2 className="text-lg font-bold text-gray-800 mb-6">{t('editBank')}</h2>
 
         {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
         <div className="space-y-4">
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">{t('currentBalance')} (COP)</label>
+            <label className="text-xs text-gray-400 mb-1 block">{t('bankName')}</label>
+            <input
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              placeholder={t('bankNamePlaceholder')}
+              value={name}
+              onChange={e => setName(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">{t('accountNickname')}</label>
+            <input
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              placeholder={t('accountNicknamePlaceholder')}
+              value={nickname}
+              onChange={e => setNickname(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">{t('currentBalance')} ({getUserCurrency()})</label>
             <input
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
               placeholder="0"

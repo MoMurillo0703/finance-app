@@ -262,21 +262,13 @@ export default function Dashboard({ refreshKey }) {
               <button onClick={() => setShowAddBank(true)} className="text-xs text-purple-600 font-medium">+</button>
             </div>
             <p className="text-base font-bold text-gray-800">
-              {new Intl.NumberFormat('es-CO', {
-                style: 'currency',
-                currency: 'COP',
-                minimumFractionDigits: 0,
-              }).format(totalBalance)}
+              {formatMoney(totalBalance)}
             </p>
           </div>
           <div className="flex-1 bg-white rounded-xl p-3 border border-gray-100">
             <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">{t('protected')}</p>
             <p className="text-base font-bold text-gray-800">
-              {new Intl.NumberFormat('es-CO', {
-                style: 'currency',
-                currency: 'COP',
-                minimumFractionDigits: 0,
-              }).format(protectedAmount)}
+              {formatMoney(protectedAmount)}
             </p>
           </div>
         </div>

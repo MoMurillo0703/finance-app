@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { formatMoney } from '../../utils/currency'
+import { formatMoney, getUserCurrency } from '../../utils/currency'
 
 export default function AddCuotaModal({ card, onClose, onSaved }) {
   const { t } = useTranslation()
@@ -81,7 +81,7 @@ export default function AddCuotaModal({ card, onClose, onSaved }) {
           </div>
 
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">{t('totalAmount')} (COP)</label>
+            <label className="text-xs text-gray-400 mb-1 block">{t('totalAmount')} ({getUserCurrency()})</label>
             <input
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
               placeholder="0"

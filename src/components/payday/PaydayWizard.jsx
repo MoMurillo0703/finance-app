@@ -4,12 +4,13 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { adjustBankBalance, adjustVaultBalance } from '../../lib/payments'
 
-import { formatMoney } from '../../utils/currency'
+import { formatMoney, getUserCurrency } from '../../utils/currency'
+import { getBankDisplayName } from '../../utils/bank'
 
 export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefillBankId }) {
   const { t } = useTranslation()
   const { user } = useAuth()
-  const currency = localStorage.getItem('currency') || 'COP'
+  const currency = getUserCurrency()
   const skippedStep1 = prefillAmount != null && prefillAmount > 0
 
   const [step, setStep] = useState(skippedStep1 ? 2 : 1)
@@ -25,7 +26,7 @@ export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefi
   useEffect(() => {
     supabase
       .from('banks')
-      .select('id, name')
+      .select('id, name, nickname')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .order('name')
@@ -181,7 +182,7 @@ export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefi
               >
                 {banks.length === 0 && <option value="">{t('noBanksHint')}</option>}
                 {banks.map(b => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
+                  <option key={b.id} value={b.id}>{getBankDisplayName(b)}</option>
                 ))}
               </select>
             </div>

@@ -9,6 +9,12 @@ export function getUserCurrency() {
   return localStorage.getItem('currency') || getDefaultCurrency()
 }
 
+export const PREFS_CHANGED = 'lala:prefs-changed'
+
+export function notifyPrefsChanged() {
+  window.dispatchEvent(new Event(PREFS_CHANGED))
+}
+
 export function formatMoney(amount, currency = getUserCurrency()) {
   if (currency === 'USD') {
     return new Intl.NumberFormat('en-US', {

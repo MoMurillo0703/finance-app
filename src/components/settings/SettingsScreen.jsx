@@ -4,10 +4,11 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import AddBankModal from '../dashboard/AddBankModal'
 import EditBankModal from './EditBankModal'
-import { formatMoney, getUserCurrency } from '../../utils/currency'
+import { formatMoney, getUserCurrency, notifyPrefsChanged } from '../../utils/currency'
 import { getUserDateFormat } from '../../utils/date'
+import { getBankDisplayName } from '../../utils/bank'
 
-export default function SettingsScreen({ onBankSaved }) {
+export default function SettingsScreen({ onBankSaved, onPrefsChanged }) {
   const { user, signOut } = useAuth()
   const { t, i18n } = useTranslation()
   const [banks, setBanks] = useState([])
@@ -31,7 +32,7 @@ export default function SettingsScreen({ onBankSaved }) {
     ;(async () => {
       const { data } = await supabase
         .from('banks')
-        .select('id, name, balance')
+        .select('id, name, nickname, balance')
         .eq('user_id', user.id)
         .eq('is_active', true)
         .order('name')
@@ -59,6 +60,8 @@ export default function SettingsScreen({ onBankSaved }) {
     const value = e.target.value
     setCurrency(value)
     localStorage.setItem('currency', value)
+    notifyPrefsChanged()
+    onPrefsChanged?.()
     await supabase
       .from('user_settings')
       .upsert({ user_id: user.id, currency: value }, { onConflict: 'user_id' })
@@ -68,6 +71,8 @@ export default function SettingsScreen({ onBankSaved }) {
     const value = e.target.value
     setDateFormat(value)
     localStorage.setItem('dateFormat', value)
+    notifyPrefsChanged()
+    onPrefsChanged?.()
   }
 
   const handleInstall = async () => {
@@ -119,8 +124,13 @@ export default function SettingsScreen({ onBankSaved }) {
                   onClick={() => setEditingBank(bank)}
                   className="w-full bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex justify-between items-center text-left"
                 >
-                  <p className="text-sm font-medium text-gray-700">{bank.name}</p>
-                  <p className="text-sm font-bold text-purple-600">{formatMoney(bank.balance)}</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-700">{getBankDisplayName(bank)}</p>
+                    {bank.nickname?.trim() && (
+                      <p className="text-xs text-gray-400">{bank.name}</p>
+                    )}
+                  </div>
+                  <p className="text-sm font-bold text-purple-600 shrink-0">{formatMoney(bank.balance)}</p>
                 </button>
               ))}
             </div>

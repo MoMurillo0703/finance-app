@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
+import { getUserCurrency } from '../../utils/currency'
 
 export default function EditCardModal({ card, onClose, onSaved }) {
   const { t } = useTranslation()
@@ -64,7 +65,7 @@ export default function EditCardModal({ card, onClose, onSaved }) {
 
         <div className="space-y-4">
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">{t('balance')} (COP)</label>
+            <label className="text-xs text-gray-400 mb-1 block">{t('balance')} ({getUserCurrency()})</label>
             <input
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
               placeholder="0"
@@ -75,7 +76,7 @@ export default function EditCardModal({ card, onClose, onSaved }) {
           </div>
 
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">{t('creditLimit')} (COP)</label>
+            <label className="text-xs text-gray-400 mb-1 block">{t('creditLimit')} ({getUserCurrency()})</label>
             <input
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
               placeholder="0"

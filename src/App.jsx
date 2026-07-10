@@ -14,8 +14,10 @@ function AppContent() {
   const [showSignup, setShowSignup] = useState(false)
   const [activeTab, setActiveTab] = useState('home')
   const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0)
+  const [prefsVersion, setPrefsVersion] = useState(0)
 
   const bumpDashboard = () => setDashboardRefreshKey(k => k + 1)
+  const bumpPrefs = () => setPrefsVersion(v => v + 1)
 
   const handleTabChange = (tab) => {
     setActiveTab(tab)
@@ -31,14 +33,20 @@ function AppContent() {
   return (
     <div className="pb-20">
       <div className={activeTab === 'home' ? '' : 'hidden'}>
-        <Dashboard refreshKey={dashboardRefreshKey} />
+        <Dashboard refreshKey={`${dashboardRefreshKey}-${prefsVersion}`} />
       </div>
       {activeTab === 'transactions' && (
-        <TransactionsScreen onTransactionSaved={bumpDashboard} />
+        <TransactionsScreen key={prefsVersion} onTransactionSaved={bumpDashboard} />
       )}
-      {activeTab === 'bills' && <BillsScreen onBillPaid={bumpDashboard} />}
-      {activeTab === 'cards' && <CardsScreen onCardSaved={bumpDashboard} />}
-      {activeTab === 'settings' && <SettingsScreen onBankSaved={bumpDashboard} />}
+      {activeTab === 'bills' && <BillsScreen key={prefsVersion} onBillPaid={bumpDashboard} />}
+      {activeTab === 'cards' && <CardsScreen key={prefsVersion} onCardSaved={bumpDashboard} />}
+      {activeTab === 'settings' && (
+        <SettingsScreen
+          key={prefsVersion}
+          onBankSaved={bumpDashboard}
+          onPrefsChanged={bumpPrefs}
+        />
+      )}
       <BottomNav active={activeTab} onChange={handleTabChange} />
     </div>
   )

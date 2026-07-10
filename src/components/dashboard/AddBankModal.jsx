@@ -8,6 +8,7 @@ export default function AddBankModal({ onClose, onSaved }) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [name, setName] = useState('')
+  const [nickname, setNickname] = useState('')
   const [accountType, setAccountType] = useState('savings')
   const [balance, setBalance] = useState('')
   const [saving, setSaving] = useState(false)
@@ -21,6 +22,7 @@ export default function AddBankModal({ onClose, onSaved }) {
     const { error: dbError } = await supabase.from('banks').insert({
       user_id: user.id,
       name: name.trim(),
+      nickname: nickname.trim() || null,
       type: accountType,
       balance: parseFloat(balance),
       is_active: true,
@@ -51,6 +53,16 @@ export default function AddBankModal({ onClose, onSaved }) {
               placeholder={t('bankNamePlaceholder')}
               value={name}
               onChange={e => setName(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">{t('accountNickname')}</label>
+            <input
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              placeholder={t('accountNicknamePlaceholder')}
+              value={nickname}
+              onChange={e => setNickname(e.target.value)}
             />
           </div>
 

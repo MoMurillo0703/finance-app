@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { getUserCurrency } from '../../utils/currency'
+import { getBankDisplayName } from '../../utils/bank'
 
 export default function EditBillModal({ bill, onClose, onSaved }) {
   const { t } = useTranslation()
@@ -18,7 +20,7 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
   useEffect(() => {
     supabase
       .from('banks')
-      .select('id, name')
+      .select('id, name, nickname')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .order('name')
@@ -91,7 +93,7 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
           </div>
 
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">{t('amount')} (COP)</label>
+            <label className="text-xs text-gray-400 mb-1 block">{t('amount')} ({getUserCurrency()})</label>
             <input
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
               placeholder="0"
@@ -125,7 +127,7 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
                 <option value="">{t('noBanksHint')}</option>
               )}
               {banks.map(bank => (
-                <option key={bank.id} value={bank.id}>{bank.name}</option>
+                <option key={bank.id} value={bank.id}>{getBankDisplayName(bank)}</option>
               ))}
             </select>
           </div>

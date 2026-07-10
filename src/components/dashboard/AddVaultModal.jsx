@@ -2,10 +2,12 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { getUserCurrency } from '../../utils/currency'
 
 export default function AddVaultModal({ onClose, onSaved }) {
   const { t } = useTranslation()
   const { user } = useAuth()
+  const currency = getUserCurrency()
   const [name, setName] = useState('')
   const [targetAmount, setTargetAmount] = useState('')
   const [currentAmount, setCurrentAmount] = useState('')
@@ -54,7 +56,7 @@ export default function AddVaultModal({ onClose, onSaved }) {
           </div>
 
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">{t('vaultTarget')}</label>
+            <label className="text-xs text-gray-400 mb-1 block">{t('vaultTarget', { currency })}</label>
             <input
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
               placeholder="500000"
@@ -65,7 +67,7 @@ export default function AddVaultModal({ onClose, onSaved }) {
           </div>
 
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">{t('vaultCurrent')}</label>
+            <label className="text-xs text-gray-400 mb-1 block">{t('vaultCurrent', { currency })}</label>
             <input
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
               placeholder="0"
