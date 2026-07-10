@@ -7,6 +7,7 @@ import VaultCard from './VaultCard'
 import AddVaultModal from './AddVaultModal'
 import AddBankModal from './AddBankModal'
 import EditVaultModal from '../vaults/EditVaultModal'
+import BillsCalendar from './BillsCalendar'
 
 const formatCOP = (value) =>
   new Intl.NumberFormat('es-CO', {
@@ -72,6 +73,7 @@ export default function Dashboard({ refreshKey }) {
   const [editingVault, setEditingVault] = useState(null)
   const [modalRefreshKey, setModalRefreshKey] = useState(0)
   const [dueBills, setDueBills] = useState([])
+  const [allBills, setAllBills] = useState([])
   const [payingId, setPayingId] = useState(null)
   const [billError, setBillError] = useState('')
 
@@ -103,6 +105,7 @@ export default function Dashboard({ refreshKey }) {
       setVaults(vaultsData ?? [])
       setTotalBalance((banksData ?? []).reduce((sum, bank) => sum + (bank.balance || 0), 0))
       setDueBills((billsData ?? []).filter(isBillDueThisWeek))
+      setAllBills(billsData ?? [])
       setLoading(false)
     })()
 
@@ -279,6 +282,8 @@ export default function Dashboard({ refreshKey }) {
             </p>
           </div>
         </div>
+
+        <BillsCalendar bills={allBills} language={i18n.language} />
 
         <div className="mb-4 flex justify-between items-center">
           <h2 className="text-base font-semibold text-gray-700">{t('vaults')}</h2>

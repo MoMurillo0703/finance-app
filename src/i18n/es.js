@@ -56,6 +56,7 @@ export default {
       invalidDueDay: "Ingresa un día válido (1-31)",
       markAsPaid: "Marcar como pagado",
       billsDueThisWeek: "Cuentas que vencen esta semana",
+      billsCalendar: "Calendario de cuentas",
       noBills: "No tienes cuentas todavía.",
       addFirstBill: "+ Agregar primera cuenta",
       deductFrom: "Descontar de",
