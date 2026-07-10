@@ -8,6 +8,7 @@ import AddVaultModal from './AddVaultModal'
 import AddBankModal from './AddBankModal'
 import EditVaultModal from '../vaults/EditVaultModal'
 import CardRow from '../cards/CardRow'
+import PaydayBanner from '../payday/PaydayBanner'
 
 const sectionHeader = 'text-[10px] font-medium tracking-wider text-gray-400 uppercase'
 
@@ -264,6 +265,7 @@ export default function Dashboard({ refreshKey }) {
       </div>
 
       <div className="px-5 py-4">
+        <PaydayBanner onComplete={() => setModalRefreshKey(k => k + 1)} />
         <SafeToSpend amount={safeToSpend} />
 
         <div className="flex gap-3 mb-4">
