@@ -178,7 +178,7 @@ export default function AddTransactionModal({ onClose, onSaved, onOpenWizard }) 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center">
+    <div className="fixed inset-0 z-[110] flex items-end justify-center">
       <div
         className="absolute inset-0 bg-black opacity-40"
         onClick={onClose}

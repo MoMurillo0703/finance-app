@@ -36,7 +36,7 @@ export default function AddVaultModal({ onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center">
+    <div className="fixed inset-0 z-[110] flex items-end justify-center">
       <div className="absolute inset-0 bg-black opacity-40" onClick={onClose} />
       <div className="relative bg-white w-full rounded-t-3xl p-6 pb-10">
         <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-6" />

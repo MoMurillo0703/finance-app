@@ -44,7 +44,7 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       <AppHeader activeTab={activeTab} />
-      <main className="pt-14 pb-20 relative z-0">
+      <main className="pt-14 pb-20">
         {activeTab === 'home' && (
           <Dashboard
             refreshKey={`${dashboardRefreshKey}-${prefsVersion}`}

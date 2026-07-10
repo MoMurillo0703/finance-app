@@ -646,7 +646,7 @@ export default function ImportModal({ onClose, onComplete }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-white flex flex-col">
+    <div className="fixed inset-0 z-[110] bg-white flex flex-col">
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
         <h2 className="text-lg font-bold text-gray-800">{t('importCsv')}</h2>
         <button type="button" onClick={onClose} className="text-sm text-gray-400">{t('cancel')}</button>
