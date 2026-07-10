@@ -171,6 +171,9 @@ export default {
       deleteAccount: 'Delete account',
       noAccounts: 'No accounts yet.',
       preferences: 'Preferences',
+      installApp: 'Install App',
+      installAndroid: '📲 Install on Android',
+      installHint: 'Open in Chrome on Android to install.',
       accountSection: 'Account',
 
       // Transactions screen

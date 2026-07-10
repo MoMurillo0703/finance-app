@@ -20,6 +20,13 @@ export default function SettingsScreen({ onBankSaved }) {
   const [showAddBank, setShowAddBank] = useState(false)
   const [editingBank, setEditingBank] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [installAvailable, setInstallAvailable] = useState(() => !!window.__installPrompt)
+
+  useEffect(() => {
+    const onInstallPrompt = () => setInstallAvailable(true)
+    window.addEventListener('beforeinstallprompt', onInstallPrompt)
+    return () => window.removeEventListener('beforeinstallprompt', onInstallPrompt)
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -49,6 +56,16 @@ export default function SettingsScreen({ onBankSaved }) {
     const nextLang = i18n.language === 'es' ? 'en' : 'es'
     localStorage.setItem('language', nextLang)
     i18n.changeLanguage(nextLang)
+  }
+
+  const handleInstall = async () => {
+    const prompt = window.__installPrompt
+    if (prompt) {
+      prompt.prompt()
+      await prompt.userChoice
+      window.__installPrompt = null
+      setInstallAvailable(false)
+    }
   }
 
   return (
@@ -109,6 +126,20 @@ export default function SettingsScreen({ onBankSaved }) {
               {i18n.language === 'es' ? 'ES → EN' : 'EN → ES'}
             </button>
           </div>
+        </section>
+
+        <section>
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">{t('installApp')}</h2>
+          <button
+            type="button"
+            onClick={handleInstall}
+            className="w-full bg-white border border-gray-100 rounded-2xl p-4 shadow-sm text-sm font-medium text-purple-600"
+          >
+            {t('installAndroid')}
+          </button>
+          {!installAvailable && (
+            <p className="mt-2 text-xs text-gray-400 text-center">{t('installHint')}</p>
+          )}
         </section>
 
         <section>
