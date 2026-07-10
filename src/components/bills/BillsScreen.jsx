@@ -158,6 +158,19 @@ export default function BillsScreen({ onBillPaid }) {
       return
     }
 
+    if (bill.vault_id) {
+      const { error: vaultUpdateError } = await supabase
+        .from('vaults')
+        .update({ current_amount: 0 })
+        .eq('id', bill.vault_id)
+
+      if (vaultUpdateError) {
+        setError(vaultUpdateError.message)
+        setPayingId(null)
+        return
+      }
+    }
+
     setPayingId(null)
     setRefreshKey(k => k + 1)
     onBillPaid?.()
