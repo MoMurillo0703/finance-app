@@ -4,7 +4,7 @@ import Login from './components/auth/Login'
 import Signup from './components/auth/Signup'
 import Dashboard from './components/dashboard/Dashboard'
 import TransactionsScreen from './components/transactions/TransactionsScreen'
-import VaultsScreen from './components/vaults/VaultsScreen'
+import BillsScreen from './components/bills/BillsScreen'
 import SettingsScreen from './components/settings/SettingsScreen'
 import BottomNav from './components/layout/BottomNav'
 
@@ -35,7 +35,7 @@ function AppContent() {
       {activeTab === 'transactions' && (
         <TransactionsScreen onTransactionSaved={bumpDashboard} />
       )}
-      {activeTab === 'vaults' && <VaultsScreen onVaultSaved={bumpDashboard} />}
+      {activeTab === 'bills' && <BillsScreen onBillPaid={bumpDashboard} />}
       {activeTab === 'settings' && <SettingsScreen onBankSaved={bumpDashboard} />}
       <BottomNav active={activeTab} onChange={handleTabChange} />
     </div>

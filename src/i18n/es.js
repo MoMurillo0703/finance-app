@@ -44,8 +44,18 @@ export default {
       // Bills
       billsTitle: "Mis cuentas",
       dueDate: "Fecha de pago",
+      dueDay: "Día de pago",
       paid: "Pagado",
       pending: "Pendiente",
+      addBill: "Agregar cuenta",
+      billName: "Nombre de la cuenta",
+      billNamePlaceholder: "Ej: Arriendo, Netflix, Internet",
+      billNameRequired: "El nombre es obligatorio",
+      invalidDueDay: "Ingresa un día válido (1-31)",
+      markAsPaid: "Marcar como pagado",
+      noBills: "No tienes cuentas todavía.",
+      addFirstBill: "+ Agregar primera cuenta",
+      deductFrom: "Descontar de",
   
       // Cards
       creditCards: "Tarjetas de crédito",

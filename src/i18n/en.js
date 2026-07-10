@@ -44,8 +44,18 @@ export default {
       // Bills
       billsTitle: "My bills",
       dueDate: "Due date",
+      dueDay: "Due day",
       paid: "Paid",
       pending: "Pending",
+      addBill: "Add bill",
+      billName: "Bill name",
+      billNamePlaceholder: "e.g. Rent, Netflix, Internet",
+      billNameRequired: "Bill name is required",
+      invalidDueDay: "Enter a valid day (1-31)",
+      markAsPaid: "Mark as paid",
+      noBills: "No bills yet.",
+      addFirstBill: "+ Add first bill",
+      deductFrom: "Deduct from",
   
       // Cards
       creditCards: "Credit cards",
