@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { formatMoney } from '../../utils/currency'
 
 export default function AddCuotaModal({ card, onClose, onSaved }) {
   const { t } = useTranslation()
@@ -104,11 +105,7 @@ export default function AddCuotaModal({ card, onClose, onSaved }) {
 
           {cuotaAmount > 0 && (
             <p className="text-xs text-gray-500">
-              {t('cuotaAmount')}: {new Intl.NumberFormat('es-CO', {
-                style: 'currency',
-                currency: card.currency || 'COP',
-                minimumFractionDigits: 0,
-              }).format(cuotaAmount)}
+              {t('cuotaAmount')}: {formatMoney(cuotaAmount, card.currency || 'COP')}
             </p>
           )}
 

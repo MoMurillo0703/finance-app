@@ -2,12 +2,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 
-const formatMoney = (value, currency = 'COP') =>
-  new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 0,
-  }).format(value)
+import { formatMoney } from '../../utils/currency'
 
 const getRemaining = (cuota) =>
   Math.max(0, (cuota.total_amount || 0) - (cuota.paid_cuotas || 0) * (cuota.cuota_amount || 0))

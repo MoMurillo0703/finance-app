@@ -1,14 +1,8 @@
 import { useTranslation } from 'react-i18next'
+import { formatMoney } from '../../utils/currency'
 
 export default function VaultCard({ vault, onClick }) {
   const { t } = useTranslation()
-
-  const formatCOP = (value) =>
-    new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0,
-    }).format(value)
 
   const percentage = vault.target_amount > 0
     ? Math.min((vault.current_amount / vault.target_amount) * 100, 100)
@@ -29,10 +23,10 @@ export default function VaultCard({ vault, onClick }) {
           )}
         </div>
         {currentAmount > 0 && (
-          <p className="text-xs font-semibold text-purple-600 shrink-0">{formatCOP(currentAmount)}</p>
+          <p className="text-xs font-semibold text-purple-600 shrink-0">{formatMoney(currentAmount)}</p>
         )}
         {!isReady && currentAmount === 0 && (
-          <p className="text-xs font-semibold text-purple-600 shrink-0">{formatCOP(0)}</p>
+          <p className="text-xs font-semibold text-purple-600 shrink-0">{formatMoney(0)}</p>
         )}
       </div>
       <div className="w-full bg-gray-100 rounded-full h-0.5">
@@ -43,7 +37,7 @@ export default function VaultCard({ vault, onClick }) {
       </div>
       {vault.target_amount > 0 && (
         <p className="text-[10px] text-gray-400 mt-0.5">
-          {t('vaultGoal')}: {formatCOP(vault.target_amount)}
+          {t('vaultGoal')}: {formatMoney(vault.target_amount)}
         </p>
       )}
     </>

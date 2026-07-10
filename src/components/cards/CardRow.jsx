@@ -1,9 +1,4 @@
-const formatMoney = (value, currency = 'COP') =>
-  new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 0,
-  }).format(value)
+import { formatMoney } from '../../utils/currency'
 
 export default function CardRow({ card, utilizationLabel }) {
   const currency = card.currency || 'COP'

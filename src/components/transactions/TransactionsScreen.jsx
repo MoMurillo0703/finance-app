@@ -6,15 +6,11 @@ import AddTransactionModal from './AddTransactionModal'
 import EditTransactionModal from './EditTransactionModal'
 import PaydayWizard from '../payday/PaydayWizard'
 
-const formatCOP = (value) =>
-  new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'COP',
-    minimumFractionDigits: 0,
-  }).format(value)
+import { formatMoney } from '../../utils/currency'
+import { formatDate } from '../../utils/date'
 
 export default function TransactionsScreen({ onTransactionSaved }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const { user } = useAuth()
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
@@ -40,12 +36,6 @@ export default function TransactionsScreen({ onTransactionSaved }) {
 
     return () => { active = false }
   }, [user.id, refreshKey])
-
-  const formatDate = (value) =>
-    new Date(value).toLocaleDateString(i18n.language === 'es' ? 'es-CO' : 'en-US', {
-      day: 'numeric',
-      month: 'short',
-    })
 
   const handleTransactionSaved = () => {
     setShowAdd(false)
@@ -106,7 +96,7 @@ export default function TransactionsScreen({ onTransactionSaved }) {
                 <p
                   className={`text-sm font-bold ${tx.type === 'income' ? 'text-green-500' : 'text-red-500'}`}
                 >
-                  {tx.type === 'income' ? '+' : '-'}{formatCOP(tx.amount)}
+                  {tx.type === 'income' ? '+' : '-'}{formatMoney(tx.amount)}
                 </p>
               </button>
             ))}

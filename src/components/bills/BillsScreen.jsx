@@ -6,12 +6,7 @@ import AddBillModal from './AddBillModal'
 import EditBillModal from './EditBillModal'
 import BillsCalendar from './BillsCalendar'
 
-const formatCOP = (value) =>
-  new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'COP',
-    minimumFractionDigits: 0,
-  }).format(value)
+import { formatMoney } from '../../utils/currency'
 
 const getCurrentBillingMonth = () => {
   const now = new Date()
@@ -230,7 +225,7 @@ export default function BillsScreen({ onBillPaid }) {
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-bold text-gray-800">{formatCOP(bill.amount)}</p>
+                        <p className="text-sm font-bold text-gray-800">{formatMoney(bill.amount)}</p>
                         <p className={`text-xs font-medium mt-0.5 ${paid ? 'text-green-500' : 'text-orange-500'}`}>
                           {paid ? t('paid') : t('pending')}
                         </p>

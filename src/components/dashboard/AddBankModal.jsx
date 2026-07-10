@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { getUserCurrency } from '../../utils/currency'
 
 export default function AddBankModal({ onClose, onSaved }) {
   const { t } = useTranslation()
@@ -62,11 +63,12 @@ export default function AddBankModal({ onClose, onSaved }) {
             >
               <option value="savings">{t('savings')}</option>
               <option value="checking">{t('checking')}</option>
+              <option value="money_market">{t('moneyMarket')}</option>
             </select>
           </div>
 
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">{t('currentBalance')} (COP)</label>
+            <label className="text-xs text-gray-400 mb-1 block">{t('currentBalance')} ({getUserCurrency()})</label>
             <input
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
               placeholder="0"

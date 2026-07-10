@@ -7,12 +7,7 @@ import EditCardModal from './EditCardModal'
 import AddCuotaModal from './AddCuotaModal'
 import CuotasSection from './CuotasSection'
 
-const formatMoney = (value, currency = 'COP') =>
-  new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 0,
-  }).format(value)
+import { formatMoney } from '../../utils/currency'
 
 export default function CardsScreen({ onCardSaved }) {
   const { t } = useTranslation()

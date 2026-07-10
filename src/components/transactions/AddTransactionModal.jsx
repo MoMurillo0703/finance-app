@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { adjustBankBalance, adjustCardBalance, adjustVaultBalance, bankDelta } from '../../lib/payments'
+import { formatMoney } from '../../utils/currency'
 
 const EXPENSE_CATEGORIES = ['essential', 'food', 'travel', 'fun', 'bills', 'debt', 'weeklyLiving', 'emergency']
 const INCOME_CATEGORIES = ['salary', 'commission', 'reimbursement']
@@ -329,11 +330,7 @@ export default function AddTransactionModal({ onClose, onSaved, onOpenWizard }) 
                   />
                   {monthlyCuota > 0 && (
                     <p className="text-xs text-gray-500 mt-2">
-                      {t('cuotaAmount')}: {new Intl.NumberFormat('es-CO', {
-                        style: 'currency',
-                        currency: 'COP',
-                        minimumFractionDigits: 0,
-                      }).format(monthlyCuota)}
+                      {t('cuotaAmount')}: {formatMoney(monthlyCuota)}
                     </p>
                   )}
                 </div>

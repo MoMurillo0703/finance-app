@@ -9,15 +9,10 @@ import AddBankModal from './AddBankModal'
 import EditVaultModal from '../vaults/EditVaultModal'
 import CardRow from '../cards/CardRow'
 import PaydayWizard from '../payday/PaydayWizard'
+import { formatMoney } from '../../utils/currency'
+import { formatDate } from '../../utils/date'
 
 const sectionHeader = 'text-[10px] font-medium tracking-wider text-gray-400 uppercase'
-
-const formatCOP = (value) =>
-  new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'COP',
-    minimumFractionDigits: 0,
-  }).format(value)
 
 const getCurrentBillingMonth = () => {
   const now = new Date()
@@ -67,7 +62,7 @@ const isBillDueThisWeek = (bill) => {
 
 export default function Dashboard({ refreshKey }) {
   const { user, signOut } = useAuth()
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const [vaults, setVaults] = useState([])
   const [totalBalance, setTotalBalance] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -128,11 +123,7 @@ export default function Dashboard({ refreshKey }) {
 
   const formatDueDate = (dueDay) => {
     const now = new Date()
-    const date = new Date(now.getFullYear(), now.getMonth(), dueDay)
-    return date.toLocaleDateString(i18n.language === 'es' ? 'es-CO' : 'en-US', {
-      month: 'short',
-      day: 'numeric',
-    })
+    return formatDate(new Date(now.getFullYear(), now.getMonth(), dueDay))
   }
 
   const handleMarkPaid = async (bill) => {
@@ -304,7 +295,7 @@ export default function Dashboard({ refreshKey }) {
                 >
                   <p className="text-xs font-medium text-gray-800 truncate">{bill.name}</p>
                   <p className="text-[10px] text-gray-400 mt-0.5">{formatDueDate(bill.due_day)}</p>
-                  <p className="text-xs font-semibold text-gray-800 mt-1">{formatCOP(bill.amount)}</p>
+                  <p className="text-xs font-semibold text-gray-800 mt-1">{formatMoney(bill.amount)}</p>
                   <button
                     onClick={() => handleMarkPaid(bill)}
                     disabled={payingId === bill.id}
