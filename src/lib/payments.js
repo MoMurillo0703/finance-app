@@ -51,6 +51,12 @@ export async function adjustVaultBalance(vaultId, delta) {
   return updateError
 }
 
-export const bankDelta = (type, amount) => (type === 'income' ? amount : -amount)
+export const bankDelta = (type, amount) => {
+  if (type === 'income') return amount
+  return -amount // expense and payment reduce bank balance
+}
 
-export const cardDelta = (type, amount) => (type === 'expense' ? amount : -amount)
+export const cardDelta = (type, amount) => {
+  if (type === 'expense') return amount // charge increases amount owed
+  return -amount // payment, income/refund reduces amount owed
+}

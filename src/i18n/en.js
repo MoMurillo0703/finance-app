@@ -194,6 +194,7 @@ export default {
 
       // Transactions screen
       expense: 'Expense',
+      payment: 'Payment',
       income: 'Income',
       descriptionPlaceholder: 'e.g. Groceries, Salary, Netflix',
       invalidAmount: 'Enter a valid amount',
@@ -236,7 +237,7 @@ export default {
       importNoRows: 'No rows selected for import',
       importButton: 'Import transactions',
       importInsertFailed: 'Import failed — no rows were saved. Check your account permissions.',
-      importCardHint: 'Charges increase balance owed; payments reduce it. Payment rows are included automatically.',
+      importCardHint: 'Charges increase balance owed; payments reduce it without counting as income.',
       importInterestDetected: '⚠️ Interest charge detected: {{amount}}. This will be tracked separately.',
       importInterestPrompt: 'Add {{amount}} interest charge to {{account}}? This will be recorded as an expense and update your balance.',
       importSummary: '✓ Imported {{count}} transactions. Total expenses: {{expenses}}. Total income: {{income}}.',

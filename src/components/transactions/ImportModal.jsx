@@ -7,6 +7,7 @@ import { adjustBankBalance, adjustCardBalance, bankDelta, cardDelta } from '../.
 import { formatMoney, getUserCurrency } from '../../utils/currency'
 import { getBankDisplayName } from '../../utils/bank'
 import { categoryForDb } from '../../utils/categories'
+import { txTypeLabel, txBadgeClass } from '../../utils/transactionType'
 
 const RULES = [
   { pattern: /uber|lyft|taxi/i, category: 'transport' },
@@ -142,7 +143,7 @@ function finalizeRowsForAccount(rows, accountType, mapping) {
     if (isPaymentDescription(row.description)) {
       return {
         ...row,
-        type: 'income',
+        type: 'payment',
         category: 'bills',
         checked: true,
       }
@@ -162,11 +163,31 @@ function finalizeRowsForAccount(rows, accountType, mapping) {
       if (raw < 0) {
         return {
           ...row,
-          type: 'income',
+          type: 'payment',
           amount: Math.abs(raw),
           category: 'bills',
         }
       }
+    }
+
+    // Bank account CSVs: negative payment to credit card = money leaving bank
+    if (accountType === 'bank' && isPaymentDescription(row.description)) {
+      return {
+        ...row,
+        type: 'payment',
+        category: 'bills',
+        checked: true,
+      }
+    }
+
+    // Credit union credit column on card statements = payment, not income
+    if (
+      accountType === 'card'
+      && mapping
+      && ['creditUnion', 'customDebitCredit'].includes(mapping.type)
+      && row.type === 'income'
+    ) {
+      return { ...row, type: 'payment', category: 'bills' }
     }
 
     return row
@@ -226,7 +247,7 @@ function rowFromRecord(record, mapping) {
   const skip = shouldSkip(description) || (interest && !isPayment)
 
   if (isPayment) {
-    type = 'income'
+    type = 'payment'
   }
 
   return {
@@ -236,7 +257,7 @@ function rowFromRecord(record, mapping) {
     amount,
     rawAmount,
     type,
-    category: type === 'income' ? (isPayment ? 'bills' : 'salary') : detectCategory(description),
+    category: type === 'payment' ? 'bills' : type === 'income' ? 'salary' : detectCategory(description),
     checked: !skip,
     isInterest: interest,
   }
@@ -403,11 +424,11 @@ export default function ImportModal({ onClose, onComplete }) {
   const toggleType = (id) => {
     setRows(prev => prev.map(r => {
       if (r.id !== id) return r
-      const type = r.type === 'income' ? 'expense' : 'income'
+      const type = r.type === 'expense' ? 'payment' : r.type === 'payment' ? 'income' : 'expense'
       return {
         ...r,
         type,
-        category: type === 'income' ? 'salary' : detectCategory(r.description),
+        category: type === 'payment' ? 'bills' : type === 'income' ? 'salary' : detectCategory(r.description),
       }
     }))
   }
@@ -613,8 +634,11 @@ export default function ImportModal({ onClose, onComplete }) {
     setStep(4)
   }
 
-  const categoryOptions = (type) =>
-    type === 'income' ? ['salary', 'commission', 'reimbursement'] : EXPENSE_CATEGORIES
+  const categoryOptions = (type) => {
+    if (type === 'income') return ['salary', 'commission', 'reimbursement']
+    if (type === 'payment') return ['bills', 'debt']
+    return EXPENSE_CATEGORIES
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-white flex flex-col">
@@ -813,13 +837,9 @@ export default function ImportModal({ onClose, onComplete }) {
                         <button
                           type="button"
                           onClick={() => toggleType(row.id)}
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                            row.type === 'income'
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-red-100 text-red-700'
-                          }`}
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${txBadgeClass(row.type)}`}
                         >
-                          {row.type === 'income' ? t('income') : t('expense')}
+                          {txTypeLabel(row.type, t)}
                         </button>
                       </td>
                       <td className="p-2 text-right whitespace-nowrap font-medium">

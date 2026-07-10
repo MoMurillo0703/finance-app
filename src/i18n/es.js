@@ -194,6 +194,7 @@ export default {
 
       // Transactions screen
       expense: 'Gasto',
+      payment: 'Pago',
       income: 'Ingreso',
       descriptionPlaceholder: 'Ej: Mercado, Salario, Netflix',
       invalidAmount: 'Monto inválido',
@@ -236,7 +237,7 @@ export default {
       importNoRows: 'No hay filas seleccionadas',
       importButton: 'Importar transacciones',
       importInsertFailed: 'La importación falló — no se guardaron filas. Revisa los permisos de tu cuenta.',
-      importCardHint: 'Los cargos aumentan el balance; los pagos lo reducen. Las filas de pago se incluyen automáticamente.',
+      importCardHint: 'Los cargos aumentan el balance; los pagos lo reducen sin contar como ingreso.',
       importInterestDetected: '⚠️ Cargo por interés detectado: {{amount}}. Se rastreará por separado.',
       importInterestPrompt: '¿Agregar {{amount}} de interés a {{account}}? Se registrará como gasto y actualizará tu balance.',
       importSummary: '✓ Importadas {{count}} transacciones. Gastos totales: {{expenses}}. Ingresos totales: {{income}}.',

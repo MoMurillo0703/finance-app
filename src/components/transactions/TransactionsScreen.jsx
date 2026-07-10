@@ -10,6 +10,7 @@ import PaydayWizard from '../payday/PaydayWizard'
 import { formatMoney } from '../../utils/currency'
 import { formatDate } from '../../utils/date'
 import { getBankDisplayName } from '../../utils/bank'
+import { txTypeLabel, txAmountClass, txAmountPrefix } from '../../utils/transactionType'
 
 function enrichTransactions(transactions, banks, cards) {
   const bankMap = Object.fromEntries(banks.map(b => [b.id, b]))
@@ -124,7 +125,7 @@ export default function TransactionsScreen({ onTransactionSaved }) {
               >
                 <div>
                   <p className="text-sm font-medium text-gray-700">
-                    {tx.description || (tx.type === 'income' ? t('income') : t('expense'))}
+                    {tx.description || txTypeLabel(tx.type, t)}
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5">
                     {[
@@ -134,10 +135,8 @@ export default function TransactionsScreen({ onTransactionSaved }) {
                     ].filter(Boolean).join(' · ')}
                   </p>
                 </div>
-                <p
-                  className={`text-sm font-bold ${tx.type === 'income' ? 'text-green-500' : 'text-red-500'}`}
-                >
-                  {tx.type === 'income' ? '+' : '-'}{formatMoney(tx.amount)}
+                <p className={`text-sm font-bold ${txAmountClass(tx.type)}`}>
+                  {txAmountPrefix(tx.type)}{formatMoney(tx.amount)}
                 </p>
               </button>
             ))}

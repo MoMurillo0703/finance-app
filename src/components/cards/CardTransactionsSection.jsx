@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { formatMoney } from '../../utils/currency'
 import { formatDate } from '../../utils/date'
+import { txTypeLabel, txAmountClass, txAmountPrefix } from '../../utils/transactionType'
 
 export default function CardTransactionsSection({ card, refreshKey }) {
   const { t } = useTranslation()
@@ -50,14 +51,14 @@ export default function CardTransactionsSection({ card, refreshKey }) {
             >
               <div className="min-w-0">
                 <p className="text-xs font-medium text-gray-700 truncate">
-                  {tx.description || (tx.type === 'income' ? t('income') : t('expense'))}
+                  {tx.description || txTypeLabel(tx.type, t)}
                 </p>
                 <p className="text-[10px] text-gray-400 mt-0.5">
                   {[formatDate(tx.transaction_date), t(tx.category, { defaultValue: tx.category })].filter(Boolean).join(' · ')}
                 </p>
               </div>
-              <p className={`text-xs font-semibold shrink-0 ${tx.type === 'income' ? 'text-green-600' : 'text-red-500'}`}>
-                {tx.type === 'income' ? '+' : '-'}{formatMoney(tx.amount, currency)}
+              <p className={`text-xs font-semibold shrink-0 ${txAmountClass(tx.type)}`}>
+                {txAmountPrefix(tx.type)}{formatMoney(tx.amount, currency)}
               </p>
             </div>
           ))}
