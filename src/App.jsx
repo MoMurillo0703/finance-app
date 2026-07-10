@@ -9,6 +9,7 @@ import CardsScreen from './components/cards/CardsScreen'
 import ReportsScreen from './components/reports/ReportsScreen'
 import SettingsScreen from './components/settings/SettingsScreen'
 import BottomNav from './components/layout/BottomNav'
+import AppHeader from './components/layout/AppHeader'
 
 function AppContent() {
   const { user } = useAuth()
@@ -41,38 +42,44 @@ function AppContent() {
   }
 
   return (
-    <div className="pb-20">
-      <div className={activeTab === 'home' ? '' : 'hidden'}>
-        <Dashboard refreshKey={`${dashboardRefreshKey}-${prefsVersion}`} />
+    <div>
+      <AppHeader activeTab={activeTab} />
+      <div className="pt-14 pb-20">
+        <div className={activeTab === 'home' ? '' : 'hidden'}>
+          <Dashboard
+            refreshKey={`${dashboardRefreshKey}-${prefsVersion}`}
+            onViewReports={() => handleTabChange('reports')}
+          />
+        </div>
+        {activeTab === 'transactions' && (
+          <TransactionsScreen
+            key={prefsVersion}
+            filterCreditCardId={txFilter?.creditCardId}
+            filterCardName={txFilter?.cardName}
+            onClearFilter={() => {
+              setTxFilter(null)
+              setActiveTab('cards')
+            }}
+            onTransactionSaved={bumpDashboard}
+          />
+        )}
+        {activeTab === 'bills' && <BillsScreen key={prefsVersion} onBillPaid={bumpDashboard} />}
+        {activeTab === 'reports' && <ReportsScreen key={prefsVersion} />}
+        {activeTab === 'cards' && (
+          <CardsScreen
+            key={prefsVersion}
+            onCardSaved={bumpDashboard}
+            onViewTransactions={viewCardTransactions}
+          />
+        )}
+        {activeTab === 'settings' && (
+          <SettingsScreen
+            key={prefsVersion}
+            onBankSaved={bumpDashboard}
+            onPrefsChanged={bumpPrefs}
+          />
+        )}
       </div>
-      {activeTab === 'transactions' && (
-        <TransactionsScreen
-          key={prefsVersion}
-          filterCreditCardId={txFilter?.creditCardId}
-          filterCardName={txFilter?.cardName}
-          onClearFilter={() => {
-            setTxFilter(null)
-            setActiveTab('cards')
-          }}
-          onTransactionSaved={bumpDashboard}
-        />
-      )}
-      {activeTab === 'bills' && <BillsScreen key={prefsVersion} onBillPaid={bumpDashboard} />}
-      {activeTab === 'reports' && <ReportsScreen key={prefsVersion} />}
-      {activeTab === 'cards' && (
-        <CardsScreen
-          key={prefsVersion}
-          onCardSaved={bumpDashboard}
-          onViewTransactions={viewCardTransactions}
-        />
-      )}
-      {activeTab === 'settings' && (
-        <SettingsScreen
-          key={prefsVersion}
-          onBankSaved={bumpDashboard}
-          onPrefsChanged={bumpPrefs}
-        />
-      )}
       <BottomNav active={activeTab} onChange={handleTabChange} />
     </div>
   )

@@ -9,7 +9,7 @@ import { getUserDateFormat } from '../../utils/date'
 import { getBankDisplayName } from '../../utils/bank'
 
 export default function SettingsScreen({ onBankSaved, onPrefsChanged }) {
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
   const { t, i18n } = useTranslation()
   const [banks, setBanks] = useState([])
   const [loading, setLoading] = useState(true)
@@ -87,10 +87,6 @@ export default function SettingsScreen({ onBankSaved, onPrefsChanged }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white px-6 pt-12 pb-4">
-        <h1 className="text-2xl font-bold text-gray-800">{t('settings')}</h1>
-      </div>
-
       <div className="px-6 py-6 space-y-8">
         <section>
           <div className="flex justify-between items-center mb-3">
@@ -188,16 +184,6 @@ export default function SettingsScreen({ onBankSaved, onPrefsChanged }) {
           {!installAvailable && (
             <p className="mt-2 text-xs text-gray-400 text-center">{t('installHint')}</p>
           )}
-        </section>
-
-        <section>
-          <h2 className="text-sm font-semibold text-gray-700 mb-3">{t('accountSection')}</h2>
-          <button
-            onClick={signOut}
-            className="w-full bg-white border border-gray-100 rounded-2xl p-4 shadow-sm text-sm text-red-500 font-medium"
-          >
-            {t('logout')}
-          </button>
         </section>
       </div>
 

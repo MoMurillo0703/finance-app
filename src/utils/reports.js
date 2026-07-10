@@ -192,3 +192,18 @@ export function summarizeByCategory(transactions, t) {
 }
 
 export const PURPLE_SHADES = ['#4c1d95', '#5b21b6', '#6d28d9', '#7c3aed', '#8b5cf6', '#a78bfa', '#c4b5fd']
+
+export const CATEGORY_EMOJI = {
+  dining: '🍽️',
+  subscriptions: '📱',
+  utilities: '💡',
+  transport: '🚗',
+  shopping: '🛒',
+  health: '💊',
+  travel: '✈️',
+  entertainment: '🎬',
+  gas: '⛽',
+  insurance: '🛡️',
+  personal: '💇',
+  other: '📦',
+}

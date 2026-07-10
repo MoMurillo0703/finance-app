@@ -216,45 +216,36 @@ export default function TransactionsScreen({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white px-6 pt-12 pb-4">
-        {filterCreditCardId ? (
-          <div className="flex items-center gap-3">
+      <div className="bg-white px-6 py-3 border-b border-gray-100">
+        {filterCreditCardId && (
+          <button
+            type="button"
+            onClick={onClearFilter}
+            className="text-sm text-purple-600 font-medium mb-1"
+          >
+            ← {t('creditCards')}
+          </button>
+        )}
+        {filterCardName && (
+          <p className="text-xs text-gray-400">{filterCardName} · {t('cardTransactions')}</p>
+        )}
+        {!filterCreditCardId && (
+          <div className="flex justify-end gap-3 items-center">
             <button
               type="button"
-              onClick={onClearFilter}
-              className="text-sm text-purple-600 font-medium"
+              onClick={() => setShowImport(true)}
+              className="hidden md:inline-flex text-xs text-gray-500 font-medium border border-gray-200 rounded-full px-3 py-1 hover:border-purple-300 hover:text-purple-600"
             >
-              ← {t('creditCards')}
+              {t('importCsv')}
+            </button>
+            <button
+              onClick={() => setShowAdd(true)}
+              className="text-xs text-purple-600 font-medium"
+            >
+              {t('addTransaction')}
             </button>
           </div>
-        ) : null}
-        <div className="flex justify-between items-center mt-1">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">
-              {filterCardName || t('transactions')}
-            </h1>
-            {filterCardName && (
-              <p className="text-xs text-gray-400 mt-0.5">{t('cardTransactions')}</p>
-            )}
-          </div>
-          {!filterCreditCardId && (
-            <div className="flex gap-3 items-center">
-              <button
-                type="button"
-                onClick={() => setShowImport(true)}
-                className="hidden md:inline-flex text-xs text-gray-500 font-medium border border-gray-200 rounded-full px-3 py-1 hover:border-purple-300 hover:text-purple-600"
-              >
-                {t('importCsv')}
-              </button>
-              <button
-                onClick={() => setShowAdd(true)}
-                className="text-xs text-purple-600 font-medium"
-              >
-                {t('addTransaction')}
-              </button>
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
       <div className="px-6 py-6">

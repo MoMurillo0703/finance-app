@@ -176,10 +176,6 @@ export default function BillsScreen({ onBillPaid }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white px-6 pt-12 pb-4">
-        <h1 className="text-2xl font-bold text-gray-800">{t('billsTitle')}</h1>
-      </div>
-
       <div className="px-5 py-4">
         {error && <p className="text-red-500 text-xs mb-3">{error}</p>}
 

@@ -163,10 +163,6 @@ export default function ReportsScreen() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-6">
-      <div className="bg-white px-6 pt-12 pb-4 border-b border-gray-100">
-        <h1 className="text-2xl font-bold text-gray-800">{t('reports')}</h1>
-      </div>
-
       <div className="px-6 py-6 space-y-6">
         <section className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between">

@@ -299,5 +299,11 @@ export default {
       categoryInsurance: 'Insurance',
       categoryPersonal: 'Personal',
       categoryOther: 'Other',
+
+      // Month snapshot
+      thisMonth: 'This Month',
+      seeAll: 'See all',
+      spentOfProjected: 'Spent {{spent}} of projected {{projected}} this month',
+      recurringThisMonth: '{{amount}} in recurring charges this month.',
     }
   }

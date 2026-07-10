@@ -8,6 +8,7 @@ import AddVaultModal from './AddVaultModal'
 import AddBankModal from './AddBankModal'
 import EditVaultModal from '../vaults/EditVaultModal'
 import CardRow from '../cards/CardRow'
+import MonthSnapshot from './MonthSnapshot'
 import PaydayWizard from '../payday/PaydayWizard'
 import { formatMoney } from '../../utils/currency'
 import { formatDate } from '../../utils/date'
@@ -60,8 +61,8 @@ const isBillDueThisWeek = (bill) => {
   return dueDays.includes(bill.due_day) && unpaid && !isBillPaidThisMonth(bill)
 }
 
-export default function Dashboard({ refreshKey }) {
-  const { user, signOut } = useAuth()
+export default function Dashboard({ refreshKey, onViewReports }) {
+  const { user } = useAuth()
   const { t } = useTranslation()
   const [vaults, setVaults] = useState([])
   const [totalBalance, setTotalBalance] = useState(0)
@@ -237,13 +238,6 @@ export default function Dashboard({ refreshKey }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white px-5 pt-12 pb-3 flex justify-between items-center">
-        <h1 className="text-xl font-bold text-purple-600">Lala</h1>
-        <button onClick={signOut} className="text-xs text-gray-400">
-          {t('logout')}
-        </button>
-      </div>
-
       <div className="px-5 py-4">
         <SafeToSpend amount={safeToSpend} />
 
@@ -326,6 +320,11 @@ export default function Dashboard({ refreshKey }) {
             ))}
           </div>
         )}
+
+        <MonthSnapshot
+          refreshKey={`${refreshKey}-${modalRefreshKey}`}
+          onViewReports={onViewReports}
+        />
 
         {creditCards.length > 0 && (
           <div className="mt-4">

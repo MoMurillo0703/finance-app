@@ -299,5 +299,11 @@ export default {
       categoryInsurance: 'Seguros',
       categoryPersonal: 'Personal',
       categoryOther: 'Otros',
+
+      // Month snapshot
+      thisMonth: 'Este mes',
+      seeAll: 'Ver todo',
+      spentOfProjected: 'Gastado {{spent}} de {{projected}} proyectado este mes',
+      recurringThisMonth: '{{amount}} en cargos recurrentes este mes.',
     }
   }
