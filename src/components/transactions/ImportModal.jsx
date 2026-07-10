@@ -125,22 +125,48 @@ function detectFormat(headers) {
 function rowFromRecord(record, mapping) {
   const dateRaw = record[mapping.dateCol]
   const description = (record[mapping.descCol] || '').trim()
+  let type = 'expense'
   let amount = 0
 
   if (mapping.type === 'wellsFargo') {
-    amount = parseAmount(record[mapping.amountCol])
-  } else if (mapping.type === 'creditUnion') {
+    const raw = parseAmount(record[mapping.amountCol])
+    if (raw < 0) {
+      type = 'expense'
+      amount = Math.abs(raw)
+    } else if (raw > 0) {
+      type = 'income'
+      amount = raw
+    } else {
+      return null
+    }
+  } else if (mapping.type === 'creditUnion' || mapping.type === 'customDebitCredit') {
     const debit = parseAmount(record[mapping.debitCol])
     const credit = parseAmount(record[mapping.creditCol])
-    amount = debit > 0 ? -debit : credit
+    if (debit > 0) {
+      type = 'expense'
+      amount = debit
+    } else if (credit > 0) {
+      type = 'income'
+      amount = credit
+    } else {
+      return null
+    }
   } else {
-    amount = parseAmount(record[mapping.amountCol])
+    const raw = parseAmount(record[mapping.amountCol])
+    if (raw < 0) {
+      type = 'expense'
+      amount = Math.abs(raw)
+    } else if (raw > 0) {
+      type = 'income'
+      amount = raw
+    } else {
+      return null
+    }
   }
 
   const isoDate = parseCsvDate(dateRaw)
   if (!isoDate || !description) return null
 
-  const type = amount >= 0 ? 'income' : 'expense'
   const interest = isInterestCharge(description)
   const skip = shouldSkip(description) || interest
 
@@ -184,12 +210,18 @@ export default function ImportModal({ onClose, onComplete }) {
   const [rawData, setRawData] = useState([])
   const [headers, setHeaders] = useState([])
   const [mapping, setMapping] = useState(null)
-  const [customMap, setCustomMap] = useState({ dateCol: '', descCol: '', amountCol: '' })
+  const [customMap, setCustomMap] = useState({
+    dateCol: '',
+    descCol: '',
+    amountMode: 'signed',
+    amountCol: '',
+    debitCol: '',
+    creditCol: '',
+  })
   const [rows, setRows] = useState([])
   const [interestAmount, setInterestAmount] = useState(null)
-  const [banks, setBanks] = useState([])
-  const [cards, setCards] = useState([])
-  const [selectedAccount, setSelectedAccount] = useState('')
+  const [accounts, setAccounts] = useState([])
+  const [selectedAccountId, setSelectedAccountId] = useState('')
   const [importing, setImporting] = useState(false)
   const [summary, setSummary] = useState(null)
   const [showInterestPrompt, setShowInterestPrompt] = useState(false)
@@ -200,8 +232,17 @@ export default function ImportModal({ onClose, onComplete }) {
       supabase.from('banks').select('id, name, nickname').eq('user_id', user.id).eq('is_active', true).order('name'),
       supabase.from('credit_cards').select('id, name').eq('user_id', user.id).eq('is_active', true).order('name'),
     ]).then(([banksRes, cardsRes]) => {
-      setBanks(banksRes.data ?? [])
-      setCards(cardsRes.data ?? [])
+      const bankAccounts = (banksRes.data ?? []).map(b => ({
+        id: b.id,
+        name: getBankDisplayName(b),
+        accountType: 'bank',
+      }))
+      const cardAccounts = (cardsRes.data ?? []).map(c => ({
+        id: c.id,
+        name: c.name,
+        accountType: 'card',
+      }))
+      setAccounts([...bankAccounts, ...cardAccounts])
     })
   }, [user.id])
 
@@ -210,13 +251,20 @@ export default function ImportModal({ onClose, onComplete }) {
     if (format.type === 'unknown') {
       setRawData(data)
       setHeaders(hdrs)
-      setCustomMap({ dateCol: hdrs[0] || '', descCol: hdrs[1] || '', amountCol: hdrs[2] || '' })
+      setCustomMap({
+        dateCol: hdrs[0] || '',
+        descCol: hdrs[1] || '',
+        amountMode: 'signed',
+        amountCol: hdrs[2] || '',
+        debitCol: hdrs.find(h => /debit/i.test(h)) || hdrs[2] || '',
+        creditCol: hdrs.find(h => /credit/i.test(h)) || hdrs[3] || '',
+      })
       setMapping(null)
       return
     }
     const built = buildRows(data, format)
     const interestRow = built.find(r => r.isInterest)
-    setInterestAmount(interestRow ? Math.abs(interestRow.amount) : null)
+    setInterestAmount(interestRow ? interestRow.amount : null)
     setRows(built)
     setMapping(format)
     setStep(2)
@@ -251,14 +299,37 @@ export default function ImportModal({ onClose, onComplete }) {
   }
 
   const applyCustomMapping = () => {
-    if (!customMap.dateCol || !customMap.descCol || !customMap.amountCol) {
+    if (!customMap.dateCol || !customMap.descCol) {
       setError(t('importMapRequired'))
       return
     }
-    const custom = { type: 'custom', ...customMap }
+    if (customMap.amountMode === 'signed' && !customMap.amountCol) {
+      setError(t('importMapRequired'))
+      return
+    }
+    if (customMap.amountMode === 'debitCredit' && (!customMap.debitCol || !customMap.creditCol)) {
+      setError(t('importMapDebitCreditRequired'))
+      return
+    }
+
+    const custom = customMap.amountMode === 'debitCredit'
+      ? {
+          type: 'customDebitCredit',
+          dateCol: customMap.dateCol,
+          descCol: customMap.descCol,
+          debitCol: customMap.debitCol,
+          creditCol: customMap.creditCol,
+        }
+      : {
+          type: 'custom',
+          dateCol: customMap.dateCol,
+          descCol: customMap.descCol,
+          amountCol: customMap.amountCol,
+        }
+
     const built = buildRows(rawData, custom)
     const interestRow = built.find(r => r.isInterest)
-    setInterestAmount(interestRow ? Math.abs(interestRow.amount) : null)
+    setInterestAmount(interestRow ? interestRow.amount : null)
     setRows(built)
     setMapping(custom)
     setError('')
@@ -281,26 +352,14 @@ export default function ImportModal({ onClose, onComplete }) {
     }))
   }
 
-  const parseAccount = (value) => {
-    if (!value) return { bankId: null, cardId: null }
-    const [kind, id] = value.split(':')
-    return kind === 'bank' ? { bankId: id, cardId: null } : { bankId: null, cardId: id }
-  }
+  const getSelectedAccount = () =>
+    accounts.find(a => a.id === selectedAccountId) || null
 
-  const getAccountName = () => {
-    const { bankId, cardId } = parseAccount(selectedAccount)
-    if (bankId) {
-      const bank = banks.find(b => b.id === bankId)
-      return getBankDisplayName(bank)
-    }
-    if (cardId) {
-      return cards.find(c => c.id === cardId)?.name || ''
-    }
-    return ''
-  }
+  const getAccountName = () => getSelectedAccount()?.name || ''
 
   const runImport = async () => {
-    if (!selectedAccount) {
+    const account = getSelectedAccount()
+    if (!account) {
       setError(t('importSelectAccount'))
       return
     }
@@ -314,13 +373,15 @@ export default function ImportModal({ onClose, onComplete }) {
     setImporting(true)
     setError('')
 
-    const { bankId, cardId } = parseAccount(selectedAccount)
+    const bankId = account.accountType === 'bank' ? account.id : null
+    const cardId = account.accountType === 'card' ? account.id : null
+
     const inserts = checked.map(row => ({
       user_id: user.id,
       bank_id: bankId,
       credit_card_id: cardId,
       type: row.type,
-      amount: Math.abs(row.amount),
+      amount: row.amount,
       description: row.description,
       category: row.category,
       transaction_date: row.date,
@@ -336,13 +397,12 @@ export default function ImportModal({ onClose, onComplete }) {
     let incomeTotal = 0
     let expenseTotal = 0
     checked.forEach(row => {
-      const abs = Math.abs(row.amount)
-      if (row.type === 'income') incomeTotal += abs
-      else expenseTotal += abs
+      if (row.type === 'income') incomeTotal += row.amount
+      else expenseTotal += row.amount
     })
 
     if (bankId) {
-      const delta = checked.reduce((sum, row) => sum + bankDelta(row.type, Math.abs(row.amount)), 0)
+      const delta = checked.reduce((sum, row) => sum + bankDelta(row.type, row.amount), 0)
       const balanceError = await adjustBankBalance(bankId, delta)
       if (balanceError) {
         setError(balanceError.message)
@@ -352,7 +412,7 @@ export default function ImportModal({ onClose, onComplete }) {
     }
 
     if (cardId) {
-      const delta = checked.reduce((sum, row) => sum + cardDelta(row.type, Math.abs(row.amount)), 0)
+      const delta = checked.reduce((sum, row) => sum + cardDelta(row.type, row.amount), 0)
       const balanceError = await adjustCardBalance(cardId, delta)
       if (balanceError) {
         setError(balanceError.message)
@@ -388,14 +448,14 @@ export default function ImportModal({ onClose, onComplete }) {
     const expenses = importedRows.filter(r => r.type === 'expense')
     const byCategory = {}
     expenses.forEach(r => {
-      byCategory[r.category] = (byCategory[r.category] || 0) + Math.abs(r.amount)
+      byCategory[r.category] = (byCategory[r.category] || 0) + r.amount
     })
 
     const descGroups = {}
     expenses.forEach(r => {
       const key = normalizeDesc(r.description)
       if (!descGroups[key]) descGroups[key] = { desc: r.description, amounts: [] }
-      descGroups[key].amounts.push(Math.abs(r.amount))
+      descGroups[key].amounts.push(r.amount)
     })
 
     const recurring = Object.values(descGroups)
@@ -419,11 +479,15 @@ export default function ImportModal({ onClose, onComplete }) {
   }
 
   function expenseTotalFrom(expenses) {
-    return expenses.reduce((sum, r) => sum + Math.abs(r.amount), 0)
+    return expenses.reduce((sum, r) => sum + r.amount, 0)
   }
 
   const handleInterestYes = async () => {
-    const { bankId, cardId } = parseAccount(selectedAccount)
+    const account = getSelectedAccount()
+    if (!account) return
+
+    const bankId = account.accountType === 'bank' ? account.id : null
+    const cardId = account.accountType === 'card' ? account.id : null
     const today = new Date().toISOString().split('T')[0]
 
     const { error: insertError } = await supabase.from('transactions').insert({
@@ -517,22 +581,85 @@ export default function ImportModal({ onClose, onComplete }) {
             ) : (
               <div className="space-y-4">
                 <p className="text-sm text-gray-600">{t('importMapColumns')}</p>
-                {['dateCol', 'descCol', 'amountCol'].map(key => (
-                  <div key={key}>
-                    <label className="text-xs text-gray-400 mb-1 block">
-                      {t(key === 'dateCol' ? 'date' : key === 'descCol' ? 'description' : 'amount')}
-                    </label>
+                <div>
+                  <label className="text-xs text-gray-400 mb-1 block">{t('date')}</label>
+                  <select
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
+                    value={customMap.dateCol}
+                    onChange={e => setCustomMap(prev => ({ ...prev, dateCol: e.target.value }))}
+                  >
+                    {headers.map(h => (
+                      <option key={h} value={h}>{h}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 mb-1 block">{t('description')}</label>
+                  <select
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
+                    value={customMap.descCol}
+                    onChange={e => setCustomMap(prev => ({ ...prev, descCol: e.target.value }))}
+                  >
+                    {headers.map(h => (
+                      <option key={h} value={h}>{h}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 mb-1 block">{t('importAmountFormat')}</label>
+                  <select
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
+                    value={customMap.amountMode}
+                    onChange={e => setCustomMap(prev => ({ ...prev, amountMode: e.target.value }))}
+                  >
+                    <option value="signed">{t('importSignedAmount')}</option>
+                    <option value="debitCredit">{t('importDebitCredit')}</option>
+                  </select>
+                  {customMap.amountMode === 'signed' && (
+                    <p className="text-xs text-gray-400 mt-1">{t('importSignedHint')}</p>
+                  )}
+                </div>
+                {customMap.amountMode === 'signed' ? (
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">{t('amount')}</label>
                     <select
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
-                      value={customMap[key]}
-                      onChange={e => setCustomMap(prev => ({ ...prev, [key]: e.target.value }))}
+                      value={customMap.amountCol}
+                      onChange={e => setCustomMap(prev => ({ ...prev, amountCol: e.target.value }))}
                     >
                       {headers.map(h => (
                         <option key={h} value={h}>{h}</option>
                       ))}
                     </select>
                   </div>
-                ))}
+                ) : (
+                  <>
+                    <div>
+                      <label className="text-xs text-gray-400 mb-1 block">{t('importDebitCol')}</label>
+                      <select
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
+                        value={customMap.debitCol}
+                        onChange={e => setCustomMap(prev => ({ ...prev, debitCol: e.target.value }))}
+                      >
+                        {headers.map(h => (
+                          <option key={h} value={h}>{h}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 mb-1 block">{t('importCreditCol')}</label>
+                      <select
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
+                        value={customMap.creditCol}
+                        onChange={e => setCustomMap(prev => ({ ...prev, creditCol: e.target.value }))}
+                      >
+                        {headers.map(h => (
+                          <option key={h} value={h}>{h}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                )}
                 <button
                   type="button"
                   onClick={applyCustomMapping}
@@ -603,7 +730,7 @@ export default function ImportModal({ onClose, onComplete }) {
                         </button>
                       </td>
                       <td className="p-2 text-right whitespace-nowrap font-medium">
-                        {formatMoney(Math.abs(row.amount), currency)}
+                        {formatMoney(row.amount, currency)}
                       </td>
                     </tr>
                   ))}
@@ -622,16 +749,24 @@ export default function ImportModal({ onClose, onComplete }) {
               <label className="text-xs text-gray-400 mb-1 block">{t('importToAccount')}</label>
               <select
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
-                value={selectedAccount}
-                onChange={e => setSelectedAccount(e.target.value)}
+                value={selectedAccountId}
+                onChange={e => setSelectedAccountId(e.target.value)}
               >
                 <option value="">{t('importSelectAccount')}</option>
-                {banks.map(b => (
-                  <option key={b.id} value={`bank:${b.id}`}>{getBankDisplayName(b)}</option>
-                ))}
-                {cards.map(c => (
-                  <option key={c.id} value={`card:${c.id}`}>💳 {c.name}</option>
-                ))}
+                {accounts.some(a => a.accountType === 'bank') && (
+                  <optgroup label={t('importBankAccounts')}>
+                    {accounts.filter(a => a.accountType === 'bank').map(a => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {accounts.some(a => a.accountType === 'card') && (
+                  <optgroup label={t('importCreditCards')}>
+                    {accounts.filter(a => a.accountType === 'card').map(a => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             </div>
             <p className="text-sm text-gray-500">
