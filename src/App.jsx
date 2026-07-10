@@ -15,11 +15,20 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState('home')
   const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0)
   const [prefsVersion, setPrefsVersion] = useState(0)
+  const [txFilter, setTxFilter] = useState(null)
 
   const bumpDashboard = () => setDashboardRefreshKey(k => k + 1)
   const bumpPrefs = () => setPrefsVersion(v => v + 1)
 
+  const viewCardTransactions = (card) => {
+    setTxFilter({ creditCardId: card.id, cardName: card.name })
+    setActiveTab('transactions')
+  }
+
   const handleTabChange = (tab) => {
+    if (tab === 'transactions' && activeTab !== 'transactions') {
+      setTxFilter(null)
+    }
     setActiveTab(tab)
     if (tab === 'home') bumpDashboard()
   }
@@ -36,10 +45,25 @@ function AppContent() {
         <Dashboard refreshKey={`${dashboardRefreshKey}-${prefsVersion}`} />
       </div>
       {activeTab === 'transactions' && (
-        <TransactionsScreen key={prefsVersion} onTransactionSaved={bumpDashboard} />
+        <TransactionsScreen
+          key={prefsVersion}
+          filterCreditCardId={txFilter?.creditCardId}
+          filterCardName={txFilter?.cardName}
+          onClearFilter={() => {
+            setTxFilter(null)
+            setActiveTab('cards')
+          }}
+          onTransactionSaved={bumpDashboard}
+        />
       )}
       {activeTab === 'bills' && <BillsScreen key={prefsVersion} onBillPaid={bumpDashboard} />}
-      {activeTab === 'cards' && <CardsScreen key={prefsVersion} onCardSaved={bumpDashboard} />}
+      {activeTab === 'cards' && (
+        <CardsScreen
+          key={prefsVersion}
+          onCardSaved={bumpDashboard}
+          onViewTransactions={viewCardTransactions}
+        />
+      )}
       {activeTab === 'settings' && (
         <SettingsScreen
           key={prefsVersion}

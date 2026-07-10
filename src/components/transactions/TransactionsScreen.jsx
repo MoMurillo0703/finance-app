@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import AddTransactionModal from './AddTransactionModal'
 import EditTransactionModal from './EditTransactionModal'
+import TransactionDetailModal from './TransactionDetailModal'
 import ImportModal from './ImportModal'
 import PaydayWizard from '../payday/PaydayWizard'
 
@@ -23,12 +24,18 @@ function enrichTransactions(transactions, banks, cards) {
   }))
 }
 
-export default function TransactionsScreen({ onTransactionSaved }) {
+export default function TransactionsScreen({
+  onTransactionSaved,
+  filterCreditCardId,
+  filterCardName,
+  onClearFilter,
+}) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
+  const [selectedTransaction, setSelectedTransaction] = useState(null)
   const [editingTransaction, setEditingTransaction] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const [wizardPrefill, setWizardPrefill] = useState(null)
@@ -38,12 +45,18 @@ export default function TransactionsScreen({ onTransactionSaved }) {
     let active = true
 
     ;(async () => {
+      let txQuery = supabase
+        .from('transactions')
+        .select('id, type, amount, description, transaction_date, category, bank_id, credit_card_id, vault_id')
+        .eq('user_id', user.id)
+        .order('transaction_date', { ascending: false })
+
+      if (filterCreditCardId) {
+        txQuery = txQuery.eq('credit_card_id', filterCreditCardId)
+      }
+
       const [txRes, banksRes, cardsRes] = await Promise.all([
-        supabase
-          .from('transactions')
-          .select('id, type, amount, description, transaction_date, category, bank_id, credit_card_id, vault_id')
-          .eq('user_id', user.id)
-          .order('transaction_date', { ascending: false }),
+        txQuery,
         supabase
           .from('banks')
           .select('id, name')
@@ -67,11 +80,13 @@ export default function TransactionsScreen({ onTransactionSaved }) {
     })()
 
     return () => { active = false }
-  }, [user.id, refreshKey])
+  }, [user.id, refreshKey, filterCreditCardId])
 
   const handleTransactionSaved = () => {
     setShowAdd(false)
     setShowImport(false)
+    setSelectedTransaction(null)
+    setEditingTransaction(null)
     setRefreshKey(k => k + 1)
     onTransactionSaved?.()
   }
@@ -82,22 +97,44 @@ export default function TransactionsScreen({ onTransactionSaved }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white px-6 pt-12 pb-4 flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">{t('transactions')}</h1>
-        <div className="flex gap-3 items-center">
-          <button
-            type="button"
-            onClick={() => setShowImport(true)}
-            className="hidden md:inline-flex text-xs text-gray-500 font-medium border border-gray-200 rounded-full px-3 py-1 hover:border-purple-300 hover:text-purple-600"
-          >
-            {t('importCsv')}
-          </button>
-          <button
-            onClick={() => setShowAdd(true)}
-            className="text-xs text-purple-600 font-medium"
-          >
-            {t('addTransaction')}
-          </button>
+      <div className="bg-white px-6 pt-12 pb-4">
+        {filterCreditCardId ? (
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClearFilter}
+              className="text-sm text-purple-600 font-medium"
+            >
+              ← {t('creditCards')}
+            </button>
+          </div>
+        ) : null}
+        <div className="flex justify-between items-center mt-1">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">
+              {filterCardName || t('transactions')}
+            </h1>
+            {filterCardName && (
+              <p className="text-xs text-gray-400 mt-0.5">{t('cardTransactions')}</p>
+            )}
+          </div>
+          {!filterCreditCardId && (
+            <div className="flex gap-3 items-center">
+              <button
+                type="button"
+                onClick={() => setShowImport(true)}
+                className="hidden md:inline-flex text-xs text-gray-500 font-medium border border-gray-200 rounded-full px-3 py-1 hover:border-purple-300 hover:text-purple-600"
+              >
+                {t('importCsv')}
+              </button>
+              <button
+                onClick={() => setShowAdd(true)}
+                className="text-xs text-purple-600 font-medium"
+              >
+                {t('addTransaction')}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -106,13 +143,17 @@ export default function TransactionsScreen({ onTransactionSaved }) {
           <p className="text-gray-400 text-sm text-center py-10">{t('loading')}</p>
         ) : transactions.length === 0 ? (
           <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
-            <p className="text-gray-400 text-sm">{t('noTransactions')}</p>
-            <button
-              onClick={() => setShowAdd(true)}
-              className="mt-3 text-purple-600 text-sm font-medium"
-            >
-              {t('addFirstTransaction')}
-            </button>
+            <p className="text-gray-400 text-sm">
+              {filterCreditCardId ? t('noCardTransactions') : t('noTransactions')}
+            </p>
+            {!filterCreditCardId && (
+              <button
+                onClick={() => setShowAdd(true)}
+                className="mt-3 text-purple-600 text-sm font-medium"
+              >
+                {t('addFirstTransaction')}
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
@@ -120,7 +161,7 @@ export default function TransactionsScreen({ onTransactionSaved }) {
               <button
                 key={tx.id}
                 type="button"
-                onClick={() => setEditingTransaction(tx)}
+                onClick={() => setSelectedTransaction(tx)}
                 className="w-full bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex justify-between items-center text-left"
               >
                 <div>
@@ -129,9 +170,9 @@ export default function TransactionsScreen({ onTransactionSaved }) {
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5">
                     {[
-                      getBankDisplayName(tx.banks) || tx.credit_cards?.name || t('unknownAccount'),
-                      tx.vaults?.name,
+                      !filterCreditCardId && (getBankDisplayName(tx.banks) || tx.credit_cards?.name),
                       formatDate(tx.transaction_date),
+                      t(tx.category, { defaultValue: tx.category }),
                     ].filter(Boolean).join(' · ')}
                   </p>
                 </div>
@@ -144,13 +185,15 @@ export default function TransactionsScreen({ onTransactionSaved }) {
         )}
       </div>
 
-      <button
-        onClick={() => setShowAdd(true)}
-        className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-purple-600 text-white text-3xl leading-none shadow-lg flex items-center justify-center"
-        aria-label={t('addTransaction')}
-      >
-        +
-      </button>
+      {!filterCreditCardId && (
+        <button
+          onClick={() => setShowAdd(true)}
+          className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-purple-600 text-white text-3xl leading-none shadow-lg flex items-center justify-center"
+          aria-label={t('addTransaction')}
+        >
+          +
+        </button>
+      )}
 
       {showAdd && (
         <AddTransactionModal
@@ -160,15 +203,22 @@ export default function TransactionsScreen({ onTransactionSaved }) {
         />
       )}
 
+      {selectedTransaction && !editingTransaction && (
+        <TransactionDetailModal
+          transaction={selectedTransaction}
+          onClose={() => setSelectedTransaction(null)}
+          onEdit={(tx) => {
+            setSelectedTransaction(null)
+            setEditingTransaction(tx)
+          }}
+        />
+      )}
+
       {editingTransaction && (
         <EditTransactionModal
           transaction={editingTransaction}
           onClose={() => setEditingTransaction(null)}
-          onSaved={() => {
-            setEditingTransaction(null)
-            setRefreshKey(k => k + 1)
-            onTransactionSaved?.()
-          }}
+          onSaved={handleTransactionSaved}
         />
       )}
 

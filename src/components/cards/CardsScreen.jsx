@@ -6,11 +6,10 @@ import AddCardModal from './AddCardModal'
 import EditCardModal from './EditCardModal'
 import AddCuotaModal from './AddCuotaModal'
 import CuotasSection from './CuotasSection'
-import CardTransactionsSection from './CardTransactionsSection'
 
 import { formatMoney } from '../../utils/currency'
 
-export default function CardsScreen({ onCardSaved }) {
+export default function CardsScreen({ onCardSaved, onViewTransactions }) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [cards, setCards] = useState([])
@@ -48,7 +47,7 @@ export default function CardsScreen({ onCardSaved }) {
     onCardSaved?.()
   }
 
-  const toggleExpand = (cardId) => {
+  const toggleCuotas = (cardId) => {
     setExpandedCardId(prev => (prev === cardId ? null : cardId))
   }
 
@@ -87,7 +86,7 @@ export default function CardsScreen({ onCardSaved }) {
                 >
                   <button
                     type="button"
-                    onClick={() => toggleExpand(card.id)}
+                    onClick={() => onViewTransactions?.(card)}
                     className="w-full text-left"
                   >
                     <div className="flex justify-between items-start mb-2">
@@ -113,9 +112,19 @@ export default function CardsScreen({ onCardSaved }) {
                         {t('utilization')}: {Math.round(utilization)}%
                       </p>
                     )}
+                    <p className="text-[10px] text-purple-600 mt-2 font-medium">
+                      {t('viewTransactions')} →
+                    </p>
                   </button>
 
                   <div className="flex gap-2 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleCuotas(card.id)}
+                      className="flex-1 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-[10px] font-medium"
+                    >
+                      {isExpanded ? t('hideCuotas') : t('viewCuotas')}
+                    </button>
                     <button
                       type="button"
                       onClick={() => setAddCuotaCard(card)}
@@ -133,17 +142,11 @@ export default function CardsScreen({ onCardSaved }) {
                   </div>
 
                   {isExpanded && (
-                    <>
-                      <CardTransactionsSection
-                        card={card}
-                        refreshKey={refreshKey}
-                      />
-                      <CuotasSection
-                        card={card}
-                        refreshKey={refreshKey}
-                        onUpdated={handleSaved}
-                      />
-                    </>
+                    <CuotasSection
+                      card={card}
+                      refreshKey={refreshKey}
+                      onUpdated={handleSaved}
+                    />
                   )}
                 </div>
               )
