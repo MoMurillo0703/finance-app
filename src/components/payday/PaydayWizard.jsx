@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import { adjustBankBalance, adjustVaultBalance } from '../../lib/payments'
 
 import { formatMoney, getUserCurrency } from '../../utils/currency'
-import { getBankDisplayName } from '../../utils/bank'
+import { getBankDisplayName, fetchBanks } from '../../utils/bank'
 
 export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefillBankId }) {
   const { t } = useTranslation()
@@ -24,20 +24,14 @@ export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefi
   const [error, setError] = useState('')
 
   useEffect(() => {
-    supabase
-      .from('banks')
-      .select('id, name, type, balance, is_active')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .order('name')
-      .then(({ data }) => {
-        if (data) {
-          setBanks(data)
-          if (!prefillBankId && data.length > 0) {
-            setBankId(prev => prev || data[0].id)
-          }
+    fetchBanks(supabase, user.id, { orderByName: true }).then(({ data }) => {
+      if (data) {
+        setBanks(data)
+        if (!prefillBankId && data.length > 0) {
+          setBankId(prev => prev || data[0].id)
         }
-      })
+      }
+    })
   }, [user.id, prefillBankId])
 
   const loadVaults = async () => {

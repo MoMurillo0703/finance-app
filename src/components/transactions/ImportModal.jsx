@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { adjustBankBalance, adjustCardBalance, bankDelta, cardDelta } from '../../lib/payments'
 import { formatMoney, getUserCurrency } from '../../utils/currency'
-import { getBankDisplayName } from '../../utils/bank'
+import { getBankDisplayName, fetchBanks } from '../../utils/bank'
 import { categoryForDb } from '../../utils/categories'
 import { txTypeLabel, txBadgeClass } from '../../utils/transactionType'
 
@@ -315,7 +315,7 @@ export default function ImportModal({ onClose, onComplete }) {
 
   useEffect(() => {
     Promise.all([
-      supabase.from('banks').select('id, name, type, balance, is_active').eq('user_id', user.id).eq('is_active', true).order('name'),
+      fetchBanks(supabase, user.id, { orderByName: true }),
       supabase.from('credit_cards').select('id, name').eq('user_id', user.id).eq('is_active', true).order('name'),
     ]).then(([banksRes, cardsRes]) => {
       const bankAccounts = (banksRes.data ?? []).map(b => ({

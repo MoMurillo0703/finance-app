@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { getUserCurrency } from '../../utils/currency'
-import { getBankDisplayName } from '../../utils/bank'
+import { getBankDisplayName, fetchBanks } from '../../utils/bank'
 
 export default function EditBillModal({ bill, onClose, onSaved }) {
   const { t } = useTranslation()
@@ -18,15 +18,9 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    supabase
-      .from('banks')
-      .select('id, name, type, balance, is_active')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .order('name')
-      .then(({ data }) => {
-        if (data) setBanks(data)
-      })
+    fetchBanks(supabase, user.id, { orderByName: true }).then(({ data }) => {
+      if (data) setBanks(data)
+    })
   }, [user.id])
 
   const handleSave = async () => {

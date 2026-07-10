@@ -273,6 +273,11 @@ export default {
       monthCharges: 'Cargos',
       monthPayments: 'Pagos',
 
+      // Account activity
+      accountActivity: 'Actividad de la cuenta',
+      viewActivity: 'Ver actividad',
+      noAccountTransactions: 'No hay transacciones en esta cuenta todavía.',
+
       // Reports
       reports: 'Informes',
       spendingByCategory: 'Gastos por categoría',

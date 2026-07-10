@@ -273,6 +273,11 @@ export default {
       monthCharges: 'Charges',
       monthPayments: 'Payments',
 
+      // Account activity
+      accountActivity: 'Account activity',
+      viewActivity: 'View activity',
+      noAccountTransactions: 'No transactions for this account yet.',
+
       // Reports
       reports: 'Reports',
       spendingByCategory: 'Spending by category',

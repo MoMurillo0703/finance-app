@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { adjustBankBalance, adjustCardBalance, adjustVaultBalance, bankDelta } from '../../lib/payments'
 import { formatMoney, getUserCurrency } from '../../utils/currency'
-import { getBankDisplayName } from '../../utils/bank'
+import { getBankDisplayName, fetchBanks } from '../../utils/bank'
 
 const EXPENSE_CATEGORIES = ['essential', 'food', 'travel', 'fun', 'bills', 'debt', 'weeklyLiving', 'emergency']
 const INCOME_CATEGORIES = ['salary', 'commission', 'reimbursement']
@@ -32,17 +32,12 @@ export default function AddTransactionModal({ onClose, onSaved, onOpenWizard }) 
   const [savedIncome, setSavedIncome] = useState(null)
 
   useEffect(() => {
-    supabase
-      .from('banks')
-      .select('id, name, type, balance, is_active')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .then(({ data }) => {
-        if (data) {
-          setBanks(data)
-          if (data.length > 0) setBankId(data[0].id)
-        }
-      })
+    fetchBanks(supabase, user.id).then(({ data }) => {
+      if (data) {
+        setBanks(data)
+        if (data.length > 0) setBankId(data[0].id)
+      }
+    })
 
     supabase
       .from('credit_cards')

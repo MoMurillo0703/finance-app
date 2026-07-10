@@ -6,9 +6,9 @@ import AddBankModal from '../dashboard/AddBankModal'
 import EditBankModal from './EditBankModal'
 import { formatMoney, getUserCurrency, notifyPrefsChanged } from '../../utils/currency'
 import { getUserDateFormat } from '../../utils/date'
-import { getBankDisplayName } from '../../utils/bank'
+import { getBankDisplayName, fetchBanks } from '../../utils/bank'
 
-export default function SettingsScreen({ onBankSaved, onPrefsChanged }) {
+export default function SettingsScreen({ onBankSaved, onPrefsChanged, onViewAccount }) {
   const { user } = useAuth()
   const { t, i18n } = useTranslation()
   const [banks, setBanks] = useState([])
@@ -30,12 +30,7 @@ export default function SettingsScreen({ onBankSaved, onPrefsChanged }) {
     let active = true
 
     ;(async () => {
-      const { data } = await supabase
-        .from('banks')
-        .select('id, name, balance, type, is_active')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .order('name')
+      const { data } = await fetchBanks(supabase, user.id, { orderByName: true })
 
       if (!active) return
       setBanks(data ?? [])
@@ -114,20 +109,33 @@ export default function SettingsScreen({ onBankSaved, onPrefsChanged }) {
           ) : (
             <div className="space-y-3">
               {banks.map(bank => (
-                <button
+                <div
                   key={bank.id}
-                  type="button"
-                  onClick={() => setEditingBank(bank)}
-                  className="w-full bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex justify-between items-center text-left"
+                  className="w-full bg-white border border-gray-100 rounded-2xl shadow-sm flex items-center"
                 >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-700">{getBankDisplayName(bank)}</p>
-                    {bank.nickname?.trim() && (
-                      <p className="text-xs text-gray-400">{bank.name}</p>
-                    )}
-                  </div>
-                  <p className="text-sm font-bold text-purple-600 shrink-0">{formatMoney(bank.balance)}</p>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => onViewAccount?.(bank)}
+                    className="flex-1 min-w-0 flex justify-between items-center p-4 text-left"
+                  >
+                    <div className="min-w-0 pr-2">
+                      <p className="text-sm font-medium text-gray-700 truncate">{getBankDisplayName(bank)}</p>
+                      {bank.nickname?.trim() && (
+                        <p className="text-xs text-gray-400 truncate">{bank.name}</p>
+                      )}
+                      <p className="text-[11px] text-purple-500 mt-0.5">{t('viewActivity')} →</p>
+                    </div>
+                    <p className="text-sm font-bold text-purple-600 shrink-0">{formatMoney(bank.balance)}</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingBank(bank)}
+                    className="shrink-0 px-4 py-4 text-xs text-gray-400 font-medium border-l border-gray-100 hover:text-purple-600"
+                    aria-label={t('editBank')}
+                  >
+                    {t('edit')}
+                  </button>
+                </div>
               ))}
             </div>
           )}

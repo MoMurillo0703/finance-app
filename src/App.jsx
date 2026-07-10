@@ -10,6 +10,7 @@ import ReportsScreen from './components/reports/ReportsScreen'
 import SettingsScreen from './components/settings/SettingsScreen'
 import BottomNav from './components/layout/BottomNav'
 import AppHeader from './components/layout/AppHeader'
+import { getBankDisplayName } from './utils/bank'
 
 function AppContent() {
   const { user } = useAuth()
@@ -23,7 +24,12 @@ function AppContent() {
   const bumpPrefs = () => setPrefsVersion(v => v + 1)
 
   const viewCardTransactions = (card) => {
-    setTxFilter({ creditCardId: card.id, cardName: card.name })
+    setTxFilter({ creditCardId: card.id, cardName: card.name, from: 'cards' })
+    setActiveTab('transactions')
+  }
+
+  const viewAccountTransactions = (bank) => {
+    setTxFilter({ bankId: bank.id, bankName: getBankDisplayName(bank), from: 'settings' })
     setActiveTab('transactions')
   }
 
@@ -56,9 +62,12 @@ function AppContent() {
             key={prefsVersion}
             filterCreditCardId={txFilter?.creditCardId}
             filterCardName={txFilter?.cardName}
+            filterBankId={txFilter?.bankId}
+            filterBankName={txFilter?.bankName}
             onClearFilter={() => {
+              const dest = txFilter?.from || 'home'
               setTxFilter(null)
-              setActiveTab('cards')
+              setActiveTab(dest)
             }}
             onTransactionSaved={bumpDashboard}
           />
@@ -77,6 +86,7 @@ function AppContent() {
             key={prefsVersion}
             onBankSaved={bumpDashboard}
             onPrefsChanged={bumpPrefs}
+            onViewAccount={viewAccountTransactions}
           />
         )}
       </main>

@@ -10,7 +10,7 @@ import PaydayWizard from '../payday/PaydayWizard'
 
 import { formatMoney } from '../../utils/currency'
 import { formatDate } from '../../utils/date'
-import { getBankDisplayName } from '../../utils/bank'
+import { getBankDisplayName, fetchBanks } from '../../utils/bank'
 import { txTypeLabel, txAmountClass, txAmountPrefix } from '../../utils/transactionType'
 
 function enrichTransactions(transactions, banks, cards) {
@@ -60,9 +60,12 @@ export default function TransactionsScreen({
   onTransactionSaved,
   filterCreditCardId,
   filterCardName,
+  filterBankId,
+  filterBankName,
   onClearFilter,
 }) {
   const { t, i18n } = useTranslation()
+  const isFiltered = Boolean(filterCreditCardId || filterBankId)
   const { user } = useAuth()
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
@@ -75,7 +78,7 @@ export default function TransactionsScreen({
   const [expandedMonths, setExpandedMonths] = useState(new Set())
 
   const monthGroups = useMemo(() => groupByMonth(transactions), [transactions])
-  const listKey = `${filterCreditCardId ?? 'all'}-${refreshKey}`
+  const listKey = `${filterCreditCardId ?? ''}-${filterBankId ?? ''}-${refreshKey}`
 
   useEffect(() => {
     if (monthGroups.length === 0) {
@@ -111,7 +114,7 @@ export default function TransactionsScreen({
         </p>
         <p className="text-xs text-gray-400 mt-0.5">
           {[
-            !filterCreditCardId && (getBankDisplayName(tx.banks) || tx.credit_cards?.name),
+            !isFiltered && (getBankDisplayName(tx.banks) || tx.credit_cards?.name),
             formatDate(tx.transaction_date),
             t(tx.category, { defaultValue: tx.category }),
           ].filter(Boolean).join(' · ')}
@@ -174,13 +177,13 @@ export default function TransactionsScreen({
         txQuery = txQuery.eq('credit_card_id', filterCreditCardId)
       }
 
+      if (filterBankId) {
+        txQuery = txQuery.eq('bank_id', filterBankId)
+      }
+
       const [txRes, banksRes, cardsRes] = await Promise.all([
         txQuery,
-        supabase
-          .from('banks')
-          .select('id, name')
-          .eq('user_id', user.id)
-          .eq('is_active', true),
+        fetchBanks(supabase, user.id, { columns: 'id, name' }),
         supabase
           .from('credit_cards')
           .select('id, name')
@@ -199,7 +202,7 @@ export default function TransactionsScreen({
     })()
 
     return () => { active = false }
-  }, [user.id, refreshKey, filterCreditCardId])
+  }, [user.id, refreshKey, filterCreditCardId, filterBankId])
 
   const handleTransactionSaved = () => {
     setShowAdd(false)
@@ -217,19 +220,22 @@ export default function TransactionsScreen({
   return (
     <div className="bg-gray-50">
       <div className="bg-white px-6 py-3 border-b border-gray-100">
-        {filterCreditCardId && (
+        {isFiltered && (
           <button
             type="button"
             onClick={onClearFilter}
             className="text-sm text-purple-600 font-medium mb-1"
           >
-            ← {t('creditCards')}
+            ← {filterBankId ? t('myAccounts') : t('creditCards')}
           </button>
         )}
         {filterCardName && (
           <p className="text-xs text-gray-400">{filterCardName} · {t('cardTransactions')}</p>
         )}
-        {!filterCreditCardId && (
+        {filterBankName && (
+          <p className="text-xs text-gray-400">{filterBankName} · {t('accountActivity')}</p>
+        )}
+        {!isFiltered && (
           <div className="flex justify-end gap-3 items-center">
             <button
               type="button"
@@ -254,9 +260,13 @@ export default function TransactionsScreen({
         ) : transactions.length === 0 ? (
           <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
             <p className="text-gray-400 text-sm">
-              {filterCreditCardId ? t('noCardTransactions') : t('noTransactions')}
+              {filterCreditCardId
+                ? t('noCardTransactions')
+                : filterBankId
+                  ? t('noAccountTransactions')
+                  : t('noTransactions')}
             </p>
-            {!filterCreditCardId && (
+            {!isFiltered && (
               <button
                 onClick={() => setShowAdd(true)}
                 className="mt-3 text-purple-600 text-sm font-medium"
@@ -270,7 +280,7 @@ export default function TransactionsScreen({
         )}
       </div>
 
-      {!filterCreditCardId && (
+      {!isFiltered && (
         <button
           onClick={() => setShowAdd(true)}
           className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-purple-600 text-white text-3xl leading-none shadow-lg flex items-center justify-center"

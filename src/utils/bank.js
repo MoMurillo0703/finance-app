@@ -27,3 +27,23 @@ export async function updateBank(supabase, id, updates) {
   }
   return { data, error }
 }
+
+// Fetches active banks including nickname, retrying without it when the
+// column doesn't exist yet (so the app works before the migration is run).
+export async function fetchBanks(supabase, userId, { columns = BANK_SELECT, orderByName = false } = {}) {
+  const run = (cols) => {
+    let query = supabase
+      .from('banks')
+      .select(cols)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+    if (orderByName) query = query.order('name')
+    return query
+  }
+
+  let { data, error } = await run(`${columns}, nickname`)
+  if (error && isMissingNicknameColumn(error)) {
+    ;({ data, error } = await run(columns))
+  }
+  return { data, error }
+}
