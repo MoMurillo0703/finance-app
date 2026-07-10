@@ -7,7 +7,8 @@ import VaultCard from './VaultCard'
 import AddVaultModal from './AddVaultModal'
 import AddBankModal from './AddBankModal'
 import EditVaultModal from '../vaults/EditVaultModal'
-import BillsCalendar from './BillsCalendar'
+
+const sectionHeader = 'text-[10px] font-medium tracking-wider text-gray-400 uppercase'
 
 const formatCOP = (value) =>
   new Intl.NumberFormat('es-CO', {
@@ -73,7 +74,6 @@ export default function Dashboard({ refreshKey }) {
   const [editingVault, setEditingVault] = useState(null)
   const [modalRefreshKey, setModalRefreshKey] = useState(0)
   const [dueBills, setDueBills] = useState([])
-  const [allBills, setAllBills] = useState([])
   const [payingId, setPayingId] = useState(null)
   const [billError, setBillError] = useState('')
 
@@ -105,7 +105,6 @@ export default function Dashboard({ refreshKey }) {
       setVaults(vaultsData ?? [])
       setTotalBalance((banksData ?? []).reduce((sum, bank) => sum + (bank.balance || 0), 0))
       setDueBills((billsData ?? []).filter(isBillDueThisWeek))
-      setAllBills(billsData ?? [])
       setLoading(false)
     })()
 
@@ -239,8 +238,8 @@ export default function Dashboard({ refreshKey }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white px-6 pt-12 pb-4 flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-purple-600">Lala</h1>
+      <div className="bg-white px-5 pt-12 pb-3 flex justify-between items-center">
+        <h1 className="text-xl font-bold text-purple-600">Lala</h1>
         <div className="flex gap-3 items-center">
           <button
             onClick={toggleLanguage}
@@ -254,16 +253,16 @@ export default function Dashboard({ refreshKey }) {
         </div>
       </div>
 
-      <div className="px-6 py-6">
+      <div className="px-5 py-4">
         <SafeToSpend amount={safeToSpend} />
 
-        <div className="flex gap-4 mb-6">
-          <div className="flex-1 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <div className="flex justify-between items-center mb-1">
-              <p className="text-xs text-gray-400">{t('totalBalance')}</p>
+        <div className="flex gap-3 mb-4">
+          <div className="flex-1 bg-white rounded-xl p-3 border border-gray-100">
+            <div className="flex justify-between items-center mb-0.5">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide">{t('totalBalance')}</p>
               <button onClick={() => setShowAddBank(true)} className="text-xs text-purple-600 font-medium">+</button>
             </div>
-            <p className="text-lg font-bold text-gray-800">
+            <p className="text-base font-bold text-gray-800">
               {new Intl.NumberFormat('es-CO', {
                 style: 'currency',
                 currency: 'COP',
@@ -271,9 +270,9 @@ export default function Dashboard({ refreshKey }) {
               }).format(totalBalance)}
             </p>
           </div>
-          <div className="flex-1 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <p className="text-xs text-gray-400 mb-1">{t('protected')}</p>
-            <p className="text-lg font-bold text-gray-800">
+          <div className="flex-1 bg-white rounded-xl p-3 border border-gray-100">
+            <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">{t('protected')}</p>
+            <p className="text-base font-bold text-gray-800">
               {new Intl.NumberFormat('es-CO', {
                 style: 'currency',
                 currency: 'COP',
@@ -283,22 +282,50 @@ export default function Dashboard({ refreshKey }) {
           </div>
         </div>
 
-        <BillsCalendar bills={allBills} language={i18n.language} />
+        {dueBills.length > 0 && (
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className={sectionHeader}>{t('sectionDueThisWeek')}</h2>
+            </div>
+            {billError && <p className="text-red-500 text-xs mb-2">{billError}</p>}
+            <div className="-mx-5 px-5 flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory">
+              {dueBills.map(bill => (
+                <div
+                  key={bill.id}
+                  className="flex-shrink-0 snap-start w-[148px] rounded-2xl border border-gray-100 bg-white px-3 py-2.5 shadow-sm"
+                >
+                  <p className="text-xs font-medium text-gray-800 truncate">{bill.name}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">{formatDueDate(bill.due_day)}</p>
+                  <p className="text-xs font-semibold text-gray-800 mt-1">{formatCOP(bill.amount)}</p>
+                  <button
+                    onClick={() => handleMarkPaid(bill)}
+                    disabled={payingId === bill.id}
+                    className="mt-2 w-full py-1 rounded-full bg-purple-600 text-white text-[10px] font-medium disabled:opacity-50"
+                  >
+                    {payingId === bill.id ? '...' : t('pay')}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
-        <div className="mb-4 flex justify-between items-center">
-          <h2 className="text-base font-semibold text-gray-700">{t('vaults')}</h2>
-          <button onClick={() => setShowAddVault(true)} className="text-xs text-purple-600 font-medium">{t('addVault')}</button>
+        <div className="mb-2 flex justify-between items-center">
+          <h2 className={sectionHeader}>{t('sectionVaults')}</h2>
+          <button onClick={() => setShowAddVault(true)} className="text-[10px] text-purple-600 font-medium uppercase tracking-wide">
+            + {t('addVault')}
+          </button>
         </div>
 
         {vaults.length === 0 ? (
-          <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
-            <p className="text-gray-400 text-sm">{t('noVaults')}</p>
-            <button onClick={() => setShowAddVault(true)} className="mt-3 text-purple-600 text-sm font-medium">
+          <div className="bg-white rounded-xl p-4 text-center border border-gray-100">
+            <p className="text-gray-400 text-xs">{t('noVaults')}</p>
+            <button onClick={() => setShowAddVault(true)} className="mt-2 text-purple-600 text-xs font-medium">
               {t('createFirstVault')}
             </button>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-1.5">
             {vaults.map(vault => (
               <VaultCard
                 key={vault.id}
@@ -306,35 +333,6 @@ export default function Dashboard({ refreshKey }) {
                 onClick={() => setEditingVault(vault)}
               />
             ))}
-          </div>
-        )}
-
-        {dueBills.length > 0 && (
-          <div className="mt-8">
-            <h2 className="text-base font-semibold text-gray-700 mb-3">{t('billsDueThisWeek')}</h2>
-            {billError && <p className="text-red-500 text-sm mb-3">{billError}</p>}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-100">
-              {dueBills.map(bill => (
-                <div key={bill.id} className="p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <p className="text-sm font-medium text-gray-700">{bill.name}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {t('dueDate')}: {formatDueDate(bill.due_day)}
-                      </p>
-                    </div>
-                    <p className="text-sm font-bold text-gray-800">{formatCOP(bill.amount)}</p>
-                  </div>
-                  <button
-                    onClick={() => handleMarkPaid(bill)}
-                    disabled={payingId === bill.id}
-                    className="w-full py-2 rounded-xl bg-purple-600 text-white text-xs font-medium disabled:opacity-50"
-                  >
-                    {payingId === bill.id ? '...' : t('markAsPaid')}
-                  </button>
-                </div>
-              ))}
-            </div>
           </div>
         )}
       </div>

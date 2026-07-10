@@ -58,19 +58,23 @@ export default function BillsCalendar({ bills, language }) {
   }, [bills, locale, startMonday])
 
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-6">
-      <h2 className="text-base font-semibold text-gray-700 mb-3 capitalize">{t('billsCalendar')}</h2>
-      <p className="text-xs text-gray-400 mb-3 capitalize">{monthLabel}</p>
+    <div className="bg-white rounded-xl p-3 border border-gray-100 mb-4">
+      <div className="flex justify-between items-baseline mb-2">
+        <p className="text-[10px] font-medium tracking-wider text-gray-400 uppercase">
+          {t('billsCalendar')}
+        </p>
+        <p className="text-[10px] text-gray-400 capitalize">{monthLabel}</p>
+      </div>
 
-      <div className="grid grid-cols-7 gap-1 mb-1">
+      <div className="grid grid-cols-7 gap-0.5 mb-0.5">
         {weekdayLabels.map((label, i) => (
-          <div key={i} className="text-center text-[10px] font-medium text-gray-400 py-1">
+          <div key={i} className="text-center text-[9px] font-medium text-gray-400 py-0.5">
             {label}
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-0.5">
         {weeks.flat().map((day, i) => {
           if (day == null) {
             return <div key={`empty-${i}`} className="aspect-square" />
@@ -82,15 +86,15 @@ export default function BillsCalendar({ bills, language }) {
           return (
             <div
               key={day}
-              className={`aspect-square rounded-lg flex flex-col items-center justify-center gap-0.5 ${
+              className={`aspect-square rounded-md flex flex-col items-center justify-center gap-0.5 ${
                 isToday ? 'bg-purple-100 ring-1 ring-purple-300' : 'bg-gray-50'
               }`}
             >
-              <span className={`text-[11px] leading-none ${isToday ? 'font-bold text-purple-700' : 'text-gray-600'}`}>
+              <span className={`text-[10px] leading-none ${isToday ? 'font-bold text-purple-700' : 'text-gray-600'}`}>
                 {day}
               </span>
               {count > 0 && (
-                <span className="text-[9px] leading-none font-semibold text-purple-600 bg-purple-50 rounded-full min-w-[14px] px-1 text-center">
+                <span className="text-[8px] leading-none font-semibold text-purple-600 bg-purple-50 rounded-full min-w-[12px] px-0.5 text-center">
                   {count}
                 </span>
               )}

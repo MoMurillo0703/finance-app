@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import AddBillModal from './AddBillModal'
+import BillsCalendar from './BillsCalendar'
 
 const formatCOP = (value) =>
   new Intl.NumberFormat('es-CO', {
@@ -39,7 +40,7 @@ const isBillPaidThisMonth = (bill) => {
 }
 
 export default function BillsScreen({ onBillPaid }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const [bills, setBills] = useState([])
   const [loading, setLoading] = useState(true)
@@ -176,23 +177,31 @@ export default function BillsScreen({ onBillPaid }) {
         <h1 className="text-2xl font-bold text-gray-800">{t('billsTitle')}</h1>
       </div>
 
-      <div className="px-6 py-6">
-        {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+      <div className="px-5 py-4">
+        {error && <p className="text-red-500 text-xs mb-3">{error}</p>}
+
+        {!loading && bills.length > 0 && (
+          <BillsCalendar bills={bills} language={i18n.language} />
+        )}
 
         {loading ? (
-          <p className="text-gray-400 text-sm text-center py-10">{t('loading')}</p>
+          <p className="text-gray-400 text-xs text-center py-8">{t('loading')}</p>
         ) : bills.length === 0 ? (
-          <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
-            <p className="text-gray-400 text-sm">{t('noBills')}</p>
+          <div className="bg-white rounded-xl p-4 text-center border border-gray-100">
+            <p className="text-gray-400 text-xs">{t('noBills')}</p>
             <button
               onClick={() => setShowAdd(true)}
-              className="mt-3 text-purple-600 text-sm font-medium"
+              className="mt-2 text-purple-600 text-xs font-medium"
             >
               {t('addFirstBill')}
             </button>
           </div>
         ) : (
-          <div className="space-y-3">
+          <>
+            <p className="text-[10px] font-medium tracking-wider text-gray-400 uppercase mb-2">
+              {t('sectionAllBills')}
+            </p>
+            <div className="space-y-2">
             {bills.map(bill => {
               const paid = isBillPaidThisMonth(bill)
               return (
@@ -227,7 +236,8 @@ export default function BillsScreen({ onBillPaid }) {
                 </div>
               )
             })}
-          </div>
+            </div>
+          </>
         )}
       </div>
 
