@@ -5,7 +5,7 @@ const TAB_TITLE_KEYS = {
   home: null,
   transactions: 'transactions',
   bills: 'bills',
-  reports: 'reports',
+  accounts: 'accounts',
   cards: 'creditCards',
   settings: 'settings',
 }

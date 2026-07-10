@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Login from './components/auth/Login'
 import Signup from './components/auth/Signup'
@@ -6,6 +7,7 @@ import Dashboard from './components/dashboard/Dashboard'
 import TransactionsScreen from './components/transactions/TransactionsScreen'
 import BillsScreen from './components/bills/BillsScreen'
 import CardsScreen from './components/cards/CardsScreen'
+import AccountsScreen from './components/accounts/AccountsScreen'
 import ReportsScreen from './components/reports/ReportsScreen'
 import SettingsScreen from './components/settings/SettingsScreen'
 import BottomNav from './components/layout/BottomNav'
@@ -13,9 +15,11 @@ import AppHeader from './components/layout/AppHeader'
 import { getBankDisplayName } from './utils/bank'
 
 function AppContent() {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const [showSignup, setShowSignup] = useState(false)
   const [activeTab, setActiveTab] = useState('home')
+  const [showReports, setShowReports] = useState(false)
   const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0)
   const [prefsVersion, setPrefsVersion] = useState(0)
   const [txFilter, setTxFilter] = useState(null)
@@ -23,8 +27,8 @@ function AppContent() {
   const bumpDashboard = () => setDashboardRefreshKey(k => k + 1)
   const bumpPrefs = () => setPrefsVersion(v => v + 1)
 
-  const viewCardTransactions = (card) => {
-    setTxFilter({ creditCardId: card.id, cardName: card.name, from: 'cards' })
+  const viewCardTransactions = (card, from = 'cards') => {
+    setTxFilter({ creditCardId: card.id, cardName: card.name, from })
     setActiveTab('transactions')
   }
 
@@ -54,7 +58,7 @@ function AppContent() {
         {activeTab === 'home' && (
           <Dashboard
             refreshKey={`${dashboardRefreshKey}-${prefsVersion}`}
-            onViewReports={() => handleTabChange('reports')}
+            onViewReports={() => setShowReports(true)}
           />
         )}
         {activeTab === 'transactions' && (
@@ -64,6 +68,7 @@ function AppContent() {
             filterCardName={txFilter?.cardName}
             filterBankId={txFilter?.bankId}
             filterBankName={txFilter?.bankName}
+            filterFrom={txFilter?.from}
             onClearFilter={() => {
               const dest = txFilter?.from || 'home'
               setTxFilter(null)
@@ -73,7 +78,14 @@ function AppContent() {
           />
         )}
         {activeTab === 'bills' && <BillsScreen key={prefsVersion} onBillPaid={bumpDashboard} />}
-        {activeTab === 'reports' && <ReportsScreen key={prefsVersion} />}
+        {activeTab === 'accounts' && (
+          <AccountsScreen
+            key={prefsVersion}
+            refreshKey={dashboardRefreshKey}
+            onViewCardTransactions={viewCardTransactions}
+            onAccountSaved={bumpDashboard}
+          />
+        )}
         {activeTab === 'cards' && (
           <CardsScreen
             key={prefsVersion}
@@ -91,6 +103,19 @@ function AppContent() {
         )}
       </main>
       <BottomNav active={activeTab} onChange={handleTabChange} />
+
+      {showReports && (
+        <div className="fixed inset-0 z-[110] bg-gray-50 overflow-y-auto pt-14 pb-20">
+          <button
+            type="button"
+            onClick={() => setShowReports(false)}
+            className="px-4 py-3 text-purple-600 text-sm font-medium"
+          >
+            ← {t('back')}
+          </button>
+          <ReportsScreen key={prefsVersion} />
+        </div>
+      )}
     </div>
   )
 }

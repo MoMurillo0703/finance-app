@@ -62,6 +62,7 @@ export default function TransactionsScreen({
   filterCardName,
   filterBankId,
   filterBankName,
+  filterFrom,
   onClearFilter,
 }) {
   const { t, i18n } = useTranslation()
@@ -226,7 +227,7 @@ export default function TransactionsScreen({
             onClick={onClearFilter}
             className="text-sm text-purple-600 font-medium mb-1"
           >
-            ← {filterBankId ? t('myAccounts') : t('creditCards')}
+            ← {filterBankId ? (filterFrom === 'settings' ? t('myAccounts') : t('accounts')) : t('creditCards')}
           </button>
         )}
         {filterCardName && (
