@@ -69,9 +69,20 @@ export default {
   
       // Cards
       creditCards: "Credit cards",
+      addCard: "Add card",
+      cardName: "Card name",
+      network: "Network",
+      creditLimit: "Credit limit",
+      statementDate: "Statement date",
+      dueDate: "Due date",
+      utilization: "Utilization",
+      noCards: "No credit cards yet.",
+      addFirstCard: "+ Add first card",
+      editCard: "Edit card",
+      deleteCard: "Delete card",
+      sectionCards: "Cards",
       balance: "Balance",
       limit: "Limit",
-      statementDate: "Statement date",
   
       // Cuotas
       cuotas: "Installments",

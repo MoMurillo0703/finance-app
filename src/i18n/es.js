@@ -68,10 +68,21 @@ export default {
       deductFrom: "Descontar de",
   
       // Cards
-      creditCards: "Tarjetas de crédito",
+      creditCards: "Tarjetas",
+      addCard: "Agregar tarjeta",
+      cardName: "Nombre de la tarjeta",
+      network: "Red",
+      creditLimit: "Cupo",
+      statementDate: "Fecha de corte",
+      dueDate: "Fecha de pago",
+      utilization: "Utilización",
+      noCards: "No tienes tarjetas todavía.",
+      addFirstCard: "+ Agregar primera tarjeta",
+      editCard: "Editar tarjeta",
+      deleteCard: "Eliminar tarjeta",
+      sectionCards: "Tarjetas",
       balance: "Balance",
       limit: "Límite",
-      statementDate: "Fecha de corte",
   
       // Cuotas
       cuotas: "Cuotas",

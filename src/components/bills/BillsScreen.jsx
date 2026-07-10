@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import AddBillModal from './AddBillModal'
+import EditBillModal from './EditBillModal'
 import BillsCalendar from './BillsCalendar'
 
 const formatCOP = (value) =>
@@ -45,6 +46,7 @@ export default function BillsScreen({ onBillPaid }) {
   const [bills, setBills] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
+  const [editingBill, setEditingBill] = useState(null)
   const [payingId, setPayingId] = useState(null)
   const [error, setError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
@@ -171,6 +173,12 @@ export default function BillsScreen({ onBillPaid }) {
     onBillPaid?.()
   }
 
+  const handleBillSaved = () => {
+    setEditingBill(null)
+    setRefreshKey(k => k + 1)
+    onBillPaid?.()
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white px-6 pt-12 pb-4">
@@ -209,20 +217,26 @@ export default function BillsScreen({ onBillPaid }) {
                   key={bill.id}
                   className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm"
                 >
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <p className="text-sm font-medium text-gray-700">{bill.name}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {t('dueDay')}: {bill.due_day}
-                      </p>
+                  <button
+                    type="button"
+                    onClick={() => setEditingBill(bill)}
+                    className="w-full text-left"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">{bill.name}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {t('dueDay')}: {bill.due_day}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-gray-800">{formatCOP(bill.amount)}</p>
+                        <p className={`text-xs font-medium mt-0.5 ${paid ? 'text-green-500' : 'text-orange-500'}`}>
+                          {paid ? t('paid') : t('pending')}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-gray-800">{formatCOP(bill.amount)}</p>
-                      <p className={`text-xs font-medium mt-0.5 ${paid ? 'text-green-500' : 'text-orange-500'}`}>
-                        {paid ? t('paid') : t('pending')}
-                      </p>
-                    </div>
-                  </div>
+                  </button>
 
                   {!paid && (
                     <button
@@ -252,7 +266,15 @@ export default function BillsScreen({ onBillPaid }) {
       {showAdd && (
         <AddBillModal
           onClose={() => setShowAdd(false)}
-          onSaved={() => { setShowAdd(false); setRefreshKey(k => k + 1) }}
+          onSaved={() => { setShowAdd(false); setRefreshKey(k => k + 1); onBillPaid?.() }}
+        />
+      )}
+
+      {editingBill && (
+        <EditBillModal
+          bill={editingBill}
+          onClose={() => setEditingBill(null)}
+          onSaved={handleBillSaved}
         />
       )}
     </div>

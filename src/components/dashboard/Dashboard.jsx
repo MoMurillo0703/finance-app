@@ -7,6 +7,7 @@ import VaultCard from './VaultCard'
 import AddVaultModal from './AddVaultModal'
 import AddBankModal from './AddBankModal'
 import EditVaultModal from '../vaults/EditVaultModal'
+import CardRow from '../cards/CardRow'
 
 const sectionHeader = 'text-[10px] font-medium tracking-wider text-gray-400 uppercase'
 
@@ -74,6 +75,7 @@ export default function Dashboard({ refreshKey }) {
   const [editingVault, setEditingVault] = useState(null)
   const [modalRefreshKey, setModalRefreshKey] = useState(0)
   const [dueBills, setDueBills] = useState([])
+  const [creditCards, setCreditCards] = useState([])
   const [payingId, setPayingId] = useState(null)
   const [billError, setBillError] = useState('')
 
@@ -100,11 +102,19 @@ export default function Dashboard({ refreshKey }) {
         .eq('is_active', true)
         .order('due_day')
 
+      const { data: cardsData } = await supabase
+        .from('credit_cards')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('name')
+
       if (!active) return
 
       setVaults(vaultsData ?? [])
       setTotalBalance((banksData ?? []).reduce((sum, bank) => sum + (bank.balance || 0), 0))
       setDueBills((billsData ?? []).filter(isBillDueThisWeek))
+      setCreditCards(cardsData ?? [])
       setLoading(false)
     })()
 
@@ -333,6 +343,17 @@ export default function Dashboard({ refreshKey }) {
                 onClick={() => setEditingVault(vault)}
               />
             ))}
+          </div>
+        )}
+
+        {creditCards.length > 0 && (
+          <div className="mt-4">
+            <h2 className={`${sectionHeader} mb-2`}>{t('sectionCards')}</h2>
+            <div>
+              {creditCards.map(card => (
+                <CardRow key={card.id} card={card} utilizationLabel={t('utilization')} />
+              ))}
+            </div>
           </div>
         )}
       </div>
