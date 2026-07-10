@@ -104,6 +104,10 @@ export default {
       checking: 'Corriente',
       currentBalance: 'Saldo actual',
       myAccounts: 'Mis cuentas',
+      editBank: 'Editar cuenta',
+      noAccounts: 'No hay cuentas todavía.',
+      preferences: 'Preferencias',
+      accountSection: 'Cuenta',
 
       // Transactions screen
       expense: 'Gasto',

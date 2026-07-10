@@ -5,6 +5,7 @@ import Signup from './components/auth/Signup'
 import Dashboard from './components/dashboard/Dashboard'
 import TransactionsScreen from './components/transactions/TransactionsScreen'
 import VaultsScreen from './components/vaults/VaultsScreen'
+import SettingsScreen from './components/settings/SettingsScreen'
 import BottomNav from './components/layout/BottomNav'
 
 function AppContent() {
@@ -35,11 +36,7 @@ function AppContent() {
         <TransactionsScreen onTransactionSaved={bumpDashboard} />
       )}
       {activeTab === 'vaults' && <VaultsScreen onVaultSaved={bumpDashboard} />}
-      {activeTab === 'settings' && (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <p className="text-gray-400">Ajustes — próximamente</p>
-        </div>
-      )}
+      {activeTab === 'settings' && <SettingsScreen onBankSaved={bumpDashboard} />}
       <BottomNav active={activeTab} onChange={handleTabChange} />
     </div>
   )
