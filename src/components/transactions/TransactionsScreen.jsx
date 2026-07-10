@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import AddTransactionModal from './AddTransactionModal'
 import EditTransactionModal from './EditTransactionModal'
+import ImportModal from './ImportModal'
 import PaydayWizard from '../payday/PaydayWizard'
 
 import { formatMoney } from '../../utils/currency'
@@ -19,6 +20,7 @@ export default function TransactionsScreen({ onTransactionSaved }) {
   const [editingTransaction, setEditingTransaction] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const [wizardPrefill, setWizardPrefill] = useState(null)
+  const [showImport, setShowImport] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -52,12 +54,21 @@ export default function TransactionsScreen({ onTransactionSaved }) {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white px-6 pt-12 pb-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">{t('transactions')}</h1>
-        <button
-          onClick={() => setShowAdd(true)}
-          className="text-xs text-purple-600 font-medium"
-        >
-          {t('addTransaction')}
-        </button>
+        <div className="flex gap-3 items-center">
+          <button
+            type="button"
+            onClick={() => setShowImport(true)}
+            className="hidden md:inline-flex text-xs text-gray-500 font-medium border border-gray-200 rounded-full px-3 py-1 hover:border-purple-300 hover:text-purple-600"
+          >
+            {t('importCsv')}
+          </button>
+          <button
+            onClick={() => setShowAdd(true)}
+            className="text-xs text-purple-600 font-medium"
+          >
+            {t('addTransaction')}
+          </button>
+        </div>
       </div>
 
       <div className="px-6 py-6">
@@ -130,6 +141,13 @@ export default function TransactionsScreen({ onTransactionSaved }) {
             setRefreshKey(k => k + 1)
             onTransactionSaved?.()
           }}
+        />
+      )}
+
+      {showImport && (
+        <ImportModal
+          onClose={() => setShowImport(false)}
+          onComplete={handleTransactionSaved}
         />
       )}
 
