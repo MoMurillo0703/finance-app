@@ -6,6 +6,7 @@ import SafeToSpend from './SafeToSpend'
 import VaultCard from './VaultCard'
 import AddVaultModal from './AddVaultModal'
 import AddBankModal from './AddBankModal'
+import EditVaultModal from '../vaults/EditVaultModal'
 
 export default function Dashboard({ refreshKey }) {
   const { user, signOut } = useAuth()
@@ -15,6 +16,7 @@ export default function Dashboard({ refreshKey }) {
   const [loading, setLoading] = useState(true)
   const [showAddVault, setShowAddVault] = useState(false)
   const [showAddBank, setShowAddBank] = useState(false)
+  const [editingVault, setEditingVault] = useState(null)
   const [modalRefreshKey, setModalRefreshKey] = useState(0)
 
   useEffect(() => {
@@ -119,7 +121,11 @@ export default function Dashboard({ refreshKey }) {
         ) : (
           <div className="space-y-3">
             {vaults.map(vault => (
-              <VaultCard key={vault.id} vault={vault} />
+              <VaultCard
+                key={vault.id}
+                vault={vault}
+                onClick={() => setEditingVault(vault)}
+              />
             ))}
           </div>
         )}
@@ -136,6 +142,14 @@ export default function Dashboard({ refreshKey }) {
         <AddBankModal
           onClose={() => setShowAddBank(false)}
           onSaved={() => { setShowAddBank(false); setModalRefreshKey(k => k + 1) }}
+        />
+      )}
+
+      {editingVault && (
+        <EditVaultModal
+          vault={editingVault}
+          onClose={() => setEditingVault(null)}
+          onSaved={() => { setEditingVault(null); setModalRefreshKey(k => k + 1) }}
         />
       )}
     </div>
