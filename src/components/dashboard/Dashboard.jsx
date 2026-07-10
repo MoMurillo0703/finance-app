@@ -126,10 +126,6 @@ export default function Dashboard({ refreshKey }) {
   const protectedAmount = vaults.reduce((sum, v) => sum + (v.current_amount || 0), 0)
   const safeToSpend = totalBalance - protectedAmount
 
-  const toggleLanguage = () => {
-    i18n.changeLanguage(i18n.language === 'es' ? 'en' : 'es')
-  }
-
   const formatDueDate = (dueDay) => {
     const now = new Date()
     const date = new Date(now.getFullYear(), now.getMonth(), dueDay)
@@ -252,17 +248,9 @@ export default function Dashboard({ refreshKey }) {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white px-5 pt-12 pb-3 flex justify-between items-center">
         <h1 className="text-xl font-bold text-purple-600">Lala</h1>
-        <div className="flex gap-3 items-center">
-          <button
-            onClick={toggleLanguage}
-            className="text-xs text-gray-400 border border-gray-200 rounded-full px-3 py-1"
-          >
-            {i18n.language === 'es' ? 'EN' : 'ES'}
-          </button>
-          <button onClick={signOut} className="text-xs text-gray-400">
-            {t('logout')}
-          </button>
-        </div>
+        <button onClick={signOut} className="text-xs text-gray-400">
+          {t('logout')}
+        </button>
       </div>
 
       <div className="px-5 py-4">
