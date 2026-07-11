@@ -473,6 +473,8 @@ export default {
       trendImproving: 'Your financial trend is improving',
       trendDeclining: 'Your expenses are trending up',
       payWithCard: 'Pay with credit card',
+      detectedRecurringCharges: 'Detected recurring charges',
+      notEnoughTrendData: 'Not enough data yet. Trends will appear after your second month of transactions.',
 
       // Add card form
       balancesSection: 'Balances',

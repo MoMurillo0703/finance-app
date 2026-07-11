@@ -25,6 +25,7 @@ import {
   detectRecurringCharges,
   summarizeByCategory,
   PURPLE_SHADES,
+  CATEGORY_EMOJI,
 } from '../../utils/reports'
 import {
   LOAN_EMOJI,
@@ -38,8 +39,13 @@ import {
   formatTrendMonthLabel,
   buildTrendInsight,
 } from '../../utils/financialTrends'
-
 import BudgetsScreen from '../budgets/BudgetsScreen'
+
+const SECTION_CLASS = 'bg-white rounded-2xl mx-4 mb-4 p-4 shadow-sm border border-gray-100'
+
+function SectionTitle({ children }) {
+  return <p className="text-sm font-semibold text-gray-700 mb-3">{children}</p>
+}
 
 export default function ReportsScreen() {
   const { t, i18n } = useTranslation()
@@ -171,6 +177,16 @@ export default function ReportsScreen() {
     [trendMetrics, t],
   )
 
+  const monthsWithTrendData = useMemo(
+    () => trendBuckets.filter(b => b.income > 0 || b.expenses > 0).length,
+    [trendBuckets],
+  )
+
+  const showIncomeTrendLine = useMemo(
+    () => trendBuckets.some(b => b.income > 0),
+    [trendBuckets],
+  )
+
   const shiftMonth = (delta) => {
     const date = new Date(year, month - 1 + delta, 1)
     setYear(date.getFullYear())
@@ -187,11 +203,11 @@ export default function ReportsScreen() {
 
   const netCashflow = totalIncome - totalSpent
   const dayOfMonth = isCurrentMonth(year, month) ? now.getDate() : daysInMonth
-  const projectedMonthEnd = dayOfMonth > 0
+  const projectedMonthEnd = isCurrentMonth(year, month) && dayOfMonth > 0
     ? (totalSpent / dayOfMonth) * daysInMonth
-    : 0
+    : totalSpent
 
-  const { breakdown, totalSpent: categoryTotal } = summarizeByCategory(monthTransactions, t)
+  const { breakdown } = summarizeByCategory(monthTransactions, t)
 
   const chartData = breakdown.map(row => ({
     ...row,
@@ -199,7 +215,8 @@ export default function ReportsScreen() {
   }))
 
   const recurringCharges = detectRecurringCharges(recurringTransactions, recentMonthKeys)
-  const totalRecurring = recurringCharges.reduce((sum, item) => sum + item.averageAmount, 0)
+  const confirmedRecurring = recurringCharges.filter(item => item.frequency === 'monthly')
+  const totalMonthlyRecurring = confirmedRecurring.reduce((sum, item) => sum + item.averageAmount, 0)
 
   const monthlyIncomes = recentMonthKeys.map(key => {
     const [y, m] = key.split('-').map(Number)
@@ -214,7 +231,7 @@ export default function ReportsScreen() {
   })
   const avgMonthlyIncome = monthlyIncomes.reduce((sum, value) => sum + value, 0)
     / Math.max(monthlyIncomes.filter(Boolean).length, 1)
-  const recurringWarning = avgMonthlyIncome > 0 && totalRecurring > avgMonthlyIncome * 0.3
+  const recurringWarning = avgMonthlyIncome > 0 && totalMonthlyRecurring > avgMonthlyIncome * 0.3
 
   const cardMap = Object.fromEntries(cards.map(card => [card.id, card.name]))
   const interestByCard = interestTransactions.reduce((acc, tx) => {
@@ -228,7 +245,7 @@ export default function ReportsScreen() {
   const { active: activeLoans, totalInterestRemaining, totalMonthlyPayments } = summarizeLoans(loans)
 
   return (
-    <div className="bg-gray-50 pb-6">
+    <div className="bg-gray-50 pb-6 min-h-full">
       <div className="flex justify-between items-center px-6 pt-6 pb-2">
         <h1 className="text-2xl font-bold text-gray-800">{t('reports')}</h1>
         <button
@@ -240,251 +257,287 @@ export default function ReportsScreen() {
         </button>
       </div>
 
-      <div className="px-6 py-4 space-y-6">
-        <section className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-          <h2 className="text-sm font-semibold text-gray-800 mb-4">{t('financialTrends')}</h2>
-          {loading ? (
-            <p className="text-xs text-gray-400">{t('loading')}</p>
-          ) : (
-            <>
-              <ResponsiveContainer width="100%" height={220}>
-                <LineChart data={trendChartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#6b7280' }} />
-                  <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} width={48} />
-                  <Tooltip formatter={(value) => formatMoney(value)} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Line type="monotone" dataKey="income" name={t('income')} stroke="#16a34a" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="expenses" name={t('expense')} stroke="#dc2626" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="net" name={t('netCashflow')} stroke="#9333ea" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
+      <section className={SECTION_CLASS}>
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => shiftMonth(-1)}
+            className="w-10 h-10 rounded-full border border-gray-200 text-gray-500"
+            aria-label={t('back')}
+          >
+            ‹
+          </button>
+          <p className="text-base font-semibold text-gray-800 capitalize">
+            {formatMonthYear(year, month, i18n.language)}
+          </p>
+          <button
+            type="button"
+            onClick={() => shiftMonth(1)}
+            className="w-10 h-10 rounded-full border border-gray-200 text-gray-500"
+            aria-label={t('next')}
+          >
+            ›
+          </button>
+        </div>
+      </section>
 
-              <div className="mt-4 space-y-2 text-xs text-gray-600">
-                <p>
-                  <span className="font-semibold text-gray-700">3-month avg:</span>{' '}
-                  {t('avgIncome')} {formatMoney(trendMetrics.avg3Income)} · {t('avgExpenses')} {formatMoney(trendMetrics.avg3Expenses)} · {t('avgNet')} {trendMetrics.avg3Net >= 0 ? '+' : ''}{formatMoney(trendMetrics.avg3Net)}
-                </p>
-                <p>
-                  <span className="font-semibold text-gray-700">6-month avg:</span>{' '}
-                  {t('avgIncome')} {formatMoney(trendMetrics.avg6Income)} · {t('avgExpenses')} {formatMoney(trendMetrics.avg6Expenses)} · {t('avgNet')} {trendMetrics.avg6Net >= 0 ? '+' : ''}{formatMoney(trendMetrics.avg6Net)}
-                </p>
-              </div>
-
-              <p className="mt-3 text-sm text-gray-700">{trendInsight}</p>
-            </>
-          )}
-        </section>
-
-        <section className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => shiftMonth(-1)}
-              className="w-10 h-10 rounded-full border border-gray-200 text-gray-500"
-              aria-label={t('back')}
-            >
-              ‹
-            </button>
-            <p className="text-base font-semibold text-gray-800 capitalize">
-              {formatMonthYear(year, month, i18n.language)}
-            </p>
-            <button
-              type="button"
-              onClick={() => shiftMonth(1)}
-              className="w-10 h-10 rounded-full border border-gray-200 text-gray-500"
-              aria-label={t('next')}
-            >
-              ›
-            </button>
+      {loading ? (
+        <p className="text-gray-400 text-sm text-center py-10">{t('loading')}</p>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3 px-4 mb-4">
+            <div className="bg-white rounded-2xl p-4 border border-gray-100">
+              <p className="text-xs text-gray-400 uppercase tracking-wide">{t('totalSpent')}</p>
+              <p className="text-xl font-bold text-red-500">{formatMoney(totalSpent)}</p>
+            </div>
+            <div className="bg-white rounded-2xl p-4 border border-gray-100">
+              <p className="text-xs text-gray-400 uppercase tracking-wide">{t('totalIncome')}</p>
+              <p className="text-xl font-bold text-green-500">{formatMoney(totalIncome)}</p>
+            </div>
+            <div className="bg-white rounded-2xl p-4 border border-gray-100">
+              <p className="text-xs text-gray-400 uppercase tracking-wide">{t('netCashflow')}</p>
+              <p className={`text-xl font-bold ${netCashflow >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                {formatMoney(netCashflow)}
+              </p>
+            </div>
+            <div className="bg-white rounded-2xl p-4 border border-gray-100">
+              <p className="text-xs text-gray-400 uppercase tracking-wide">{t('projectedMonthEnd')}</p>
+              <p className="text-xl font-bold text-purple-600">{formatMoney(projectedMonthEnd)}</p>
+            </div>
           </div>
-        </section>
 
-        {loading ? (
-          <p className="text-gray-400 text-sm text-center py-10">{t('loading')}</p>
-        ) : monthTransactions.length === 0 ? (
-          <div className="bg-white border border-gray-100 rounded-2xl p-6 text-center">
-            <p className="text-gray-400 text-sm">{t('noTransactionsMonth')}</p>
-          </div>
-        ) : (
-          <>
-            <section className="grid grid-cols-2 gap-3">
-              <SummaryCard label={t('totalSpent')} value={formatMoney(totalSpent)} />
-              <SummaryCard label={t('totalIncome')} value={formatMoney(totalIncome)} />
-              <SummaryCard
-                label={t('netCashflow')}
-                value={formatMoney(netCashflow)}
-                valueClass={netCashflow >= 0 ? 'text-green-600' : 'text-red-600'}
-              />
-              {isCurrentMonth(year, month) && (
-                <SummaryCard
-                  label={t('projectedMonthEnd')}
-                  value={formatMoney(projectedMonthEnd)}
-                />
-              )}
-            </section>
+          <section className={SECTION_CLASS}>
+            <SectionTitle>{t('spendingByCategory')}</SectionTitle>
+            {breakdown.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-6">{t('noTransactionsMonth')}</p>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={Math.max(breakdown.length * 40, 120)}>
+                  <BarChart
+                    data={chartData}
+                    layout="vertical"
+                    margin={{ left: 0, right: 72, top: 0, bottom: 0 }}
+                  >
+                    <XAxis type="number" hide domain={[0, 'dataMax']} />
+                    <YAxis
+                      type="category"
+                      dataKey="label"
+                      width={108}
+                      tick={{ fontSize: 11, fill: '#6b7280' }}
+                    />
+                    <Bar dataKey="amount" radius={[0, 6, 6, 0]} barSize={18}>
+                      {chartData.map((_, index) => (
+                        <Cell key={index} fill={PURPLE_SHADES[index % PURPLE_SHADES.length]} />
+                      ))}
+                      <LabelList dataKey="amountLabel" position="right" style={{ fontSize: 11, fill: '#4b5563' }} />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
 
-            <section className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-gray-800 mb-4">{t('spendingByCategory')}</h2>
-              {breakdown.length === 0 ? (
-                <p className="text-xs text-gray-400">{t('noTransactionsMonth')}</p>
-              ) : (
-                <>
-                  <ResponsiveContainer width="100%" height={Math.max(breakdown.length * 40, 120)}>
-                    <BarChart
-                      data={chartData}
-                      layout="vertical"
-                      margin={{ left: 0, right: 72, top: 0, bottom: 0 }}
-                    >
-                      <XAxis type="number" hide domain={[0, 'dataMax']} />
-                      <YAxis
-                        type="category"
-                        dataKey="label"
-                        width={108}
-                        tick={{ fontSize: 11, fill: '#6b7280' }}
-                      />
-                      <Bar dataKey="amount" radius={[0, 6, 6, 0]} barSize={18}>
-                        {chartData.map((_, index) => (
-                          <Cell key={index} fill={PURPLE_SHADES[index % PURPLE_SHADES.length]} />
-                        ))}
-                        <LabelList dataKey="amountLabel" position="right" style={{ fontSize: 11, fill: '#4b5563' }} />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-
-                  <div className="mt-4 border-t border-gray-100 pt-3 space-y-2">
-                    {breakdown.map(row => (
-                      <div key={row.category} className="flex items-center justify-between text-sm">
-                        <div>
-                          <p className="font-medium text-gray-700">{row.label}</p>
-                          <p className="text-xs text-gray-400">
-                            {row.count} · {row.percentage.toFixed(1)}%
-                          </p>
-                        </div>
-                        <p className="font-semibold text-gray-800">{formatMoney(row.amount)}</p>
+                <div className="mt-5 space-y-4">
+                  {breakdown.map(row => (
+                    <div key={row.category}>
+                      <div className="flex items-center justify-between gap-3 text-sm">
+                        <span className="font-medium text-gray-700 truncate">
+                          {CATEGORY_EMOJI[row.category] || CATEGORY_EMOJI.other} {row.label}
+                        </span>
+                        <span className="font-semibold text-gray-800 shrink-0">
+                          {formatMoney(row.amount)}
+                          <span className="text-gray-400 font-normal ml-1.5">
+                            {row.percentage.toFixed(1)}%
+                          </span>
+                        </span>
                       </div>
-                    ))}
-                    <div className="flex items-center justify-between text-sm border-t border-gray-100 pt-2">
-                      <p className="font-semibold text-gray-700">{t('total')}</p>
-                      <p className="font-bold text-gray-900">{formatMoney(categoryTotal)}</p>
+                      <div className="mt-1.5 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-purple-500"
+                          style={{ width: `${Math.min(row.percentage, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </section>
+
+          <section className={SECTION_CLASS}>
+            <SectionTitle>{t('financialTrends')}</SectionTitle>
+            {monthsWithTrendData < 2 ? (
+              <p className="text-sm text-gray-400 text-center py-8">{t('notEnoughTrendData')}</p>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={220}>
+                  <LineChart data={trendChartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                    <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#6b7280' }} />
+                    <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} width={48} />
+                    <Tooltip formatter={(value) => formatMoney(value)} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    {showIncomeTrendLine && (
+                      <Line
+                        type="monotone"
+                        dataKey="income"
+                        name={t('income')}
+                        stroke="#16a34a"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    )}
+                    <Line
+                      type="monotone"
+                      dataKey="expenses"
+                      name={t('expense')}
+                      stroke="#dc2626"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="net"
+                      name={t('netCashflow')}
+                      stroke="#9333ea"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+
+                <div className="mt-4 space-y-2 text-sm text-gray-600">
+                  <div className="flex flex-wrap gap-x-2 gap-y-1">
+                    <span className="font-semibold text-gray-700">3-month avg:</span>
+                    {showIncomeTrendLine && (
+                      <span>{t('avgIncome')} {formatMoney(trendMetrics.avg3Income)}</span>
+                    )}
+                    <span>{t('avgExpenses')} {formatMoney(trendMetrics.avg3Expenses)}</span>
+                    <span>
+                      {t('avgNet')} {trendMetrics.avg3Net >= 0 ? '+' : ''}{formatMoney(trendMetrics.avg3Net)}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-x-2 gap-y-1">
+                    <span className="font-semibold text-gray-700">6-month avg:</span>
+                    {showIncomeTrendLine && (
+                      <span>{t('avgIncome')} {formatMoney(trendMetrics.avg6Income)}</span>
+                    )}
+                    <span>{t('avgExpenses')} {formatMoney(trendMetrics.avg6Expenses)}</span>
+                    <span>
+                      {t('avgNet')} {trendMetrics.avg6Net >= 0 ? '+' : ''}{formatMoney(trendMetrics.avg6Net)}
+                    </span>
+                  </div>
+                </div>
+
+                <p className="mt-3 text-sm italic text-gray-500">{trendInsight}</p>
+              </>
+            )}
+          </section>
+
+          <section className={`${SECTION_CLASS} ${recurringWarning ? 'border-amber-300 bg-amber-50/40' : ''}`}>
+            <SectionTitle>{t('detectedRecurringCharges')}</SectionTitle>
+            {recurringCharges.length === 0 ? (
+              <p className="text-xs text-gray-400">{t('noTransactionsMonth')}</p>
+            ) : (
+              <div className="space-y-3">
+                {recurringCharges.map(item => (
+                  <div key={item.merchant} className="flex items-center justify-between gap-3 text-sm">
+                    <p className="font-medium text-gray-700 truncate">{item.merchant}</p>
+                    <div className="flex items-center gap-2 shrink-0 text-right">
+                      <p className="font-semibold text-gray-800">
+                        {formatMoney(item.averageAmount)}
+                        {item.frequency === 'monthly' && (
+                          <span className="text-gray-400 font-normal">/mo</span>
+                        )}
+                      </p>
+                      <span className="text-xs text-gray-500 whitespace-nowrap">
+                        {item.frequency === 'monthly' ? `🔁 ${t('recurring')}` : `⚡ ${t('irregular')}`}
+                      </span>
                     </div>
                   </div>
-                </>
-              )}
-            </section>
-          </>
-        )}
-
-        <section className={`bg-white border rounded-2xl p-4 shadow-sm ${
-          recurringWarning ? 'border-amber-300 bg-amber-50/40' : 'border-gray-100'
-        }`}>
-          <h2 className="text-sm font-semibold text-gray-800 mb-3">{t('recurringCharges')}</h2>
-          {recurringCharges.length === 0 ? (
-            <p className="text-xs text-gray-400">{t('noTransactionsMonth')}</p>
-          ) : (
-            <div className="space-y-2">
-              {recurringCharges.map(item => (
-                <div key={item.merchant} className="flex items-center justify-between text-sm">
-                  <div>
-                    <p className="font-medium text-gray-700 truncate pr-2">{item.merchant}</p>
-                    <p className="text-xs text-gray-400">
-                      {item.frequency === 'monthly' ? t('recurring') : t('irregular')}
+                ))}
+                {confirmedRecurring.length > 0 && (
+                  <div className="pt-3 flex items-center justify-between">
+                    <p className="text-sm font-semibold text-gray-700">{t('monthlyCommitments')}</p>
+                    <p className={`text-sm font-bold ${recurringWarning ? 'text-amber-700' : 'text-gray-900'}`}>
+                      {formatMoney(totalMonthlyRecurring)}
                     </p>
                   </div>
-                  <p className="font-semibold text-gray-800 shrink-0">{formatMoney(item.averageAmount)}</p>
-                </div>
-              ))}
-              <div className="border-t border-gray-100 pt-2 flex items-center justify-between">
-                <p className="text-sm font-semibold text-gray-700">{t('monthlyCommitments')}</p>
-                <p className={`text-sm font-bold ${recurringWarning ? 'text-amber-700' : 'text-gray-900'}`}>
-                  {formatMoney(totalRecurring)}
-                </p>
+                )}
               </div>
-            </div>
-          )}
-        </section>
+            )}
+          </section>
 
-        <section className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-          <h2 className="text-sm font-semibold text-gray-800 mb-3">{t('interestTracker')}</h2>
-          <p className="text-sm text-gray-700 mb-3">
-            {t('interestYTD', { amount: formatMoney(interestYTD) })}
-          </p>
-          {Object.keys(interestByCard).length === 0 ? (
-            <p className="text-xs text-gray-400">{t('noTransactionsMonth')}</p>
-          ) : (
-            <div className="space-y-2">
-              {Object.entries(interestByCard).map(([cardId, info]) => (
-                <div key={cardId} className="flex items-center justify-between text-sm">
-                  <p className="text-gray-700">{info.name}</p>
-                  <p className="font-semibold text-red-600">{formatMoney(info.total)}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-          <h2 className="text-sm font-semibold text-gray-800 mb-3">{t('debtOverview')}</h2>
-          {activeLoans.length === 0 ? (
-            <p className="text-xs text-gray-400">{t('noLoans')}</p>
-          ) : (
-            <div className="space-y-3">
-              {activeLoans.map(loan => {
-                const stats = calculateLoanStats(
-                  loan.current_balance,
-                  loan.interest_rate,
-                  loan.monthly_payment,
-                )
-                return (
-                  <div key={loan.id} className="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-medium text-gray-800">
-                          {LOAN_EMOJI[loan.loan_type] || LOAN_EMOJI.other} {loan.name}
-                        </p>
-                        <p className="text-xs text-gray-400">{loanTypeLabel(loan.loan_type, t)}</p>
-                      </div>
-                      <p className="text-sm font-bold text-gray-800 shrink-0">
-                        {formatMoney(loan.current_balance)}
-                      </p>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-500">
-                      <span>{t('interestRateShort', { rate: loan.interest_rate })}</span>
-                      <span>{t('paymentPerMonth', { amount: formatMoney(loan.monthly_payment) })}</span>
-                      {stats.monthsToPayoff != null && (
-                        <span>{stats.monthsToPayoff} {t('monthsLeft')}</span>
-                      )}
-                    </div>
+          <section className={SECTION_CLASS}>
+            <SectionTitle>{t('interestTracker')}</SectionTitle>
+            <p className="text-sm text-gray-700 mb-3">
+              {t('interestYTD', { amount: formatMoney(interestYTD) })}
+            </p>
+            {Object.keys(interestByCard).length === 0 ? (
+              <p className="text-xs text-gray-400">{t('noTransactionsMonth')}</p>
+            ) : (
+              <div className="space-y-3">
+                {Object.entries(interestByCard).map(([cardId, info]) => (
+                  <div key={cardId} className="flex items-center justify-between text-sm">
+                    <p className="text-gray-700">{info.name}</p>
+                    <p className="font-semibold text-red-600">{formatMoney(info.total)}</p>
                   </div>
-                )
-              })}
-              <div className="border-t border-gray-100 pt-3 space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <p className="text-gray-600">{t('totalInterestLeft')}</p>
-                  <p className="font-bold text-red-600">{formatMoney(totalInterestRemaining)}</p>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <p className="text-gray-600">{t('totalMonthlyLoanCommitment')}</p>
-                  <p className="font-bold text-gray-900">{formatMoney(totalMonthlyPayments)}</p>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className={SECTION_CLASS}>
+            <SectionTitle>{t('debtOverview')}</SectionTitle>
+            {activeLoans.length === 0 ? (
+              <p className="text-xs text-gray-400">{t('noLoans')}</p>
+            ) : (
+              <div className="space-y-4">
+                {activeLoans.map(loan => {
+                  const stats = calculateLoanStats(
+                    loan.current_balance,
+                    loan.interest_rate,
+                    loan.monthly_payment,
+                  )
+                  return (
+                    <div key={loan.id}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">
+                            {LOAN_EMOJI[loan.loan_type] || LOAN_EMOJI.other} {loan.name}
+                          </p>
+                          <p className="text-xs text-gray-400">{loanTypeLabel(loan.loan_type, t)}</p>
+                        </div>
+                        <p className="text-sm font-bold text-gray-800 shrink-0">
+                          {formatMoney(loan.current_balance)}
+                        </p>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-500">
+                        <span>{t('interestRateShort', { rate: loan.interest_rate })}</span>
+                        <span>{t('paymentPerMonth', { amount: formatMoney(loan.monthly_payment) })}</span>
+                        {stats.monthsToPayoff != null && (
+                          <span>{stats.monthsToPayoff} {t('monthsLeft')}</span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+                <div className="pt-2 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <p className="text-gray-600">{t('totalInterestLeft')}</p>
+                    <p className="font-bold text-red-600">{formatMoney(totalInterestRemaining)}</p>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <p className="text-gray-600">{t('totalMonthlyLoanCommitment')}</p>
+                    <p className="font-bold text-gray-900">{formatMoney(totalMonthlyPayments)}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </section>
-      </div>
+            )}
+          </section>
+        </>
+      )}
 
       {showBudgets && (
         <BudgetsScreen onClose={() => setShowBudgets(false)} />
       )}
-    </div>
-  )
-}
-
-function SummaryCard({ label, value, valueClass = 'text-gray-900' }) {
-  return (
-    <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-      <p className="text-[11px] uppercase tracking-wide text-gray-400">{label}</p>
-      <p className={`text-lg font-bold mt-1 ${valueClass}`}>{value}</p>
     </div>
   )
 }

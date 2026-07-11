@@ -118,14 +118,17 @@ export function getRecentMonthKeys(count, fromDate = new Date()) {
   return keys
 }
 
-export function cleanMerchantName(description) {
-  if (!description) return 'Unknown'
-  let name = description.trim()
-  const trailingStateZip = name.match(/^(.*)\s+[A-Z]{2}(?:\s+\d{5}(?:-\d{4})?)?$/i)
-  if (trailingStateZip?.[1]) {
-    name = trailingStateZip[1].trim()
-  }
-  return name || description.trim()
+export function cleanMerchantName(raw) {
+  if (!raw) return 'Unknown'
+  return raw
+    .replace(/\s*\d{7,}/g, '')
+    .replace(/\b[A-Z]{2,}\s*\*/g, '')
+    .replace(/\s+(SAN FRANCISCO|CA|FL|OH|NY|TX|CO|WA|IL|GA)\s*$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+    .replace(/\b\w/g, c => c.toUpperCase())
+    || 'Unknown'
 }
 
 function amountsWithinTolerance(amounts, tolerance = 0.1) {

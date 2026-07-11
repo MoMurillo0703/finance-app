@@ -473,6 +473,8 @@ export default {
       trendImproving: 'Tu tendencia financiera está mejorando',
       trendDeclining: 'Tus gastos están aumentando',
       payWithCard: 'Pagar con tarjeta',
+      detectedRecurringCharges: 'Cargos recurrentes detectados',
+      notEnoughTrendData: 'Datos insuficientes. Las tendencias aparecerán después de tu segundo mes de transacciones.',
 
       // Add card form
       balancesSection: 'Saldos',
