@@ -100,6 +100,7 @@ export default function BillsScreen({ onBillPaid }) {
   const { user } = useAuth()
   const [bills, setBills] = useState([])
   const [cards, setCards] = useState([])
+  const [statementsMap, setStatementsMap] = useState({})
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
   const [editingBill, setEditingBill] = useState(null)
@@ -142,7 +143,7 @@ export default function BillsScreen({ onBillPaid }) {
         ),
       ]
 
-      const cardSelect = 'id, name, current_balance, interest_rate, intro_rate, intro_rate_expires, manual_minimum_payment, is_active'
+      const cardSelect = 'id, name, current_balance, interest_rate, intro_rate, intro_rate_expires, is_active'
 
       const cardQueries = [
         supabase
@@ -161,7 +162,20 @@ export default function BillsScreen({ onBillPaid }) {
         )
       }
 
-      const cardResults = await Promise.all(cardQueries)
+      const fetches = [...cardQueries]
+      if (autoCardIds.length > 0) {
+        fetches.push(
+          supabase
+            .from('card_statements')
+            .select('*')
+            .in('credit_card_id', autoCardIds)
+            .order('statement_date', { ascending: false }),
+        )
+      }
+
+      const results = await Promise.all(fetches)
+      const cardResults = results.slice(0, cardQueries.length)
+      const statementsResult = autoCardIds.length > 0 ? results[results.length - 1] : null
       const cardsById = new Map()
       for (const result of cardResults) {
         for (const card of result.data ?? []) {
@@ -169,8 +183,17 @@ export default function BillsScreen({ onBillPaid }) {
         }
       }
 
+      const stmtsByCard = {}
+      for (const stmt of statementsResult?.data ?? []) {
+        if (!stmtsByCard[stmt.credit_card_id]) stmtsByCard[stmt.credit_card_id] = []
+        if (stmtsByCard[stmt.credit_card_id].length < 12) {
+          stmtsByCard[stmt.credit_card_id].push(stmt)
+        }
+      }
+
       setBills(billsList)
       setCards([...cardsById.values()])
+      setStatementsMap(stmtsByCard)
       setLoading(false)
     })()
 
@@ -184,13 +207,13 @@ export default function BillsScreen({ onBillPaid }) {
     let totalPaid = 0
 
     for (const bill of bills) {
-      const amount = getBillDisplayAmount(bill, cardMap)
+      const amount = getBillDisplayAmount(bill, cardMap, statementsMap)
       totalDue += amount
       if (isBillPaidThisMonth(bill)) totalPaid += amount
     }
 
     return { totalDue, totalPaid }
-  }, [bills, cardMap])
+  }, [bills, cardMap, statementsMap])
 
   const dayBills = useMemo(() => {
     if (selectedDay == null) return []
@@ -198,10 +221,10 @@ export default function BillsScreen({ onBillPaid }) {
       .filter(b => b.due_day === selectedDay)
       .map(bill => ({
         ...bill,
-        displayAmount: getBillDisplayAmount(bill, cardMap),
+        displayAmount: getBillDisplayAmount(bill, cardMap, statementsMap),
         is_paid: isBillPaidThisMonth(bill),
       }))
-  }, [bills, selectedDay, cardMap])
+  }, [bills, selectedDay, cardMap, statementsMap])
 
   useEffect(() => {
     if (selectedDay == null) return
@@ -270,7 +293,7 @@ export default function BillsScreen({ onBillPaid }) {
 
   const renderCard = (bill, seenDays) => {
     const paid = isBillPaidThisMonth(bill)
-    const displayAmount = getBillDisplayAmount(bill, cardMap)
+    const displayAmount = getBillDisplayAmount(bill, cardMap, statementsMap)
     const isOverdue = !paid && bill.due_day < todayDate
     const isDueSoon = !paid && dueSoonDays.has(bill.due_day)
     const isSelected = selectedDay != null && bill.due_day === selectedDay
@@ -417,6 +440,7 @@ export default function BillsScreen({ onBillPaid }) {
         <PayBillModal
           bill={payingBill}
           cardMap={cardMap}
+          statementsMap={statementsMap}
           onClose={() => setPayingBill(null)}
           onPaid={handleBillPaid}
         />

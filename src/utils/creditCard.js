@@ -59,9 +59,65 @@ export function calculateAutoBillMinimum(card) {
   return Math.max(balance * 0.02, 25) + monthlyInterest
 }
 
-export function getCardMinimumPayment(card) {
-  if (card?.manual_minimum_payment != null && !Number.isNaN(Number(card.manual_minimum_payment))) {
-    return Number(card.manual_minimum_payment)
+export function getLastStatementDate(statementDay, asOf = new Date()) {
+  const day = Number(statementDay) || 1
+  const anchor = new Date(asOf.getFullYear(), asOf.getMonth(), 1)
+  if (asOf.getDate() < day) {
+    anchor.setMonth(anchor.getMonth() - 1)
   }
-  return calculateAutoBillMinimum(card)
+  const lastDay = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0).getDate()
+  anchor.setDate(Math.min(day, lastDay))
+  return anchor.toISOString().split('T')[0]
+}
+
+export function getCardMinimumPayment(card, statements = []) {
+  const balance = Number(card?.current_balance) || 0
+  const rate = getEffectiveRate(card)
+  const monthlyInterest = balance * (rate / 100 / 12)
+
+  if (statements.length >= 3) {
+    const formulas = {
+      standard: s => Math.max(25, (s.balance * 0.01) + s.interest_charged),
+      twopercent: s => Math.max(25, (s.balance * 0.02) + s.interest_charged),
+      flatpercent: s => Math.max(25, s.balance * 0.02),
+      interestplus: s => Math.max(25, s.interest_charged + (s.balance * 0.01)),
+    }
+
+    const scores = Object.entries(formulas).map(([name, fn]) => {
+      const avgError = statements.reduce((sum, s) => {
+        return sum + Math.abs(fn(s) - Number(s.actual_minimum))
+      }, 0) / statements.length
+      return { name, avgError, fn }
+    })
+
+    const best = scores.sort((a, b) => a.avgError - b.avgError)[0]
+    const estimated = best.fn({ balance, interest_charged: monthlyInterest })
+
+    return {
+      amount: estimated,
+      confidence: best.avgError < 5 ? 'high' : best.avgError < 20 ? 'medium' : 'low',
+      formula: best.name,
+      monthsOfData: statements.length,
+    }
+  }
+
+  return {
+    amount: Math.max(25, (balance * 0.01) + monthlyInterest),
+    confidence: 'estimated',
+    formula: 'standard',
+    monthsOfData: statements.length,
+  }
+}
+
+export function getCardMinimumAmount(card, statements = []) {
+  return getCardMinimumPayment(card, statements).amount
+}
+
+export async function syncAutoBillMinimum(supabaseClient, card, statements = []) {
+  const { amount } = getCardMinimumPayment(card, statements)
+  await supabaseClient
+    .from('bills')
+    .update({ amount })
+    .eq('credit_card_id', card.id)
+    .eq('is_auto_card_bill', true)
 }

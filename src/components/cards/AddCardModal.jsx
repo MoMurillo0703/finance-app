@@ -29,7 +29,6 @@ export default function AddCardModal({ onClose, onSaved }) {
   const [network, setNetwork] = useState('Visa')
   const creditLimitInput = useCurrencyInput()
   const currentBalanceInput = useCurrencyInput()
-  const manualMinimumInput = useCurrencyInput()
   const currency = getUserCurrency()
   const [statementDate, setStatementDate] = useState('')
   const [dueDate, setDueDate] = useState('')
@@ -98,9 +97,6 @@ export default function AddCardModal({ onClose, onSaved }) {
       if (introRateExpires) {
         row.intro_rate_expires = introRateExpires
       }
-    }
-    if (manualMinimumInput.raw && manualMinimumInput.numericValue > 0) {
-      row.manual_minimum_payment = manualMinimumInput.numericValue
     }
 
     const { data: newCard, error: dbError } = await supabase
@@ -321,17 +317,6 @@ export default function AddCardModal({ onClose, onSaved }) {
                 onChange={handleDayChange(setDueDate)}
               />
             </div>
-          </div>
-          <div className="mt-3">
-            <FieldLabel>{t('minimumPaymentFromStatement')}</FieldLabel>
-            <input
-              className={inputClass}
-              type="text"
-              inputMode="decimal"
-              placeholder={currencyAmountPlaceholder(currency)}
-              value={manualMinimumInput.displayValue}
-              onChange={manualMinimumInput.handleChange}
-            />
           </div>
         </div>
 
