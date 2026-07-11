@@ -10,11 +10,12 @@ import MonthSnapshot from './MonthSnapshot'
 import BillsThisWeek from './BillsThisWeek'
 import PaydayWizard from '../payday/PaydayWizard'
 import PurchaseSimulator from '../simulator/PurchaseSimulator'
+import DebtPayoffPlanner from '../debt/DebtPayoffPlanner'
 import { formatMoney } from '../../utils/currency'
 import { fetchBanks } from '../../utils/bank'
 import { calculateNetWorth } from '../../utils/netWorth'
 
-export default function Dashboard({ refreshKey, onNavigate }) {
+export default function Dashboard({ refreshKey, onNavigate, setHideNav }) {
   const { user } = useAuth()
   const { t } = useTranslation()
   const [vaults, setVaults] = useState([])
@@ -29,6 +30,7 @@ export default function Dashboard({ refreshKey, onNavigate }) {
   const [modalRefreshKey, setModalRefreshKey] = useState(0)
   const [showPaydayWizard, setShowPaydayWizard] = useState(false)
   const [showSimulator, setShowSimulator] = useState(false)
+  const [showDebtPlanner, setShowDebtPlanner] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -159,6 +161,16 @@ export default function Dashboard({ refreshKey, onNavigate }) {
               </p>
             </div>
           </div>
+
+          {(totalCreditCardDebt > 0 || totalLoanDebt > 0) && (
+            <button
+              type="button"
+              onClick={() => setShowDebtPlanner(true)}
+              className="w-full mt-3 py-2.5 rounded-xl text-sm font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 transition-colors"
+            >
+              {t('payoffPlan')} →
+            </button>
+          )}
         </div>
 
         <div className="flex gap-3">
@@ -277,6 +289,13 @@ export default function Dashboard({ refreshKey, onNavigate }) {
         <PurchaseSimulator
           onClose={() => setShowSimulator(false)}
           onSaved={() => setModalRefreshKey(k => k + 1)}
+        />
+      )}
+
+      {showDebtPlanner && (
+        <DebtPayoffPlanner
+          onClose={() => setShowDebtPlanner(false)}
+          setHideNav={setHideNav}
         />
       )}
     </div>

@@ -42,6 +42,7 @@ import {
   buildTrendInsight,
 } from '../../utils/financialTrends'
 import BudgetsScreen from '../budgets/BudgetsScreen'
+import DebtPayoffPlanner from '../debt/DebtPayoffPlanner'
 
 const SECTION_CLASS = 'bg-white rounded-2xl mx-4 mb-4 p-4 shadow-sm border border-gray-100'
 
@@ -54,6 +55,7 @@ export default function ReportsScreen({ setHideNav }) {
   const { user } = useAuth()
   const now = new Date()
   const [showBudgets, setShowBudgets] = useState(false)
+  const [showDebtPlanner, setShowDebtPlanner] = useState(false)
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [monthTransactions, setMonthTransactions] = useState([])
@@ -87,9 +89,9 @@ export default function ReportsScreen({ setHideNav }) {
   const trendStart = sixMonthsAgo.toISOString().split('T')[0]
 
   useEffect(() => {
-    setHideNav?.(showBudgets)
+    setHideNav?.(showBudgets || showDebtPlanner)
     return () => setHideNav?.(false)
-  }, [showBudgets, setHideNav])
+  }, [showBudgets, showDebtPlanner, setHideNav])
 
   useEffect(() => {
     let active = true
@@ -548,6 +550,14 @@ export default function ReportsScreen({ setHideNav }) {
                   <p className="text-sm text-gray-500">{t('totalYearlyInterest')}</p>
                   <p className="font-bold text-red-500">{formatMoney(totalMonthlyInterest * 12)}</p>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowDebtPlanner(true)}
+                  className="w-full mt-4 py-2.5 rounded-xl text-sm font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 transition-colors"
+                >
+                  {t('payoffPlannerLink')} →
+                </button>
               </>
             )}
           </section>
@@ -694,6 +704,13 @@ export default function ReportsScreen({ setHideNav }) {
 
       {showBudgets && (
         <BudgetsScreen onClose={() => setShowBudgets(false)} />
+      )}
+
+      {showDebtPlanner && (
+        <DebtPayoffPlanner
+          onClose={() => setShowDebtPlanner(false)}
+          setHideNav={setHideNav}
+        />
       )}
     </div>
   )

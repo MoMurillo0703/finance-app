@@ -80,6 +80,7 @@ function AppContent() {
           <Dashboard
             refreshKey={`${dashboardRefreshKey}-${prefsVersion}`}
             onNavigate={setActiveTab}
+            setHideNav={setHideNav}
           />
         )}
         {activeTab === 'transactions' && (
