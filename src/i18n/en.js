@@ -381,6 +381,30 @@ export default {
 
       nothingDueThisWeek: 'Nothing due this week 🎉',
 
+      // Purchase simulator
+      canIAfford: 'Can I afford this?',
+      purchaseSimulator: 'Purchase Simulator',
+      purchaseDescription: 'What are you buying?',
+      payNow: 'Pay now (debit)',
+      payCredit: 'Credit card',
+      payInstallments: 'Installments (cuotas)',
+      impactAnalysis: 'Impact analysis',
+      beforePurchase: 'Before',
+      afterPurchase: 'After',
+      verdictGreen: 'You can afford this',
+      verdictYellow: 'Tight but possible',
+      verdictRed: 'Not recommended',
+      goAhead: 'Go ahead — record it',
+      justChecking: 'Just checking',
+      newMinPayment: 'New min. payment',
+      monthlySurplus: 'Monthly surplus',
+      totalCostWithInterest: 'Total cost with interest',
+      simulatorTipGreen: 'Tip: Consider putting {{percent}}% of the remaining surplus into your emergency vault.',
+      simulatorTipYellow: 'Tip: This purchase will leave you with less than a month\'s buffer. Consider waiting until next payday.',
+      simulatorTipRed: 'Tip: This purchase would put your card over 90% utilization. High utilization can impact your credit score.',
+      simulatorCuotaMonthly: 'Monthly cuota payment: {{amount}}/mo for {{months}} months',
+      simulatorCuotaSurplus: 'This cuota will use {{percent}}% of your projected monthly surplus',
+
       // Month snapshot
       thisMonth: 'This Month',
       seeAll: 'See all',

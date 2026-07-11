@@ -12,6 +12,7 @@ import CuotasSection from './CuotasSection'
 import CardEstimatorPanel from './CardEstimatorPanel'
 import AddTransactionModal from '../transactions/AddTransactionModal'
 import AddCuotaModal from './AddCuotaModal'
+import PurchaseSimulator from '../simulator/PurchaseSimulator'
 
 const TABS = ['transactions', 'cuotas', 'estimator']
 
@@ -50,6 +51,7 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
   const [showAddTransaction, setShowAddTransaction] = useState(false)
   const [showAddCuota, setShowAddCuota] = useState(false)
   const [showMakePayment, setShowMakePayment] = useState(false)
+  const [showSimulator, setShowSimulator] = useState(false)
   const [paymentAmount, setPaymentAmount] = useState('')
   const [paymentBankId, setPaymentBankId] = useState('')
   const [paying, setPaying] = useState(false)
@@ -259,6 +261,16 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
               </button>
             </div>
 
+            <div className="px-4 py-2 border-b border-gray-100">
+              <button
+                type="button"
+                onClick={() => setShowSimulator(true)}
+                className="w-full py-2 rounded-xl border border-purple-200 text-purple-600 text-xs font-medium"
+              >
+                🤔 {t('canIAfford')}
+              </button>
+            </div>
+
             <div className="flex border-b border-gray-100">
               {TABS.map(tab => (
                 <button
@@ -412,6 +424,14 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
           card={liveCard}
           onClose={() => setShowAddCuota(false)}
           onSaved={handleSaved}
+        />
+      )}
+
+      {showSimulator && (
+        <PurchaseSimulator
+          onClose={() => setShowSimulator(false)}
+          onSaved={handleSaved}
+          prefillCardId={liveCard.id}
         />
       )}
     </>

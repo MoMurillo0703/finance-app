@@ -14,6 +14,7 @@ import AccountHistoryModal from './AccountHistoryModal'
 import LoansSection from '../loans/LoansSection'
 import AddLoanModal from '../loans/AddLoanModal'
 import EditLoanModal from '../loans/EditLoanModal'
+import PurchaseSimulator from '../simulator/PurchaseSimulator'
 
 function accountTypeLabel(type, t) {
   if (type === 'checking') return t('checking')
@@ -37,6 +38,7 @@ export default function AccountsScreen({ onAccountSaved, refreshKey = 0 }) {
   const [editingCard, setEditingCard] = useState(null)
   const [editingLoan, setEditingLoan] = useState(null)
   const [detailCard, setDetailCard] = useState(null)
+  const [showSimulator, setShowSimulator] = useState(false)
   const [historyBank, setHistoryBank] = useState(null)
   const [dataRefreshKey, setDataRefreshKey] = useState(0)
 
@@ -85,6 +87,14 @@ export default function AccountsScreen({ onAccountSaved, refreshKey = 0 }) {
   return (
     <div className="bg-gray-50 min-h-full">
       <div className="px-4 py-4 pb-24 space-y-6">
+        <button
+          type="button"
+          onClick={() => setShowSimulator(true)}
+          className="w-full py-2.5 rounded-2xl border border-purple-200 text-purple-600 font-medium text-sm bg-white"
+        >
+          🤔 {t('canIAfford')}
+        </button>
+
         <section>
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
             {t('bankAccounts')}
@@ -323,6 +333,13 @@ export default function AccountsScreen({ onAccountSaved, refreshKey = 0 }) {
             if (data) setDetailCard(data)
             onAccountSaved?.()
           }}
+        />
+      )}
+
+      {showSimulator && (
+        <PurchaseSimulator
+          onClose={() => setShowSimulator(false)}
+          onSaved={handleSaved}
         />
       )}
     </div>

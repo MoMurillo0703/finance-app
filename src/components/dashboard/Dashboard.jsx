@@ -9,6 +9,7 @@ import EditVaultModal from '../vaults/EditVaultModal'
 import MonthSnapshot from './MonthSnapshot'
 import BillsThisWeek from './BillsThisWeek'
 import PaydayWizard from '../payday/PaydayWizard'
+import PurchaseSimulator from '../simulator/PurchaseSimulator'
 import { formatMoney } from '../../utils/currency'
 import { fetchBanks } from '../../utils/bank'
 
@@ -23,6 +24,7 @@ export default function Dashboard({ refreshKey, onViewReports }) {
   const [editingVault, setEditingVault] = useState(null)
   const [modalRefreshKey, setModalRefreshKey] = useState(0)
   const [showPaydayWizard, setShowPaydayWizard] = useState(false)
+  const [showSimulator, setShowSimulator] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -94,6 +96,14 @@ export default function Dashboard({ refreshKey, onViewReports }) {
             + {t('addVault')}
           </button>
         </div>
+
+        <button
+          type="button"
+          onClick={() => setShowSimulator(true)}
+          className="w-full py-2.5 rounded-2xl border border-purple-200 text-purple-600 font-medium text-sm"
+        >
+          🤔 {t('canIAfford')}
+        </button>
 
         {totalBalance === 0 && vaults.length === 0 && (
           <div className="bg-purple-50 border border-purple-100 rounded-2xl p-5 text-center">
@@ -168,6 +178,13 @@ export default function Dashboard({ refreshKey, onViewReports }) {
             setShowPaydayWizard(false)
             setModalRefreshKey(k => k + 1)
           }}
+        />
+      )}
+
+      {showSimulator && (
+        <PurchaseSimulator
+          onClose={() => setShowSimulator(false)}
+          onSaved={() => setModalRefreshKey(k => k + 1)}
         />
       )}
     </div>

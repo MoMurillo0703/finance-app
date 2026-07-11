@@ -381,6 +381,30 @@ export default {
 
       nothingDueThisWeek: 'Nada pendiente esta semana 🎉',
 
+      // Purchase simulator
+      canIAfford: '¿Puedo pagarlo?',
+      purchaseSimulator: 'Simulador de compra',
+      purchaseDescription: '¿Qué vas a comprar?',
+      payNow: 'Pagar ahora (débito)',
+      payCredit: 'Tarjeta de crédito',
+      payInstallments: 'Cuotas',
+      impactAnalysis: 'Análisis de impacto',
+      beforePurchase: 'Antes',
+      afterPurchase: 'Después',
+      verdictGreen: 'Puedes pagarlo',
+      verdictYellow: 'Justo pero posible',
+      verdictRed: 'No recomendado',
+      goAhead: 'Adelante — registrarlo',
+      justChecking: 'Solo estaba viendo',
+      newMinPayment: 'Nuevo pago mínimo',
+      monthlySurplus: 'Excedente mensual',
+      totalCostWithInterest: 'Costo total con interés',
+      simulatorTipGreen: 'Consejo: Considera destinar el {{percent}}% del excedente restante a tu bóveda de emergencia.',
+      simulatorTipYellow: 'Consejo: Esta compra te dejará con menos de un mes de colchón. Considera esperar hasta el próximo pago.',
+      simulatorTipRed: 'Consejo: Esta compra pondría tu tarjeta por encima del 90% de utilización. Una alta utilización puede afectar tu puntaje crediticio.',
+      simulatorCuotaMonthly: 'Pago mensual de cuota: {{amount}}/mes por {{months}} meses',
+      simulatorCuotaSurplus: 'Esta cuota usará el {{percent}}% de tu excedente mensual proyectado',
+
       // Month snapshot
       thisMonth: 'Este mes',
       seeAll: 'Ver todo',
