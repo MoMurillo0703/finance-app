@@ -1,16 +1,18 @@
 import { useState, useEffect, useMemo } from 'react'
+import { Pencil } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { formatMoney, isCOPUser } from '../../utils/currency'
 import { formatDate } from '../../utils/date'
-import { calculateMinimumPayment, getCardApr } from '../../utils/cards'
+import { getCardApr } from '../../utils/cards'
 import {
   getBillingCycleStart,
   isIntroRateActive,
   isIntroRateExpiringSoon,
   getIntroRateDaysLeft,
   calculateAutoBillMinimum,
+  getCardMinimumPayment,
 } from '../../utils/creditCard'
 import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
 import { adjustBankBalance, adjustCardBalance, bankDelta, cardDelta } from '../../lib/payments'
@@ -73,6 +75,9 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
   const [paymentError, setPaymentError] = useState('')
   const [statementSnapshot, setStatementSnapshot] = useState(null)
   const [urgentPromos, setUrgentPromos] = useState([])
+  const [editingMinimum, setEditingMinimum] = useState(false)
+  const [minimumInput, setMinimumInput] = useState('')
+  const [savingMinimum, setSavingMinimum] = useState(false)
 
   const currency = liveCard.currency || 'COP'
   const limit = liveCard.credit_limit || 0
@@ -88,8 +93,10 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
     tabs.push('estimator')
     return tabs
   }, [copUser])
-  const estimate = useMemo(() => calculateMinimumPayment(liveCard, copUser ? cuotas : []), [liveCard, cuotas, copUser])
-  const totalMinimum = estimate.totalMinimum
+  const calculatedMinimum = useMemo(() => calculateAutoBillMinimum(liveCard), [liveCard])
+  const displayedMinimum = liveCard.manual_minimum_payment ?? calculatedMinimum
+  const hasManualMinimum = liveCard.manual_minimum_payment != null
+  const totalMinimum = displayedMinimum
   const introActive = isIntroRateActive(liveCard)
   const introExpiringSoon = isIntroRateExpiringSoon(liveCard)
   const introDaysLeft = getIntroRateDaysLeft(liveCard)
@@ -109,7 +116,7 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
     setStatementSnapshot({
       newCharges,
       payToAvoidInterest: newCharges,
-      minimumDue: calculateAutoBillMinimum(card),
+      minimumDue: getCardMinimumPayment(card),
     })
   }
 
@@ -174,6 +181,35 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
     setShowAddCuota(false)
     setShowMakePayment(false)
     refreshData()
+  }
+
+  const handleSaveMinimum = async () => {
+    setSavingMinimum(true)
+    const parsed = minimumInput.trim() === '' ? null : parseFloat(minimumInput)
+    if (parsed != null && (Number.isNaN(parsed) || parsed < 0)) {
+      setSavingMinimum(false)
+      return
+    }
+
+    const { error: updateError } = await supabase
+      .from('credit_cards')
+      .update({ manual_minimum_payment: parsed })
+      .eq('id', liveCard.id)
+
+    setSavingMinimum(false)
+    if (updateError) return
+
+    setEditingMinimum(false)
+    refreshData()
+  }
+
+  const startEditingMinimum = () => {
+    setMinimumInput(
+      liveCard.manual_minimum_payment != null
+        ? String(liveCard.manual_minimum_payment)
+        : String(Math.round(calculatedMinimum * 100) / 100),
+    )
+    setEditingMinimum(true)
   }
 
   const handleMakePayment = async () => {
@@ -341,7 +377,50 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
             <div className="flex justify-between items-center px-5 py-3 bg-amber-50 border-b border-amber-100">
               <div>
                 <p className="text-[10px] text-amber-600 font-medium uppercase">{t('estMinimumDue')}</p>
-                <p className="text-base font-bold text-amber-800">{formatMoney(totalMinimum, currency)}</p>
+                {editingMinimum ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <input
+                      className="w-28 border border-amber-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                      type="number"
+                      inputMode="decimal"
+                      value={minimumInput}
+                      onChange={e => setMinimumInput(e.target.value)}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSaveMinimum}
+                      disabled={savingMinimum}
+                      className="text-xs bg-amber-600 text-white px-2 py-1 rounded-lg disabled:opacity-50"
+                    >
+                      {t('save')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingMinimum(false)}
+                      className="text-xs text-gray-500"
+                    >
+                      {t('cancel')}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <p className="text-xl font-bold text-amber-800">{formatMoney(displayedMinimum, currency)}</p>
+                    <button
+                      type="button"
+                      onClick={startEditingMinimum}
+                      className="text-gray-400 hover:text-gray-600"
+                      aria-label={t('edit')}
+                    >
+                      <Pencil size={14} />
+                    </button>
+                  </div>
+                )}
+                {!editingMinimum && (
+                  <p className="text-[10px] text-amber-700/70 mt-0.5">
+                    {hasManualMinimum ? t('minimumFromStatement') : t('minimumEstimated')}
+                  </p>
+                )}
               </div>
               <div className="text-right">
                 <p className="text-[10px] text-gray-400">{t('dueDate')}</p>

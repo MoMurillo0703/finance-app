@@ -58,3 +58,10 @@ export function calculateAutoBillMinimum(card) {
   const monthlyInterest = balance * (effectiveRate / 100 / 12)
   return Math.max(balance * 0.02, 25) + monthlyInterest
 }
+
+export function getCardMinimumPayment(card) {
+  if (card?.manual_minimum_payment != null && !Number.isNaN(Number(card.manual_minimum_payment))) {
+    return Number(card.manual_minimum_payment)
+  }
+  return calculateAutoBillMinimum(card)
+}

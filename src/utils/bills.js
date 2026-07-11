@@ -1,4 +1,4 @@
-import { calculateAutoBillMinimum } from './creditCard'
+import { getCardMinimumPayment } from './creditCard'
 
 export function getCurrentBillingMonth() {
   const now = new Date()
@@ -34,7 +34,7 @@ export function getBillDisplayAmount(bill, cardMap = {}) {
 
   if (bill.credit_card_id && (bill.is_auto_card_bill || Number(bill.amount) === 0)) {
     const card = cardMap[bill.credit_card_id]
-    if (card) return calculateAutoBillMinimum(card)
+    if (card) return getCardMinimumPayment(card)
   }
 
   return Number(bill.amount) || 0

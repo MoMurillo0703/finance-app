@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -15,14 +16,16 @@ import {
   getCurrentBillingMonth,
 } from '../../utils/bills'
 
-function BillCard({ bill, displayAmount, paid, isOverdue, isDueSoon, faded, cardId, flashing, onEdit, onPay, onUndo, t }) {
-  const borderClass = paid
-    ? 'border-green-100'
-    : isOverdue
-      ? 'border-red-200'
-      : isDueSoon
-        ? 'border-amber-200'
-        : 'border-gray-100'
+function BillCard({ bill, displayAmount, paid, isOverdue, isDueSoon, faded, cardId, selected, onEdit, onPay, onUndo, t }) {
+  const borderClass = selected
+    ? 'border-purple-400 shadow-purple-100 shadow-md ring-2 ring-purple-300'
+    : paid
+      ? 'border-green-100'
+      : isOverdue
+        ? 'border-red-200'
+        : isDueSoon
+          ? 'border-amber-200'
+          : 'border-gray-100'
 
   const barClass = paid
     ? 'bg-green-400'
@@ -35,9 +38,9 @@ function BillCard({ bill, displayAmount, paid, isOverdue, isDueSoon, faded, card
   return (
     <div
       id={cardId}
-      className={`bg-white rounded-2xl p-4 border shadow-sm relative transition-all ${borderClass} ${
+      className={`bg-white rounded-2xl p-4 border shadow-sm relative transition-all duration-300 ${borderClass} ${
         faded ? 'opacity-60' : ''
-      } ${flashing ? 'ring-2 ring-purple-400 animate-pulse' : ''}`}
+      }`}
     >
       <div className={`absolute top-0 left-4 right-4 h-1 rounded-full ${barClass}`} />
 
@@ -102,10 +105,8 @@ export default function BillsScreen({ onBillPaid }) {
   const [editingBill, setEditingBill] = useState(null)
   const [payingBill, setPayingBill] = useState(null)
   const [selectedDay, setSelectedDay] = useState(null)
-  const [flashDay, setFlashDay] = useState(null)
   const [error, setError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
-  const flashTimer = useRef(null)
 
   const todayDate = new Date().getDate()
 
@@ -141,7 +142,7 @@ export default function BillsScreen({ onBillPaid }) {
         ),
       ]
 
-      const cardSelect = 'id, name, current_balance, interest_rate, intro_rate, intro_rate_expires, is_active'
+      const cardSelect = 'id, name, current_balance, interest_rate, intro_rate, intro_rate_expires, manual_minimum_payment, is_active'
 
       const cardQueries = [
         supabase
@@ -178,11 +179,6 @@ export default function BillsScreen({ onBillPaid }) {
 
   const grouped = useMemo(() => groupBillsByStatus(bills), [bills])
 
-  const orderedBills = useMemo(
-    () => [...grouped.overdue, ...grouped.dueThisWeek, ...grouped.upcoming, ...grouped.paid],
-    [grouped],
-  )
-
   const summary = useMemo(() => {
     let totalDue = 0
     let totalPaid = 0
@@ -196,22 +192,22 @@ export default function BillsScreen({ onBillPaid }) {
     return { totalDue, totalPaid }
   }, [bills, cardMap])
 
+  const dayBills = useMemo(() => {
+    if (selectedDay == null) return []
+    return bills
+      .filter(b => b.due_day === selectedDay)
+      .map(bill => ({
+        ...bill,
+        displayAmount: getBillDisplayAmount(bill, cardMap),
+        is_paid: isBillPaidThisMonth(bill),
+      }))
+  }, [bills, selectedDay, cardMap])
+
   useEffect(() => {
     if (selectedDay == null) return
-    const firstBill = orderedBills.find(b => b.due_day === selectedDay)
-    if (!firstBill) return
-
-    const el = document.getElementById(`bill-day-${selectedDay}`)
+    const el = document.getElementById(`bill-${selectedDay}`)
     el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-
-    setFlashDay(selectedDay)
-    if (flashTimer.current) clearTimeout(flashTimer.current)
-    flashTimer.current = setTimeout(() => setFlashDay(null), 1000)
-  }, [selectedDay, orderedBills])
-
-  useEffect(() => () => {
-    if (flashTimer.current) clearTimeout(flashTimer.current)
-  }, [])
+  }, [selectedDay])
 
   const handleBillSaved = () => {
     setEditingBill(null)
@@ -277,11 +273,12 @@ export default function BillsScreen({ onBillPaid }) {
     const displayAmount = getBillDisplayAmount(bill, cardMap)
     const isOverdue = !paid && bill.due_day < todayDate
     const isDueSoon = !paid && dueSoonDays.has(bill.due_day)
+    const isSelected = selectedDay != null && bill.due_day === selectedDay
 
     let cardId
     if (!seenDays.has(bill.due_day)) {
       seenDays.add(bill.due_day)
-      cardId = `bill-day-${bill.due_day}`
+      cardId = `bill-${bill.due_day}`
     }
 
     return (
@@ -294,7 +291,7 @@ export default function BillsScreen({ onBillPaid }) {
         isDueSoon={isDueSoon}
         faded={paid}
         cardId={cardId}
-        flashing={flashDay != null && bill.due_day === flashDay}
+        selected={isSelected}
         onEdit={setEditingBill}
         onPay={setPayingBill}
         onUndo={handleUndo}
@@ -332,6 +329,34 @@ export default function BillsScreen({ onBillPaid }) {
             selectedDay={selectedDay}
             onSelectDay={setSelectedDay}
           />
+
+          {selectedDay && dayBills.length > 0 && (
+            <div className="mx-4 mb-3 bg-white rounded-2xl border border-purple-200 shadow-md p-3">
+              <div className="flex justify-between items-center mb-2">
+                <p className="text-xs font-semibold text-purple-600">{t('dayLabel', { day: selectedDay })}</p>
+                <button type="button" onClick={() => setSelectedDay(null)}>
+                  <X size={14} className="text-gray-400" />
+                </button>
+              </div>
+              {dayBills.map(bill => (
+                <div key={bill.id} className="flex justify-between items-center py-1.5 border-t border-gray-50 first:border-t-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${bill.is_paid ? 'bg-green-400' : 'bg-red-400'}`} />
+                    <p className="text-sm text-gray-700 truncate">{bill.name}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 ml-2">
+                    <p className="text-sm font-semibold text-gray-800">{formatMoney(bill.displayAmount)}</p>
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                      bill.is_paid ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'
+                    }`}
+                    >
+                      {bill.is_paid ? '✓' : t('due')}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="grid grid-cols-3 gap-2 mx-4 mb-4">
             <div className="bg-red-50 rounded-xl p-3 text-center">
