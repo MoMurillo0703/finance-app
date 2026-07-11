@@ -190,6 +190,8 @@ export default {
       max: "Max",
       goalReached: "Goal reached!",
       neededToReachGoal: "{{amount}} needed to reach goal",
+      checking: "Checking",
+      overBy: "Over by {{amount}}",
   
       // Manolo
       pet: "Pet",

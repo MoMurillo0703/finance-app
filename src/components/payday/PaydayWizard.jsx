@@ -13,6 +13,83 @@ import {
   parseCurrencyRaw,
 } from '../../hooks/useCurrencyInput'
 
+const VAULT_COLORS = [
+  'bg-purple-600',
+  'bg-violet-500',
+  'bg-indigo-500',
+  'bg-purple-400',
+  'bg-fuchsia-500',
+  'bg-violet-400',
+  'bg-indigo-400',
+]
+
+function AllocationProgressBar({ vaults, vaultAllocations, payAmount, remaining, currency, t }) {
+  const segments = useMemo(() => {
+    if (remaining < 0 || payAmount <= 0) return []
+
+    const vaultSegments = vaults
+      .map((vault, index) => {
+        const amount = vaultAllocations.find(a => a.id === vault.id)?.amount || 0
+        if (amount <= 0) return null
+        return {
+          key: vault.id,
+          label: vault.name,
+          amount,
+          color: VAULT_COLORS[index % VAULT_COLORS.length],
+        }
+      })
+      .filter(Boolean)
+
+    if (remaining > 0) {
+      vaultSegments.push({
+        key: 'checking',
+        label: t('checking'),
+        amount: remaining,
+        color: 'bg-gray-200',
+      })
+    }
+
+    return vaultSegments
+  }, [vaults, vaultAllocations, remaining, payAmount, t])
+
+  if (payAmount <= 0) return null
+
+  return (
+    <div className="mb-5">
+      <div className="flex rounded-full overflow-hidden h-4 w-full mb-2">
+        {remaining < 0 ? (
+          <div className="bg-red-400 w-full transition-all duration-300" />
+        ) : (
+          segments.map(seg => (
+            <div
+              key={seg.key}
+              className={`${seg.color} transition-all duration-300`}
+              style={{ width: `${(seg.amount / payAmount) * 100}%` }}
+            />
+          ))
+        )}
+      </div>
+
+      <div className="flex flex-wrap gap-x-3 gap-y-1">
+        {remaining < 0 ? (
+          <p className="text-xs text-red-500">
+            ⚠️ {t('overBy', { amount: formatMoney(Math.abs(remaining), currency) })}
+          </p>
+        ) : (
+          segments.map(seg => (
+            <div key={seg.key} className="flex items-center gap-1">
+              <div className={`w-2 h-2 rounded-full ${seg.color}`} />
+              <p className="text-xs text-gray-500">
+                {seg.label} {formatMoney(seg.amount, currency)}
+              </p>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  )
+}
+
 function VaultAllocationRow({ vault, amount, onAmountChange, onMax, t, currency }) {
   const [localRaw, setLocalRaw] = useState('')
   const [editing, setEditing] = useState(false)
@@ -295,6 +372,15 @@ export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefi
                 <p className="text-xs text-green-600 mt-1">✅ {t('fullyAllocated')}</p>
               )}
             </div>
+
+            <AllocationProgressBar
+              vaults={vaults}
+              vaultAllocations={vaultAllocations}
+              payAmount={payAmount}
+              remaining={remaining}
+              currency={currency}
+              t={t}
+            />
 
             {vaults.length === 0 ? (
               <p className="text-sm text-gray-400 py-4 text-center">{t('noVaults')}</p>

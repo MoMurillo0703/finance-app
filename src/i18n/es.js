@@ -190,6 +190,8 @@ export default {
       max: "Máx",
       goalReached: "¡Meta alcanzada!",
       neededToReachGoal: "Faltan {{amount}} para la meta",
+      checking: "Cuenta corriente",
+      overBy: "Excedido por {{amount}}",
   
       // Manolo
       pet: "Mascota",
