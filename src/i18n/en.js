@@ -472,5 +472,14 @@ export default {
       trendImproving: 'Your financial trend is improving',
       trendDeclining: 'Your expenses are trending up',
       payWithCard: 'Pay with credit card',
+
+      // Add card form
+      balancesSection: 'Balances',
+      interestRatesSection: 'Interest rates',
+      billingDatesSection: 'Billing dates',
+      statementCloses: 'Statement closes',
+      paymentDue: 'Payment due',
+      hasIntroRate: 'This card has an intro/promotional rate',
+      dayPlaceholder: 'Day',
     }
   }

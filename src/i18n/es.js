@@ -472,5 +472,14 @@ export default {
       trendImproving: 'Tu tendencia financiera está mejorando',
       trendDeclining: 'Tus gastos están aumentando',
       payWithCard: 'Pagar con tarjeta',
+
+      // Add card form
+      balancesSection: 'Saldos',
+      interestRatesSection: 'Tasas de interés',
+      billingDatesSection: 'Fechas de facturación',
+      statementCloses: 'Corte de estado',
+      paymentDue: 'Pago vence',
+      hasIntroRate: 'Esta tarjeta tiene tasa introductoria/promocional',
+      dayPlaceholder: 'Día',
     }
   }
