@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { formatMoney } from '../../utils/currency'
+import { formatMoney, getUserCurrency } from '../../utils/currency'
 import { BUDGET_CATEGORIES } from '../../utils/transactionCategories'
+import { useCurrencyInput, currencyAmountPlaceholder } from '../../hooks/useCurrencyInput'
 import {
   buildBudgetRows,
   getBudgetCategoryLabel,
@@ -14,15 +15,16 @@ import {
 function BudgetEditSheet({ category, budget, onClose, onSaved }) {
   const { t } = useTranslation()
   const { user } = useAuth()
-  const [limit, setLimit] = useState(budget?.monthly_limit ? String(budget.monthly_limit) : '')
+  const limitInput = useCurrencyInput(budget?.monthly_limit ?? '')
+  const currency = getUserCurrency()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   const meta = BUDGET_CATEGORIES.find(c => c.key === category.key)
 
   const handleSave = async () => {
-    const parsed = parseFloat(limit)
-    if (!limit || isNaN(parsed) || parsed <= 0) {
+    const parsed = limitInput.numericValue
+    if (!limitInput.raw || parsed <= 0) {
       setError(t('invalidAmount'))
       return
     }
@@ -88,11 +90,11 @@ function BudgetEditSheet({ category, budget, onClose, onSaved }) {
           <label className="text-xs text-gray-400 mb-1 block">{t('monthlyLimit')}</label>
           <input
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-            type="number"
-            min="1"
-            placeholder="0"
-            value={limit}
-            onChange={e => setLimit(e.target.value)}
+            type="text"
+            inputMode="decimal"
+            placeholder={currencyAmountPlaceholder(currency)}
+            value={limitInput.displayValue}
+            onChange={limitInput.handleChange}
           />
         </div>
 
@@ -125,7 +127,8 @@ function AddBudgetSheet({ budgetedKeys, onClose, onSaved }) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [selectedKey, setSelectedKey] = useState(null)
-  const [limit, setLimit] = useState('')
+  const limitInput = useCurrencyInput()
+  const currency = getUserCurrency()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -133,8 +136,8 @@ function AddBudgetSheet({ budgetedKeys, onClose, onSaved }) {
   const selected = availableCategories.find(c => c.key === selectedKey)
 
   const handleSave = async () => {
-    const parsed = parseFloat(limit)
-    if (!limit || isNaN(parsed) || parsed <= 0) {
+    const parsed = limitInput.numericValue
+    if (!limitInput.raw || parsed <= 0) {
       setError(t('invalidAmount'))
       return
     }
@@ -193,7 +196,7 @@ function AddBudgetSheet({ budgetedKeys, onClose, onSaved }) {
           <>
             <button
               type="button"
-              onClick={() => { setSelectedKey(null); setLimit(''); setError('') }}
+              onClick={() => { setSelectedKey(null); limitInput.reset(); setError('') }}
               className="text-xs text-purple-600 font-medium mb-3 shrink-0 self-start"
             >
               ← {t('back')}
@@ -211,11 +214,11 @@ function AddBudgetSheet({ budgetedKeys, onClose, onSaved }) {
               <label className="text-xs text-gray-400 mb-1 block">{t('monthlyLimit')}</label>
               <input
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-                type="number"
-                min="1"
-                placeholder="0"
-                value={limit}
-                onChange={e => setLimit(e.target.value)}
+                type="text"
+                inputMode="decimal"
+                placeholder={currencyAmountPlaceholder(currency)}
+                value={limitInput.displayValue}
+                onChange={limitInput.handleChange}
                 autoFocus
               />
             </div>

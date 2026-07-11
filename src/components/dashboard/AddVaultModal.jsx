@@ -3,27 +3,28 @@ import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { getUserCurrency } from '../../utils/currency'
+import { useCurrencyInput, currencyAmountPlaceholder } from '../../hooks/useCurrencyInput'
 
 export default function AddVaultModal({ onClose, onSaved }) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const currency = getUserCurrency()
   const [name, setName] = useState('')
-  const [targetAmount, setTargetAmount] = useState('')
-  const [currentAmount, setCurrentAmount] = useState('')
+  const targetAmountInput = useCurrencyInput()
+  const currentAmountInput = useCurrencyInput()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   const handleSave = async () => {
     if (!name.trim()) { setError('Name is required'); return }
-    if (!targetAmount || isNaN(targetAmount)) { setError('Enter a valid target amount'); return }
+    if (!targetAmountInput.raw || targetAmountInput.numericValue <= 0) { setError('Enter a valid target amount'); return }
 
     setSaving(true)
     const { error: dbError } = await supabase.from('vaults').insert({
       user_id: user.id,
       name: name.trim(),
-      target_amount: parseFloat(targetAmount),
-      current_amount: parseFloat(currentAmount) || 0,
+      target_amount: targetAmountInput.numericValue,
+      current_amount: currentAmountInput.numericValue,
       is_active: true,
     })
 
@@ -59,10 +60,11 @@ export default function AddVaultModal({ onClose, onSaved }) {
             <label className="text-xs text-gray-400 mb-1 block">{t('vaultTarget', { currency })}</label>
             <input
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-              placeholder="500000"
-              type="number"
-              value={targetAmount}
-              onChange={e => setTargetAmount(e.target.value)}
+              type="text"
+              inputMode="decimal"
+              placeholder={currencyAmountPlaceholder(currency)}
+              value={targetAmountInput.displayValue}
+              onChange={targetAmountInput.handleChange}
             />
           </div>
 
@@ -70,10 +72,11 @@ export default function AddVaultModal({ onClose, onSaved }) {
             <label className="text-xs text-gray-400 mb-1 block">{t('vaultCurrent', { currency })}</label>
             <input
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-              placeholder="0"
-              type="number"
-              value={currentAmount}
-              onChange={e => setCurrentAmount(e.target.value)}
+              type="text"
+              inputMode="decimal"
+              placeholder={currencyAmountPlaceholder(currency)}
+              value={currentAmountInput.displayValue}
+              onChange={currentAmountInput.handleChange}
             />
           </div>
         </div>

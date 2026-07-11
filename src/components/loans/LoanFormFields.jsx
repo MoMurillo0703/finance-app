@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { getUserCurrency } from '../../utils/currency'
 import { formatMoney } from '../../utils/currency'
+import { currencyAmountPlaceholder } from '../../hooks/useCurrencyInput'
 import { calculateLoanStats, estimatePayoffDate, LOAN_TYPES, loanTypeLabel } from '../../utils/loans'
 
 export function LoanCalcPreview({ balance, rate, monthlyPayment }) {
@@ -47,10 +48,10 @@ export function LoanFormFields({
   name, setName,
   loanType, setLoanType,
   lender, setLender,
-  originalAmount, setOriginalAmount,
-  currentBalance, setCurrentBalance,
+  originalAmountInput,
+  currentBalanceInput,
   interestRate, setInterestRate,
-  monthlyPayment, setMonthlyPayment,
+  monthlyPaymentInput,
   dueDay, setDueDay,
   startDate, setStartDate,
   endDate, setEndDate,
@@ -99,10 +100,11 @@ export function LoanFormFields({
         <label className="text-xs text-gray-400 mb-1 block">{t('originalAmount')} ({currency})</label>
         <input
           className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-          type="number"
-          placeholder="0"
-          value={originalAmount}
-          onChange={e => setOriginalAmount(e.target.value)}
+          type="text"
+          inputMode="decimal"
+          placeholder={currencyAmountPlaceholder(currency)}
+          value={originalAmountInput.displayValue}
+          onChange={originalAmountInput.handleChange}
         />
       </div>
 
@@ -110,10 +112,11 @@ export function LoanFormFields({
         <label className="text-xs text-gray-400 mb-1 block">{t('currentBalance')} ({currency})</label>
         <input
           className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-          type="number"
-          placeholder="0"
-          value={currentBalance}
-          onChange={e => setCurrentBalance(e.target.value)}
+          type="text"
+          inputMode="decimal"
+          placeholder={currencyAmountPlaceholder(currency)}
+          value={currentBalanceInput.displayValue}
+          onChange={currentBalanceInput.handleChange}
         />
       </div>
 
@@ -133,10 +136,11 @@ export function LoanFormFields({
         <label className="text-xs text-gray-400 mb-1 block">{t('monthlyPayment')} ({currency})</label>
         <input
           className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-          type="number"
-          placeholder="0"
-          value={monthlyPayment}
-          onChange={e => setMonthlyPayment(e.target.value)}
+          type="text"
+          inputMode="decimal"
+          placeholder={currencyAmountPlaceholder(currency)}
+          value={monthlyPaymentInput.displayValue}
+          onChange={monthlyPaymentInput.handleChange}
         />
       </div>
 

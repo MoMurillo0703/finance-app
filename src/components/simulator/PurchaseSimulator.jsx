@@ -7,6 +7,7 @@ import { fetchBanks, getBankDropdownLabel } from '../../utils/bank'
 import { getCardApr, calculateMinimumPayment, DEFAULT_CARD_APR } from '../../utils/cards'
 import { adjustBankBalance, adjustCardBalance } from '../../lib/payments'
 import { getRecentMonthKeys } from '../../utils/reports'
+import { useCurrencyInput, currencyAmountPlaceholder } from '../../hooks/useCurrencyInput'
 
 function avgMonthlyTotal(transactions, type, monthKeys) {
   if (monthKeys.length === 0) return 0
@@ -146,7 +147,7 @@ export default function PurchaseSimulator({ onClose, onSaved, prefillCardId }) {
   const [error, setError] = useState('')
 
   const [description, setDescription] = useState('')
-  const [amount, setAmount] = useState('')
+  const amountInput = useCurrencyInput()
   const [paymentMethod, setPaymentMethod] = useState(prefillCardId ? 'credit' : 'bank')
   const [bankId, setBankId] = useState('')
   const [cardId, setCardId] = useState(prefillCardId || '')
@@ -218,7 +219,7 @@ export default function PurchaseSimulator({ onClose, onSaved, prefillCardId }) {
     return () => { active = false }
   }, [user.id, fetchStart, prefillCardId])
 
-  const purchaseAmount = parseFloat(amount) || 0
+  const purchaseAmount = amountInput.numericValue
   const installmentCount = parseInt(numCuotas, 10) || 0
   const selectedCard = cards.find(c => c.id === cardId)
   const selectedBank = banks.find(b => b.id === bankId)
@@ -399,10 +400,11 @@ export default function PurchaseSimulator({ onClose, onSaved, prefillCardId }) {
                   <label className="text-xs text-gray-400 mb-1 block">{t('amount')} ({currency})</label>
                   <input
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-                    type="number"
-                    placeholder="0"
-                    value={amount}
-                    onChange={e => setAmount(e.target.value)}
+                    type="text"
+                    inputMode="decimal"
+                    placeholder={currencyAmountPlaceholder(currency)}
+                    value={amountInput.displayValue}
+                    onChange={amountInput.handleChange}
                   />
                 </div>
                 <div>

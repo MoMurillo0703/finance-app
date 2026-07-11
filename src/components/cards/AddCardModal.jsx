@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { getUserCurrency } from '../../utils/currency'
+import { useCurrencyInput, currencyAmountPlaceholder } from '../../hooks/useCurrencyInput'
 
 const NETWORKS = ['Visa', 'Mastercard', 'Amex', 'Other']
 
@@ -11,8 +12,9 @@ export default function AddCardModal({ onClose, onSaved }) {
   const { user } = useAuth()
   const [name, setName] = useState('')
   const [network, setNetwork] = useState('Visa')
-  const [creditLimit, setCreditLimit] = useState('')
-  const [currentBalance, setCurrentBalance] = useState('')
+  const creditLimitInput = useCurrencyInput()
+  const currentBalanceInput = useCurrencyInput()
+  const currency = getUserCurrency()
   const [statementDate, setStatementDate] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [interestRate, setInterestRate] = useState('')
@@ -23,8 +25,8 @@ export default function AddCardModal({ onClose, onSaved }) {
 
   const handleSave = async () => {
     if (!name.trim()) { setError(t('billNameRequired')); return }
-    if (!creditLimit || isNaN(creditLimit)) { setError(t('invalidAmount')); return }
-    if (currentBalance === '' || isNaN(currentBalance)) { setError(t('invalidAmount')); return }
+    if (!creditLimitInput.raw || creditLimitInput.numericValue <= 0) { setError(t('invalidAmount')); return }
+    if (!currentBalanceInput.raw || currentBalanceInput.numericValue < 0) { setError(t('invalidAmount')); return }
     if (!validateDay(statementDate)) { setError(t('invalidDueDay')); return }
     if (!validateDay(dueDate)) { setError(t('invalidDueDay')); return }
 
@@ -33,8 +35,8 @@ export default function AddCardModal({ onClose, onSaved }) {
       user_id: user.id,
       name: name.trim(),
       network,
-      credit_limit: parseFloat(creditLimit),
-      current_balance: parseFloat(currentBalance),
+      credit_limit: creditLimitInput.numericValue,
+      current_balance: currentBalanceInput.numericValue,
       statement_date: parseInt(statementDate, 10),
       due_date: parseInt(dueDate, 10),
       currency: getUserCurrency(),
@@ -88,24 +90,26 @@ export default function AddCardModal({ onClose, onSaved }) {
           </div>
 
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">{t('creditLimit')} ({getUserCurrency()})</label>
+            <label className="text-xs text-gray-400 mb-1 block">{t('creditLimit')} ({currency})</label>
             <input
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-              placeholder="0"
-              type="number"
-              value={creditLimit}
-              onChange={e => setCreditLimit(e.target.value)}
+              type="text"
+              inputMode="decimal"
+              placeholder={currencyAmountPlaceholder(currency)}
+              value={creditLimitInput.displayValue}
+              onChange={creditLimitInput.handleChange}
             />
           </div>
 
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">{t('balance')} ({getUserCurrency()})</label>
+            <label className="text-xs text-gray-400 mb-1 block">{t('balance')} ({currency})</label>
             <input
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-              placeholder="0"
-              type="number"
-              value={currentBalance}
-              onChange={e => setCurrentBalance(e.target.value)}
+              type="text"
+              inputMode="decimal"
+              placeholder={currencyAmountPlaceholder(currency)}
+              value={currentBalanceInput.displayValue}
+              onChange={currentBalanceInput.handleChange}
             />
           </div>
 

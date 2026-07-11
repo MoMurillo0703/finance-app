@@ -4,12 +4,14 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { getUserCurrency } from '../../utils/currency'
 import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
+import { useCurrencyInput, currencyAmountPlaceholder } from '../../hooks/useCurrencyInput'
 
 export default function AddBillModal({ onClose, onSaved }) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [name, setName] = useState('')
-  const [amount, setAmount] = useState('')
+  const amountInput = useCurrencyInput()
+  const currency = getUserCurrency()
   const [dueDay, setDueDay] = useState('')
   const [bankId, setBankId] = useState('')
   const [banks, setBanks] = useState([])
@@ -27,7 +29,7 @@ export default function AddBillModal({ onClose, onSaved }) {
 
   const handleSave = async () => {
     if (!name.trim()) { setError(t('billNameRequired')); return }
-    if (!amount || isNaN(amount)) { setError(t('invalidAmount')); return }
+    if (!amountInput.raw || amountInput.numericValue <= 0) { setError(t('invalidAmount')); return }
     if (!dueDay || isNaN(dueDay) || dueDay < 1 || dueDay > 31) {
       setError(t('invalidDueDay'))
       return
@@ -38,7 +40,7 @@ export default function AddBillModal({ onClose, onSaved }) {
     const { error: dbError } = await supabase.from('bills').insert({
       user_id: user.id,
       name: name.trim(),
-      amount: parseFloat(amount),
+      amount: amountInput.numericValue,
       due_day: parseInt(dueDay, 10),
       bank_id: bankId,
       category: 'bills',
@@ -74,13 +76,14 @@ export default function AddBillModal({ onClose, onSaved }) {
           </div>
 
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">{t('amount')} ({getUserCurrency()})</label>
+            <label className="text-xs text-gray-400 mb-1 block">{t('amount')} ({currency})</label>
             <input
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-              placeholder="0"
-              type="number"
-              value={amount}
-              onChange={e => setAmount(e.target.value)}
+              type="text"
+              inputMode="decimal"
+              placeholder={currencyAmountPlaceholder(currency)}
+              value={amountInput.displayValue}
+              onChange={amountInput.handleChange}
             />
           </div>
 

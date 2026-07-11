@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { getUserCurrency } from '../../utils/currency'
 import { insertBank } from '../../utils/bank'
+import { useCurrencyInput, currencyAmountPlaceholder } from '../../hooks/useCurrencyInput'
 
 export default function OnboardingFlow({ onComplete, onGoToDashboard }) {
   const { t } = useTranslation()
@@ -11,7 +12,8 @@ export default function OnboardingFlow({ onComplete, onGoToDashboard }) {
   const [step, setStep] = useState(1)
   const [name, setName] = useState('')
   const [accountType, setAccountType] = useState('checking')
-  const [balance, setBalance] = useState('')
+  const balanceInput = useCurrencyInput()
+  const currency = getUserCurrency()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -20,7 +22,7 @@ export default function OnboardingFlow({ onComplete, onGoToDashboard }) {
       setError(t('bankNameRequired'))
       return
     }
-    if (!balance || isNaN(balance)) {
+    if (!balanceInput.raw || balanceInput.numericValue < 0) {
       setError(t('invalidAmount'))
       return
     }
@@ -32,7 +34,7 @@ export default function OnboardingFlow({ onComplete, onGoToDashboard }) {
       user_id: user.id,
       name: name.trim(),
       type: accountType,
-      balance: parseFloat(balance),
+      balance: balanceInput.numericValue,
       is_active: true,
     })
 
@@ -105,14 +107,15 @@ export default function OnboardingFlow({ onComplete, onGoToDashboard }) {
               </div>
               <div>
                 <label className="text-xs text-gray-400 mb-1 block">
-                  {t('currentBalance')} ({getUserCurrency()})
+                  {t('currentBalance')} ({currency})
                 </label>
                 <input
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-                  type="number"
-                  placeholder="0"
-                  value={balance}
-                  onChange={e => setBalance(e.target.value)}
+                  type="text"
+                  inputMode="decimal"
+                  placeholder={currencyAmountPlaceholder(currency)}
+                  value={balanceInput.displayValue}
+                  onChange={balanceInput.handleChange}
                 />
               </div>
             </div>

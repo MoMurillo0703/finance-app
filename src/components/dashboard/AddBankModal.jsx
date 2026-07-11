@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { getUserCurrency } from '../../utils/currency'
 import { insertBank } from '../../utils/bank'
+import { useCurrencyInput, currencyAmountPlaceholder } from '../../hooks/useCurrencyInput'
 
 export default function AddBankModal({ onClose, onSaved }) {
   const { t } = useTranslation()
@@ -11,13 +12,14 @@ export default function AddBankModal({ onClose, onSaved }) {
   const [name, setName] = useState('')
   const [nickname, setNickname] = useState('')
   const [accountType, setAccountType] = useState('savings')
-  const [balance, setBalance] = useState('')
+  const balanceInput = useCurrencyInput()
+  const currency = getUserCurrency()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   const handleSave = async () => {
     if (!name.trim()) { setError('Bank name is required'); return }
-    if (!balance || isNaN(balance)) { setError('Enter a valid balance'); return }
+    if (!balanceInput.raw || balanceInput.numericValue < 0) { setError('Enter a valid balance'); return }
 
     setSaving(true)
     const { error: dbError } = await insertBank(supabase, {
@@ -25,7 +27,7 @@ export default function AddBankModal({ onClose, onSaved }) {
       name: name.trim(),
       nickname: nickname.trim() || null,
       type: accountType,
-      balance: parseFloat(balance),
+      balance: balanceInput.numericValue,
       is_active: true,
     })
 
@@ -81,13 +83,14 @@ export default function AddBankModal({ onClose, onSaved }) {
           </div>
 
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">{t('currentBalance')} ({getUserCurrency()})</label>
+            <label className="text-xs text-gray-400 mb-1 block">{t('currentBalance')} ({currency})</label>
             <input
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-              placeholder="0"
-              type="number"
-              value={balance}
-              onChange={e => setBalance(e.target.value)}
+              type="text"
+              inputMode="decimal"
+              placeholder={currencyAmountPlaceholder(currency)}
+              value={balanceInput.displayValue}
+              onChange={balanceInput.handleChange}
             />
           </div>
         </div>

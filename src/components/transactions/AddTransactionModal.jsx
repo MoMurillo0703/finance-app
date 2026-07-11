@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import { adjustBankBalance, adjustCardBalance, adjustVaultBalance, bankDelta } from '../../lib/payments'
 import { formatMoney, getUserCurrency, isCOPUser } from '../../utils/currency'
 import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
+import { useCurrencyInput, currencyAmountPlaceholder } from '../../hooks/useCurrencyInput'
 
 const EXPENSE_CATEGORIES = ['essential', 'food', 'travel', 'fun', 'bills', 'debt', 'weeklyLiving', 'emergency']
 const INCOME_CATEGORIES = ['salary', 'commission', 'reimbursement']
@@ -20,7 +21,8 @@ export default function AddTransactionModal({
   const { user } = useAuth()
   const [type, setType] = useState('expense')
   const [category, setCategory] = useState('essential')
-  const [amount, setAmount] = useState('')
+  const amountInput = useCurrencyInput()
+  const currency = getUserCurrency()
   const [description, setDescription] = useState('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [paymentMethod, setPaymentMethod] = useState(lockToCardExpense ? 'card' : 'bank')
@@ -73,14 +75,14 @@ export default function AddTransactionModal({
       })
   }, [user.id])
 
-  const parsedAmount = parseFloat(amount)
+  const parsedAmount = amountInput.numericValue
   const installmentCount = parseInt(numCuotas, 10)
   const monthlyCuota = parsedAmount > 0 && installmentCount > 0
     ? parsedAmount / installmentCount
     : 0
 
   const handleSave = async () => {
-    if (!amount || isNaN(amount)) { setError(t('invalidAmount')); return }
+    if (!amountInput.raw || parsedAmount <= 0) { setError(t('invalidAmount')); return }
     if (!category) { setError(t('selectCategory')); return }
 
     const isCardExpense = type === 'expense' && paymentMethod === 'card'
@@ -249,13 +251,14 @@ export default function AddTransactionModal({
           )}
 
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">{t('amount')} ({getUserCurrency()})</label>
+            <label className="text-xs text-gray-400 mb-1 block">{t('amount')} ({currency})</label>
             <input
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-              placeholder="0"
-              type="number"
-              value={amount}
-              onChange={e => setAmount(e.target.value)}
+              type="text"
+              inputMode="decimal"
+              placeholder={currencyAmountPlaceholder(currency)}
+              value={amountInput.displayValue}
+              onChange={amountInput.handleChange}
             />
           </div>
 

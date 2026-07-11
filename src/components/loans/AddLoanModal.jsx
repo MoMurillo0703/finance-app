@@ -25,6 +25,7 @@ import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { LoanFormFields, LoanCalcPreview, resolveEndDate } from './LoanFormFields'
+import { useCurrencyInput } from '../../hooks/useCurrencyInput'
 
 export default function AddLoanModal({ onClose, onSaved }) {
   const { t } = useTranslation()
@@ -32,8 +33,9 @@ export default function AddLoanModal({ onClose, onSaved }) {
   const [name, setName] = useState('')
   const [loanType, setLoanType] = useState('auto')
   const [lender, setLender] = useState('')
-  const [originalAmount, setOriginalAmount] = useState('')
-  const [currentBalance, setCurrentBalance] = useState('')
+  const originalAmountInput = useCurrencyInput()
+  const currentBalanceInput = useCurrencyInput()
+  const monthlyPaymentInput = useCurrencyInput()
   const [interestRate, setInterestRate] = useState('')
   const [monthlyPayment, setMonthlyPayment] = useState('')
   const [dueDay, setDueDay] = useState('')
@@ -44,13 +46,13 @@ export default function AddLoanModal({ onClose, onSaved }) {
 
   const handleSave = async () => {
     if (!name.trim()) { setError(t('loanNameRequired')); return }
-    if (!originalAmount || isNaN(originalAmount)) { setError(t('invalidAmount')); return }
-    if (!currentBalance || isNaN(currentBalance)) { setError(t('invalidAmount')); return }
+    if (!originalAmountInput.raw || originalAmountInput.numericValue <= 0) { setError(t('invalidAmount')); return }
+    if (!currentBalanceInput.raw || currentBalanceInput.numericValue < 0) { setError(t('invalidAmount')); return }
     if (!interestRate || isNaN(interestRate)) { setError(t('invalidAmount')); return }
-    if (!monthlyPayment || isNaN(monthlyPayment)) { setError(t('invalidAmount')); return }
+    if (!monthlyPaymentInput.raw || monthlyPaymentInput.numericValue <= 0) { setError(t('invalidAmount')); return }
 
-    const balance = parseFloat(currentBalance)
-    const payment = parseFloat(monthlyPayment)
+    const balance = currentBalanceInput.numericValue
+    const payment = monthlyPaymentInput.numericValue
     const rate = parseFloat(interestRate)
     const resolvedEndDate = resolveEndDate(endDate, balance, rate, payment)
 
@@ -60,7 +62,7 @@ export default function AddLoanModal({ onClose, onSaved }) {
       name: name.trim(),
       loan_type: loanType,
       lender: lender.trim() || null,
-      original_amount: parseFloat(originalAmount),
+      original_amount: originalAmountInput.numericValue,
       current_balance: balance,
       interest_rate: rate,
       monthly_payment: payment,
@@ -91,19 +93,19 @@ export default function AddLoanModal({ onClose, onSaved }) {
           name={name} setName={setName}
           loanType={loanType} setLoanType={setLoanType}
           lender={lender} setLender={setLender}
-          originalAmount={originalAmount} setOriginalAmount={setOriginalAmount}
-          currentBalance={currentBalance} setCurrentBalance={setCurrentBalance}
+          originalAmountInput={originalAmountInput}
+          currentBalanceInput={currentBalanceInput}
           interestRate={interestRate} setInterestRate={setInterestRate}
-          monthlyPayment={monthlyPayment} setMonthlyPayment={setMonthlyPayment}
+          monthlyPaymentInput={monthlyPaymentInput}
           dueDay={dueDay} setDueDay={setDueDay}
           startDate={startDate} setStartDate={setStartDate}
           endDate={endDate} setEndDate={setEndDate}
         />
 
         <LoanCalcPreview
-          balance={currentBalance}
+          balance={currentBalanceInput.numericValue}
           rate={interestRate}
-          monthlyPayment={monthlyPayment}
+          monthlyPayment={monthlyPaymentInput.numericValue}
         />
 
         <div className="flex gap-3 mt-6">

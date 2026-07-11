@@ -25,6 +25,7 @@ import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { LoanFormFields, LoanCalcPreview, resolveEndDate } from './LoanFormFields'
+import { useCurrencyInput } from '../../hooks/useCurrencyInput'
 
 export default function EditLoanModal({ loan, onClose, onSaved }) {
   const { t } = useTranslation()
@@ -32,10 +33,10 @@ export default function EditLoanModal({ loan, onClose, onSaved }) {
   const [name, setName] = useState(loan.name ?? '')
   const [loanType, setLoanType] = useState(loan.loan_type ?? 'auto')
   const [lender, setLender] = useState(loan.lender ?? '')
-  const [originalAmount, setOriginalAmount] = useState(String(loan.original_amount ?? ''))
-  const [currentBalance, setCurrentBalance] = useState(String(loan.current_balance ?? ''))
+  const originalAmountInput = useCurrencyInput(loan.original_amount)
+  const currentBalanceInput = useCurrencyInput(loan.current_balance)
+  const monthlyPaymentInput = useCurrencyInput(loan.monthly_payment)
   const [interestRate, setInterestRate] = useState(String(loan.interest_rate ?? ''))
-  const [monthlyPayment, setMonthlyPayment] = useState(String(loan.monthly_payment ?? ''))
   const [dueDay, setDueDay] = useState(loan.due_day != null ? String(loan.due_day) : '')
   const [startDate, setStartDate] = useState(loan.start_date ?? '')
   const [endDate, setEndDate] = useState(loan.end_date ?? '')
@@ -46,13 +47,13 @@ export default function EditLoanModal({ loan, onClose, onSaved }) {
 
   const handleSave = async () => {
     if (!name.trim()) { setError(t('loanNameRequired')); return }
-    if (!originalAmount || isNaN(originalAmount)) { setError(t('invalidAmount')); return }
-    if (!currentBalance || isNaN(currentBalance)) { setError(t('invalidAmount')); return }
+    if (!originalAmountInput.raw || originalAmountInput.numericValue <= 0) { setError(t('invalidAmount')); return }
+    if (!currentBalanceInput.raw || currentBalanceInput.numericValue < 0) { setError(t('invalidAmount')); return }
     if (!interestRate || isNaN(interestRate)) { setError(t('invalidAmount')); return }
-    if (!monthlyPayment || isNaN(monthlyPayment)) { setError(t('invalidAmount')); return }
+    if (!monthlyPaymentInput.raw || monthlyPaymentInput.numericValue <= 0) { setError(t('invalidAmount')); return }
 
-    const balance = parseFloat(currentBalance)
-    const payment = parseFloat(monthlyPayment)
+    const balance = currentBalanceInput.numericValue
+    const payment = monthlyPaymentInput.numericValue
     const rate = parseFloat(interestRate)
     const resolvedEndDate = resolveEndDate(endDate, balance, rate, payment)
 
@@ -63,7 +64,7 @@ export default function EditLoanModal({ loan, onClose, onSaved }) {
         name: name.trim(),
         loan_type: loanType,
         lender: lender.trim() || null,
-        original_amount: parseFloat(originalAmount),
+        original_amount: originalAmountInput.numericValue,
         current_balance: balance,
         interest_rate: rate,
         monthly_payment: payment,
@@ -82,8 +83,8 @@ export default function EditLoanModal({ loan, onClose, onSaved }) {
   }
 
   const handleMakePayment = async () => {
-    const payment = parseFloat(monthlyPayment)
-    const balance = parseFloat(currentBalance)
+    const payment = monthlyPaymentInput.numericValue
+    const balance = currentBalanceInput.numericValue
     if (!payment || isNaN(payment) || payment <= 0) {
       setError(t('invalidAmount'))
       return
@@ -161,25 +162,25 @@ export default function EditLoanModal({ loan, onClose, onSaved }) {
           name={name} setName={setName}
           loanType={loanType} setLoanType={setLoanType}
           lender={lender} setLender={setLender}
-          originalAmount={originalAmount} setOriginalAmount={setOriginalAmount}
-          currentBalance={currentBalance} setCurrentBalance={setCurrentBalance}
+          originalAmountInput={originalAmountInput}
+          currentBalanceInput={currentBalanceInput}
           interestRate={interestRate} setInterestRate={setInterestRate}
-          monthlyPayment={monthlyPayment} setMonthlyPayment={setMonthlyPayment}
+          monthlyPaymentInput={monthlyPaymentInput}
           dueDay={dueDay} setDueDay={setDueDay}
           startDate={startDate} setStartDate={setStartDate}
           endDate={endDate} setEndDate={setEndDate}
         />
 
         <LoanCalcPreview
-          balance={currentBalance}
+          balance={currentBalanceInput.numericValue}
           rate={interestRate}
-          monthlyPayment={monthlyPayment}
+          monthlyPayment={monthlyPaymentInput.numericValue}
         />
 
         <button
           type="button"
           onClick={handleMakePayment}
-          disabled={paying || parseFloat(currentBalance) <= 0}
+          disabled={paying || currentBalanceInput.numericValue <= 0}
           className="w-full mt-4 py-3 rounded-xl bg-green-600 text-white text-sm font-medium disabled:opacity-50"
         >
           {paying ? '...' : t('makePayment')}
