@@ -12,12 +12,15 @@ import PaydayWizard from '../payday/PaydayWizard'
 import PurchaseSimulator from '../simulator/PurchaseSimulator'
 import { formatMoney } from '../../utils/currency'
 import { fetchBanks } from '../../utils/bank'
+import { calculateNetWorth } from '../../utils/netWorth'
 
 export default function Dashboard({ refreshKey, onNavigate }) {
   const { user } = useAuth()
   const { t } = useTranslation()
   const [vaults, setVaults] = useState([])
   const [banks, setBanks] = useState([])
+  const [creditCards, setCreditCards] = useState([])
+  const [loans, setLoans] = useState([])
   const [totalBalance, setTotalBalance] = useState(0)
   const [loading, setLoading] = useState(true)
   const [showAddVault, setShowAddVault] = useState(false)
@@ -31,18 +34,36 @@ export default function Dashboard({ refreshKey, onNavigate }) {
     let active = true
 
     ;(async () => {
-      const { data: vaultsData } = await supabase
-        .from('vaults')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-
-      const { data: banksData } = await fetchBanks(supabase, user.id)
+      const [
+        { data: vaultsData },
+        { data: banksData },
+        { data: cardsData },
+        { data: loansData },
+      ] = await Promise.all([
+        supabase
+          .from('vaults')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true),
+        fetchBanks(supabase, user.id),
+        supabase
+          .from('credit_cards')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true),
+        supabase
+          .from('loans')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true),
+      ])
 
       if (!active) return
 
       setVaults(vaultsData ?? [])
       setBanks(banksData ?? [])
+      setCreditCards(cardsData ?? [])
+      setLoans(loansData ?? [])
       setTotalBalance((banksData ?? []).reduce((sum, bank) => sum + (bank.balance || 0), 0))
       setLoading(false)
     })()
@@ -52,6 +73,15 @@ export default function Dashboard({ refreshKey, onNavigate }) {
 
   const protectedAmount = vaults.reduce((sum, v) => sum + (v.current_amount || 0), 0)
   const safeToSpend = totalBalance - protectedAmount
+  const {
+    netWorth,
+    totalAssets,
+    totalLiabilities,
+    totalBankBalance,
+    totalVaultSavings,
+    totalCreditCardDebt,
+    totalLoanDebt,
+  } = calculateNetWorth({ banks, vaults, creditCards, loans })
   const dataRefreshKey = `${refreshKey}-${modalRefreshKey}`
   const onboardingComplete = localStorage.getItem('onboarding_complete') === 'true'
   const showAccountsEmpty = onboardingComplete && banks.length === 0
@@ -95,6 +125,38 @@ export default function Dashboard({ refreshKey, onNavigate }) {
             <div>
               <p className="text-[10px] text-purple-300">{t('protected')}</p>
               <p className="text-sm font-semibold">{formatMoney(protectedAmount)}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="flex justify-between items-start mb-3">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{t('netWorth')}</p>
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+              netWorth >= 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'
+            }`}>
+              {netWorth >= 0 ? `↑ ${t('positive')}` : `↓ ${t('negative')}`}
+            </span>
+          </div>
+
+          <p className={`text-3xl font-bold mb-4 ${netWorth >= 0 ? 'text-gray-900' : 'text-red-500'}`}>
+            {formatMoney(netWorth)}
+          </p>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-green-50 rounded-xl p-3">
+              <p className="text-xs text-gray-400 mb-1">{t('assets')}</p>
+              <p className="font-bold text-green-600">{formatMoney(totalAssets)}</p>
+              <p className="text-xs text-gray-400 mt-1">
+                {formatMoney(totalBankBalance)} {t('netWorthCash')} · {formatMoney(totalVaultSavings)} {t('netWorthSaved')}
+              </p>
+            </div>
+            <div className="bg-red-50 rounded-xl p-3">
+              <p className="text-xs text-gray-400 mb-1">{t('liabilities')}</p>
+              <p className="font-bold text-red-500">{formatMoney(totalLiabilities)}</p>
+              <p className="text-xs text-gray-400 mt-1">
+                {formatMoney(totalCreditCardDebt)} {t('netWorthCards')} · {formatMoney(totalLoanDebt)} {t('netWorthLoans')}
+              </p>
             </div>
           </div>
         </div>

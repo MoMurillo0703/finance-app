@@ -17,6 +17,8 @@ import {
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { formatMoney } from '../../utils/currency'
+import { getEffectiveRate } from '../../utils/creditCard'
+import { calculateNetWorth } from '../../utils/netWorth'
 import {
   getMonthBounds,
   isCurrentMonth,
@@ -57,8 +59,10 @@ export default function ReportsScreen() {
   const [monthTransactions, setMonthTransactions] = useState([])
   const [recurringTransactions, setRecurringTransactions] = useState([])
   const [interestTransactions, setInterestTransactions] = useState([])
-  const [cards, setCards] = useState([])
+  const [creditCards, setCreditCards] = useState([])
   const [loans, setLoans] = useState([])
+  const [banks, setBanks] = useState([])
+  const [vaults, setVaults] = useState([])
   const [trendTransactions, setTrendTransactions] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -95,6 +99,8 @@ export default function ReportsScreen() {
         cardsRes,
         loansRes,
         trendRes,
+        banksRes,
+        vaultsRes,
       ] = await Promise.all([
         supabase
           .from('transactions')
@@ -118,7 +124,7 @@ export default function ReportsScreen() {
           .order('transaction_date', { ascending: false }),
         supabase
           .from('credit_cards')
-          .select('id, name')
+          .select('*')
           .eq('user_id', user.id)
           .eq('is_active', true),
         supabase
@@ -133,6 +139,18 @@ export default function ReportsScreen() {
           .eq('user_id', user.id)
           .gte('transaction_date', trendStart)
           .order('transaction_date', { ascending: false }),
+        supabase
+          .from('banks')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .order('name'),
+        supabase
+          .from('vaults')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .order('name'),
       ])
 
       if (!active) return
@@ -145,8 +163,10 @@ export default function ReportsScreen() {
       setMonthTransactions(monthRes.data ?? [])
       setRecurringTransactions(recurringRes.data ?? [])
       setInterestTransactions(interestRows)
-      setCards(cardsRes.data ?? [])
+      setCreditCards(cardsRes.data ?? [])
       setLoans(loansRes.data ?? [])
+      setBanks(banksRes.data ?? [])
+      setVaults(vaultsRes.data ?? [])
       setTrendTransactions(trendRes.data ?? [])
       setLoading(false)
     })()
@@ -233,7 +253,27 @@ export default function ReportsScreen() {
     / Math.max(monthlyIncomes.filter(Boolean).length, 1)
   const recurringWarning = avgMonthlyIncome > 0 && totalMonthlyRecurring > avgMonthlyIncome * 0.3
 
-  const cardMap = Object.fromEntries(cards.map(card => [card.id, card.name]))
+  const cardMap = Object.fromEntries(creditCards.map(card => [card.id, card.name]))
+
+  const {
+    totalAssets,
+    totalCreditCardDebt,
+    totalLoanDebt,
+    netWorth,
+  } = calculateNetWorth({ banks, vaults, creditCards, loans })
+
+  const activeCardsWithBalance = creditCards.filter(c => c.is_active && c.current_balance > 0)
+  const activeLoansWithBalance = loans.filter(l => l.is_active && l.current_balance > 0)
+
+  const totalMonthlyInterest = [
+    ...activeCardsWithBalance.map(card => {
+      const rate = getEffectiveRate(card)
+      return card.current_balance * (rate / 100 / 12)
+    }),
+    ...activeLoansWithBalance.map(loan =>
+      loan.current_balance * ((loan.interest_rate || 0) / 100 / 12),
+    ),
+  ].reduce((sum, value) => sum + value, 0)
   const interestByCard = interestTransactions.reduce((acc, tx) => {
     const key = tx.credit_card_id || 'unknown'
     if (!acc[key]) acc[key] = { name: cardMap[key] || t('unknownAccount'), total: 0 }
@@ -427,6 +467,118 @@ export default function ReportsScreen() {
                 </div>
 
                 <p className="mt-3 text-sm italic text-gray-500">{trendInsight}</p>
+              </>
+            )}
+          </section>
+
+          <section className={SECTION_CLASS}>
+            <SectionTitle>{t('netWorth')}</SectionTitle>
+            <p className={`text-2xl font-bold mb-1 ${netWorth >= 0 ? 'text-gray-900' : 'text-red-500'}`}>
+              {formatMoney(netWorth)}
+            </p>
+            <p className="text-xs text-gray-400 mb-4">
+              {formatMoney(totalAssets)} {t('assets')} − {formatMoney(totalCreditCardDebt + totalLoanDebt)} {t('liabilities')}
+            </p>
+          </section>
+
+          <section className={SECTION_CLASS}>
+            <SectionTitle>{t('debtBreakdown')}</SectionTitle>
+            {activeCardsWithBalance.length === 0 && activeLoansWithBalance.length === 0 ? (
+              <p className="text-xs text-gray-400">{t('noLoans')}</p>
+            ) : (
+              <>
+                {activeCardsWithBalance.map(card => {
+                  const rate = getEffectiveRate(card)
+                  const monthlyInterest = card.current_balance * (rate / 100 / 12)
+                  const utilization = card.credit_limit
+                    ? Math.round((card.current_balance / card.credit_limit) * 100)
+                    : null
+                  return (
+                    <div key={card.id} className="flex justify-between items-center py-2.5 border-b border-gray-50 last:border-0">
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">{card.name}</p>
+                        <p className="text-xs text-gray-400">
+                          {t('interestPerMonthLine', { rate, amount: formatMoney(monthlyInterest) })}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-red-500">{formatMoney(card.current_balance)}</p>
+                        {utilization != null && (
+                          <p className="text-xs text-gray-400">
+                            {utilization}% {t('utilized')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+
+                {activeLoansWithBalance.map(loan => {
+                  const monthlyInterest = loan.current_balance * ((loan.interest_rate || 0) / 100 / 12)
+                  return (
+                    <div key={loan.id} className="flex justify-between items-center py-2.5 border-b border-gray-50 last:border-0">
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">{loan.name}</p>
+                        <p className="text-xs text-gray-400">
+                          {t('interestPerMonthLine', { rate: loan.interest_rate, amount: formatMoney(monthlyInterest) })}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-red-500">{formatMoney(loan.current_balance)}</p>
+                        {loan.monthly_payment > 0 && (
+                          <p className="text-xs text-gray-400">
+                            {t('paymentPerMonth', { amount: formatMoney(loan.monthly_payment) })}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+
+                <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between">
+                  <p className="text-sm text-gray-500">{t('totalMonthlyInterest')}</p>
+                  <p className="font-bold text-red-500">{formatMoney(totalMonthlyInterest)}</p>
+                </div>
+                <div className="flex justify-between mt-1">
+                  <p className="text-sm text-gray-500">{t('totalYearlyInterest')}</p>
+                  <p className="font-bold text-red-500">{formatMoney(totalMonthlyInterest * 12)}</p>
+                </div>
+              </>
+            )}
+          </section>
+
+          <section className={SECTION_CLASS}>
+            <SectionTitle>{t('assetBreakdown')}</SectionTitle>
+            {banks.filter(b => b.is_active).length === 0 && vaults.filter(v => v.is_active && v.current_amount > 0).length === 0 ? (
+              <p className="text-xs text-gray-400">{t('noAccounts')}</p>
+            ) : (
+              <>
+                {banks.filter(b => b.is_active).map(bank => (
+                  <div key={bank.id} className="flex justify-between items-center py-2.5 border-b border-gray-50 last:border-0">
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">
+                        {bank.nickname ? `${bank.nickname} (${bank.name})` : bank.name}
+                      </p>
+                      <p className="text-xs text-gray-400 capitalize">{bank.type}</p>
+                    </div>
+                    <p className="font-bold text-green-600">{formatMoney(bank.balance)}</p>
+                  </div>
+                ))}
+
+                {vaults.filter(v => v.is_active && v.current_amount > 0).map(vault => (
+                  <div key={vault.id} className="flex justify-between items-center py-2.5 border-b border-gray-50 last:border-0">
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">🏦 {vault.name}</p>
+                      <p className="text-xs text-gray-400">{t('savingsGoal')}</p>
+                    </div>
+                    <p className="font-bold text-green-600">{formatMoney(vault.current_amount)}</p>
+                  </div>
+                ))}
+
+                <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between">
+                  <p className="text-sm text-gray-500">{t('totalAssets')}</p>
+                  <p className="font-bold text-green-600">{formatMoney(totalAssets)}</p>
+                </div>
               </>
             )}
           </section>
