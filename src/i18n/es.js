@@ -83,6 +83,10 @@ export default {
       sectionUpcoming: "Próximas",
       paidThisMonthToggle: "{{count}} pagadas este mes",
       markBillAsPaidConfirm: "¿Marcar {{name}} como pagada?",
+      due: "Por pagar",
+      dueSoon: "Vence pronto",
+      undo: "Deshacer",
+      dayLabel: "Día {{day}}",
 
       // Budgets
       budgets: 'Presupuestos',

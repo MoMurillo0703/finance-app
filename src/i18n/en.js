@@ -83,6 +83,10 @@ export default {
       sectionUpcoming: "Upcoming",
       paidThisMonthToggle: "{{count}} paid this month",
       markBillAsPaidConfirm: "Mark {{name}} as paid?",
+      due: "Due",
+      dueSoon: "Due soon",
+      undo: "Undo",
+      dayLabel: "Day {{day}}",
 
       // Budgets
       budgets: 'Budgets',
