@@ -175,12 +175,19 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
 
           <div className="overflow-y-auto flex-1">
             <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-5 text-white">
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <p className="text-xs text-gray-400">{liveCard.network}</p>
-                  <p className="text-lg font-bold">{liveCard.name}</p>
+              <div className="flex justify-between items-start">
+                <div className="flex-1 min-w-0 pr-3">
+                  <p className="text-xs text-gray-400 mb-0.5">{liveCard.network}</p>
+                  <div className="flex items-center gap-2 flex-wrap mb-3">
+                    <p className="text-lg font-bold text-white">{liveCard.name}</p>
+                    {isOverLimit && (
+                      <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full shrink-0">
+                        ⚠️ {t('overLimit')}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <span className="text-xs bg-white/20 px-2 py-1 rounded-full">
                     APR {getCardApr(liveCard).toFixed(2)}%
                   </span>
@@ -194,13 +201,8 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
                   </button>
                 </div>
               </div>
-              {isOverLimit && (
-                <span className="inline-block text-xs bg-red-500 text-white px-2 py-1 rounded-full mb-2">
-                  ⚠️ {t('overLimit')}
-                </span>
-              )}
               <p className={`text-xs mb-1 ${isOverLimit ? 'text-red-400' : 'text-gray-400'}`}>
-                {isOverLimit ? t('overLimit') : t('availableCredit')}
+                {t('availableCredit')}
               </p>
               <p className={`text-3xl font-bold mb-1 ${isOverLimit ? 'text-red-400' : ''}`}>
                 {formatMoney(isOverLimit ? 0 : availableCredit, currency)}
