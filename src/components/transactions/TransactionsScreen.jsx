@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import AddTransactionModal from './AddTransactionModal'
 import EditTransactionModal from './EditTransactionModal'
-import TransactionDetailModal from './TransactionDetailModal'
+import RecategorizeTransactionSheet from './RecategorizeTransactionSheet'
 import ImportModal from './ImportModal'
 import PaydayWizard from '../payday/PaydayWizard'
 
@@ -71,7 +71,7 @@ export default function TransactionsScreen({
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
-  const [selectedTransaction, setSelectedTransaction] = useState(null)
+  const [recategorizeTransaction, setRecategorizeTransaction] = useState(null)
   const [editingTransaction, setEditingTransaction] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const [wizardPrefill, setWizardPrefill] = useState(null)
@@ -102,7 +102,7 @@ export default function TransactionsScreen({
     <button
       key={tx.id}
       type="button"
-      onClick={() => setSelectedTransaction(tx)}
+      onClick={() => setRecategorizeTransaction(tx)}
       className={`w-full border border-gray-100 flex justify-between items-center text-left ${
         nested
           ? 'bg-gray-50 rounded-xl p-3'
@@ -208,7 +208,7 @@ export default function TransactionsScreen({
   const handleTransactionSaved = () => {
     setShowAdd(false)
     setShowImport(false)
-    setSelectedTransaction(null)
+    setRecategorizeTransaction(null)
     setEditingTransaction(null)
     setRefreshKey(k => k + 1)
     onTransactionSaved?.()
@@ -299,14 +299,11 @@ export default function TransactionsScreen({
         />
       )}
 
-      {selectedTransaction && !editingTransaction && (
-        <TransactionDetailModal
-          transaction={selectedTransaction}
-          onClose={() => setSelectedTransaction(null)}
-          onEdit={(tx) => {
-            setSelectedTransaction(null)
-            setEditingTransaction(tx)
-          }}
+      {recategorizeTransaction && (
+        <RecategorizeTransactionSheet
+          transaction={recategorizeTransaction}
+          onClose={() => setRecategorizeTransaction(null)}
+          onSaved={handleTransactionSaved}
         />
       )}
 

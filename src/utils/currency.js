@@ -9,6 +9,10 @@ export function getUserCurrency() {
   return localStorage.getItem('currency') || getDefaultCurrency()
 }
 
+export function isCOPUser() {
+  return getUserCurrency() === 'COP'
+}
+
 export const PREFS_CHANGED = 'lala:prefs-changed'
 
 export function notifyPrefsChanged() {

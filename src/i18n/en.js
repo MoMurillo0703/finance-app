@@ -47,7 +47,9 @@ export default {
       selectCard: "Select a credit card",
       noCardsHint: "No credit cards — add one first",
       payInInstallments: "Pay in installments",
-      invalidNumCuotas: "Enter at least 2 installments",
+      splitIntoCuotas: "Split into cuotas",
+      recategorize: "Recategorize",
+      invalidNumCuotas: "Enter between 2 and 48 installments",
   
       // Bills
       billsTitle: "My bills",
@@ -319,6 +321,8 @@ export default {
       monthlyCommitments: 'Monthly commitments',
       noTransactionsMonth: 'No transactions this month',
       categoryDining: 'Dining',
+      categoryGroceries: 'Groceries',
+      categoryIncome: 'Income',
       categorySubscriptions: 'Subscriptions',
       categoryUtilities: 'Utilities',
       categoryTransport: 'Transport',

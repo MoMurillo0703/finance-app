@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { adjustBankBalance, adjustCardBalance, adjustVaultBalance, bankDelta } from '../../lib/payments'
-import { formatMoney, getUserCurrency } from '../../utils/currency'
+import { formatMoney, getUserCurrency, isCOPUser } from '../../utils/currency'
 import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
 
 const EXPENSE_CATEGORIES = ['essential', 'food', 'travel', 'fun', 'bills', 'debt', 'weeklyLiving', 'emergency']
@@ -87,7 +87,7 @@ export default function AddTransactionModal({
 
     if (isCardExpense) {
       if (!creditCardId) { setError(t('selectCard')); return }
-      if (useInstallments && (!numCuotas || isNaN(numCuotas) || installmentCount < 2)) {
+      if (useInstallments && (!numCuotas || isNaN(numCuotas) || installmentCount < 2 || installmentCount > 48)) {
         setError(t('invalidNumCuotas'))
         return
       }
@@ -133,7 +133,7 @@ export default function AddTransactionModal({
           total_amount: parsedAmount,
           cuota_amount: monthlyCuota,
           total_cuotas: installmentCount,
-          paid_cuotas: 0,
+          paid_cuotas: 1,
           start_date: date,
           is_active: true,
         }
@@ -319,31 +319,36 @@ export default function AddTransactionModal({
               </>
               )}
 
-              <label className="flex items-center gap-2 mt-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={useInstallments}
-                  onChange={e => setUseInstallments(e.target.checked)}
-                  className="rounded border-gray-300 text-purple-600 focus:ring-purple-400"
-                />
-                <span className="text-xs text-gray-600">{t('payInInstallments')}</span>
-              </label>
+              {isCOPUser() && (
+                <div className={lockToCardExpense ? 'mt-3' : ''}>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={useInstallments}
+                      onChange={e => setUseInstallments(e.target.checked)}
+                      className="rounded border-gray-300 text-purple-600 focus:ring-purple-400"
+                    />
+                    <span className="text-xs text-gray-600">{t('splitIntoCuotas')}</span>
+                  </label>
 
-              {useInstallments && (
-                <div className="mt-3">
-                  <label className="text-xs text-gray-400 mb-1 block">{t('numCuotas')}</label>
-                  <input
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-                    placeholder="12"
-                    type="number"
-                    min="2"
-                    value={numCuotas}
-                    onChange={e => setNumCuotas(e.target.value)}
-                  />
-                  {monthlyCuota > 0 && (
-                    <p className="text-xs text-gray-500 mt-2">
-                      {t('cuotaAmount')}: {formatMoney(monthlyCuota)}
-                    </p>
+                  {useInstallments && (
+                    <div className="mt-3">
+                      <label className="text-xs text-gray-400 mb-1 block">{t('numCuotas')}</label>
+                      <input
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                        placeholder="12"
+                        type="number"
+                        min="2"
+                        max="48"
+                        value={numCuotas}
+                        onChange={e => setNumCuotas(e.target.value)}
+                      />
+                      {monthlyCuota > 0 && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          {t('cuotaAmount')}: {formatMoney(monthlyCuota)}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
               )}

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { formatMoney } from '../../utils/currency'
+import { formatMoney, isCOPUser } from '../../utils/currency'
 import { formatDate } from '../../utils/date'
 import { calculateMinimumPayment, getCardApr } from '../../utils/cards'
 import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
@@ -63,7 +63,9 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
   const availableCredit = Math.max(0, limit - balance)
   const isOverLimit = balance > limit
   const utilization = limit > 0 ? Math.min((balance / limit) * 100, 100) : 0
-  const estimate = useMemo(() => calculateMinimumPayment(liveCard, cuotas), [liveCard, cuotas])
+  const copUser = isCOPUser()
+  const visibleTabs = copUser ? TABS : TABS.filter(tab => tab !== 'cuotas')
+  const estimate = useMemo(() => calculateMinimumPayment(liveCard, copUser ? cuotas : []), [liveCard, cuotas, copUser])
   const totalMinimum = estimate.totalMinimum
 
   const refreshData = async () => {
@@ -241,17 +243,19 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
               <button
                 type="button"
                 onClick={() => setShowAddTransaction(true)}
-                className="flex-1 py-2 rounded-xl bg-purple-600 text-white text-xs font-medium"
+                className={`py-2 rounded-xl bg-purple-600 text-white text-xs font-medium ${copUser ? 'flex-1' : 'w-full'}`}
               >
                 + {t('transaction')}
               </button>
-              <button
-                type="button"
-                onClick={() => setShowAddCuota(true)}
-                className="flex-1 py-2 rounded-xl bg-gray-100 text-gray-700 text-xs font-medium"
-              >
-                + {t('cuota')}
-              </button>
+              {copUser && (
+                <button
+                  type="button"
+                  onClick={() => setShowAddCuota(true)}
+                  className="flex-1 py-2 rounded-xl bg-gray-100 text-gray-700 text-xs font-medium"
+                >
+                  + {t('cuota')}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setShowMakePayment(true)}
@@ -272,7 +276,7 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
             </div>
 
             <div className="flex border-b border-gray-100">
-              {TABS.map(tab => (
+              {visibleTabs.map(tab => (
                 <button
                   key={tab}
                   type="button"
@@ -337,7 +341,7 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
                 </div>
               )}
 
-              {activeTab === 'cuotas' && (
+              {copUser && activeTab === 'cuotas' && (
                 <CuotasSection
                   card={liveCard}
                   refreshKey={refreshKey}
@@ -419,7 +423,7 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
         />
       )}
 
-      {showAddCuota && (
+      {copUser && showAddCuota && (
         <AddCuotaModal
           card={liveCard}
           onClose={() => setShowAddCuota(false)}

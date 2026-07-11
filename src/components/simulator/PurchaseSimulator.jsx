@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { formatMoney, getUserCurrency } from '../../utils/currency'
+import { formatMoney, getUserCurrency, isCOPUser } from '../../utils/currency'
 import { fetchBanks, getBankDropdownLabel } from '../../utils/bank'
 import { getCardApr, calculateMinimumPayment, DEFAULT_CARD_APR } from '../../utils/cards'
 import { adjustBankBalance, adjustCardBalance } from '../../lib/payments'
@@ -138,6 +138,7 @@ export default function PurchaseSimulator({ onClose, onSaved, prefillCardId }) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const currency = getUserCurrency()
+  const copUser = isCOPUser()
 
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(true)
@@ -150,6 +151,23 @@ export default function PurchaseSimulator({ onClose, onSaved, prefillCardId }) {
   const [bankId, setBankId] = useState('')
   const [cardId, setCardId] = useState(prefillCardId || '')
   const [numCuotas, setNumCuotas] = useState('12')
+
+  const paymentMethodOptions = useMemo(() => {
+    const options = [
+      { id: 'bank', label: t('payNow') },
+      { id: 'credit', label: t('payCredit') },
+    ]
+    if (copUser) {
+      options.push({ id: 'cuotas', label: t('payInstallments') })
+    }
+    return options
+  }, [copUser, t])
+
+  useEffect(() => {
+    if (!copUser && paymentMethod === 'cuotas') {
+      setPaymentMethod(prefillCardId ? 'credit' : 'bank')
+    }
+  }, [copUser, paymentMethod, prefillCardId])
 
   const [banks, setBanks] = useState([])
   const [cards, setCards] = useState([])
@@ -331,12 +349,25 @@ export default function PurchaseSimulator({ onClose, onSaved, prefillCardId }) {
     return t('simulatorTipRed')
   }
 
-  const formatDelta = (before, after, invert = false) => {
-    const diff = after - before
-    if (Math.abs(diff) < 0.01) return formatMoney(after, currency)
-    const arrow = diff > 0 ? '↑' : '↓'
-    const sign = invert ? (diff > 0 ? '↓' : '↑') : arrow
-    return `${formatMoney(after, currency)} (${sign}${formatMoney(Math.abs(diff), currency)})`
+  const renderAfterValue = (before, after, { higherIsBad = false, suffix = '' } = {}) => {
+    const delta = after - before
+    const base = `${formatMoney(after, currency)}${suffix}`
+
+    if (Math.abs(delta) < 0.01) {
+      return <span className="font-semibold text-gray-800">{base}</span>
+    }
+
+    const arrow = delta >= 0 ? '↑' : '↓'
+    const deltaColor = higherIsBad
+      ? (delta >= 0 ? 'text-red-500' : 'text-green-600')
+      : (delta >= 0 ? 'text-green-600' : 'text-red-500')
+
+    return (
+      <span className="font-semibold text-gray-800">
+        {base}{' '}
+        <span className={deltaColor}>({arrow}{formatMoney(Math.abs(delta), currency)})</span>
+      </span>
+    )
   }
 
   return (
@@ -377,11 +408,7 @@ export default function PurchaseSimulator({ onClose, onSaved, prefillCardId }) {
                 <div>
                   <label className="text-xs text-gray-400 mb-2 block">{t('paymentMethod')}</label>
                   <div className="flex flex-col gap-2">
-                    {[
-                      { id: 'bank', label: t('payNow') },
-                      { id: 'credit', label: t('payCredit') },
-                      { id: 'cuotas', label: t('payInstallments') },
-                    ].map(opt => (
+                    {paymentMethodOptions.map(opt => (
                       <button
                         key={opt.id}
                         type="button"
@@ -485,9 +512,7 @@ export default function PurchaseSimulator({ onClose, onSaved, prefillCardId }) {
                     </div>
                     <div className="p-2 border-l border-gray-100">
                       <p className="text-gray-400">{t('safeToSpend')}</p>
-                      <p className="font-semibold text-gray-800">
-                        {formatDelta(analysis.safeToSpend, analysis.newSafeToSpend, true)}
-                      </p>
+                      {renderAfterValue(analysis.safeToSpend, analysis.newSafeToSpend)}
                     </div>
                   </div>
 
@@ -504,12 +529,14 @@ export default function PurchaseSimulator({ onClose, onSaved, prefillCardId }) {
                       </div>
                       <div className="p-2 border-l border-gray-100">
                         <p className="text-gray-400">{t('balance')}</p>
-                        <p className="font-semibold text-gray-800">
-                          {formatMoney(analysis.newCardBalance, currency)}
+                        <div>
+                          {renderAfterValue(analysis.currentCardBalance, analysis.newCardBalance, { higherIsBad: true })}
                           {analysis.creditLimit > 0 && (
-                            <span className="text-gray-400 font-normal"> ({Math.round(analysis.newUtilization)}%) ↑</span>
+                            <span className="text-gray-400 font-normal text-[11px]">
+                              {' '}({Math.round(analysis.newUtilization)}%)
+                            </span>
                           )}
-                        </p>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -522,14 +549,11 @@ export default function PurchaseSimulator({ onClose, onSaved, prefillCardId }) {
                       </div>
                       <div className="p-2 border-l border-gray-100">
                         <p className="text-gray-400">{t('newMinPayment')}</p>
-                        <p className="font-semibold text-gray-800">
-                          {formatMoney(analysis.newMinimumPayment, currency)}/mo
-                          {analysis.newMinimumPayment > analysis.currentMinPayment && (
-                            <span className="text-red-500 font-normal">
-                              {' '}(+{formatMoney(analysis.newMinimumPayment - analysis.currentMinPayment, currency)})
-                            </span>
-                          )}
-                        </p>
+                        {renderAfterValue(
+                          analysis.currentMinPayment,
+                          analysis.newMinimumPayment,
+                          { higherIsBad: true, suffix: '/mo' },
+                        )}
                       </div>
                     </div>
                   )}
@@ -541,7 +565,7 @@ export default function PurchaseSimulator({ onClose, onSaved, prefillCardId }) {
                     </div>
                     <div className="p-2 border-l border-gray-100">
                       <p className="text-gray-400">{t('monthlySurplus')}</p>
-                      <p className="font-semibold text-gray-800">{formatMoney(analysis.newSurplus, currency)}</p>
+                      {renderAfterValue(analysis.projectedSurplus, analysis.newSurplus)}
                     </div>
                   </div>
                 </div>

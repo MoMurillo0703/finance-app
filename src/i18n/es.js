@@ -47,7 +47,9 @@ export default {
       selectCard: "Selecciona una tarjeta",
       noCardsHint: "No hay tarjetas — agrega una primero",
       payInInstallments: "Pagar en cuotas",
-      invalidNumCuotas: "Ingresa al menos 2 cuotas",
+      splitIntoCuotas: "Dividir en cuotas",
+      recategorize: "Recategorizar",
+      invalidNumCuotas: "Ingresa entre 2 y 48 cuotas",
   
       // Bills
       billsTitle: "Mis cuentas",
@@ -319,6 +321,8 @@ export default {
       monthlyCommitments: 'Compromisos mensuales',
       noTransactionsMonth: 'Sin transacciones este mes',
       categoryDining: 'Restaurantes',
+      categoryGroceries: 'Mercado',
+      categoryIncome: 'Ingresos',
       categorySubscriptions: 'Suscripciones',
       categoryUtilities: 'Servicios',
       categoryTransport: 'Transporte',
