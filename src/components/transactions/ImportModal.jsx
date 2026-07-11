@@ -10,6 +10,7 @@ import { categoryForDb } from '../../utils/categories'
 import { txTypeLabel, txBadgeClass } from '../../utils/transactionType'
 
 const RULES = [
+  { pattern: /interest charged|interest fee|finance charge/i, category: 'interest' },
   { pattern: /uber|lyft|taxi/i, category: 'transport' },
   { pattern: /walmart|target|costco|best.?buy|rei|officemax|wal.?mart|amazon/i, category: 'shopping' },
   { pattern: /restaurant|grill|cafe|coffee|sushi|tavern|brewing|wings|pizza|kitchen|diner|bbq|burger|taco|chipotle|mcdonald|starbucks|dunkin|tahoe|heirloom|doghouse|lazy.?dog|mad.?duck|kenjis|rustica/i, category: 'dining' },
@@ -30,7 +31,8 @@ const RULES = [
 
 const EXPENSE_CATEGORIES = [
   'transport', 'shopping', 'dining', 'subscriptions', 'utilities', 'health',
-  'travel', 'entertainment', 'gas', 'insurance', 'personal', 'auto', 'business', 'other',
+  'travel', 'entertainment', 'gas', 'insurance', 'personal', 'auto', 'business',
+  'interest', 'other',
   'essential', 'food', 'fun', 'bills', 'debt', 'weeklyLiving', 'emergency',
 ]
 
@@ -46,7 +48,17 @@ const PAYMENT_PATTERNS = [
   /PAYMENT - THANK/i,
 ]
 
-const INTEREST_PATTERN = /INTEREST CHARGED/i
+const INTEREST_PATTERN = /interest charged|interest fee|finance charge/i
+
+function cleanDescription(desc) {
+  if (!desc) return ''
+  if (/AMERICAN[0-9]/i.test(desc)) return 'American Airlines'
+  if (/UNITED\s*[0-9]/i.test(desc)) return 'United Airlines'
+  if (/DELTA\s*[0-9]/i.test(desc)) return 'Delta Airlines'
+  if (/SOUTHWEST/i.test(desc)) return 'Southwest Airlines'
+  if (/SKYAIRLIN/i.test(desc)) return 'Sky Airlines'
+  return desc.replace(/\s+[A-Z]{2}$/, '').replace(/\s{2,}/g, ' ').trim()
+}
 
 function normalizeHeader(h) {
   return (h || '').trim().toLowerCase()
@@ -201,7 +213,7 @@ function finalizeRowsForAccount(rows, accountType, mapping) {
 
 function rowFromRecord(record, mapping) {
   const dateRaw = record[mapping.dateCol]
-  const description = (record[mapping.descCol] || '').trim()
+  const description = cleanDescription((record[mapping.descCol] || '').trim())
   let type = 'expense'
   let amount = 0
   let rawAmount = null
@@ -645,7 +657,7 @@ export default function ImportModal({ onClose, onComplete }) {
         type: 'expense',
         amount: interestAmount,
         description: 'Interest charge',
-        category: 'debt',
+        category: 'interest',
         transaction_date: today,
       })
 

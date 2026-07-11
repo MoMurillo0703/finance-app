@@ -51,7 +51,7 @@ export default function TransactionDetailModal({ transaction, onClose, onEdit })
           </div>
 
           <div>
-            <p className="text-xs text-gray-400 mb-1">{t('importToAccount')}</p>
+            <p className="text-xs text-gray-400 mb-1">{t('account')}</p>
             <p className="text-sm text-gray-800">{accountName}</p>
           </div>
         </div>

@@ -13,6 +13,7 @@ export const IMPORT_CATEGORY_MAP = {
   personal: 'fun',
   auto: 'essential',
   business: 'essential',
+  interest: 'interest',
   other: 'essential',
 }
 

@@ -13,10 +13,12 @@ export const SPENDING_CATEGORIES = [
   'auto',
   'business',
   'loan',
+  'interest',
   'other',
 ]
 
 const CATEGORY_RULES = [
+  { pattern: /interest charged|interest fee|finance charge/i, category: 'interest' },
   { pattern: /uber|lyft|taxi/i, category: 'transport' },
   { pattern: /walmart|target|costco|best.?buy|rei|officemax|wal.?mart|amazon/i, category: 'shopping' },
   { pattern: /restaurant|grill|cafe|coffee|sushi|tavern|brewing|wings|pizza|kitchen|diner|bbq|burger|taco|chipotle|mcdonald|starbucks|dunkin/i, category: 'dining' },
@@ -59,7 +61,7 @@ const DB_CATEGORY_MAP = {
   emergency: 'other',
   pet: 'personal',
   grooming: 'personal',
-  interest: 'other',
+  interest: 'interest',
   loan: 'loan',
 }
 
@@ -218,6 +220,7 @@ export const CATEGORY_EMOJI = {
   personal: '💇',
   auto: '🚗',
   business: '💼',
+  interest: '💸',
   loan: '🏦',
   other: '📦',
 }

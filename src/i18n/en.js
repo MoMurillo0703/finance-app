@@ -41,6 +41,7 @@ export default {
       date: "Date",
       essential: "Essential",
       bank: "Bank",
+      account: "Account",
       paymentMethod: "Payment method",
       creditCard: "Credit card",
       selectCard: "Select a credit card",
@@ -331,6 +332,7 @@ export default {
       categoryOther: 'Other',
       categoryAuto: 'Auto',
       categoryBusiness: 'Business',
+      categoryInterest: 'Interest',
       categoryLoan: 'Loans',
 
       // Loans
