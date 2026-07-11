@@ -95,6 +95,16 @@ export default function AccountsScreen({ onAccountSaved, refreshKey = 0 }) {
           🤔 {t('canIAfford')}
         </button>
 
+        {loading ? (
+          <p className="text-gray-400 text-sm text-center py-12">{t('loading')}</p>
+        ) : banks.length === 0 && cards.length === 0 && loans.length === 0 ? (
+          <div className="text-center py-12 text-gray-400">
+            <p className="text-4xl mb-3">🏦</p>
+            <p className="font-medium text-gray-600">{t('noAccounts')}</p>
+            <p className="text-sm mt-1">{t('addAccountsPrompt')}</p>
+          </div>
+        ) : (
+          <>
         <section>
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
             {t('bankAccounts')}
@@ -232,6 +242,8 @@ export default function AccountsScreen({ onAccountSaved, refreshKey = 0 }) {
             onEdit={setEditingLoan}
           />
         </section>
+          </>
+        )}
       </div>
 
       <button

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Login from './components/auth/Login'
@@ -13,7 +13,9 @@ import ReportsScreen from './components/reports/ReportsScreen'
 import SettingsScreen from './components/settings/SettingsScreen'
 import BottomNav from './components/layout/BottomNav'
 import AppHeader from './components/layout/AppHeader'
-import { getBankDisplayName } from './utils/bank'
+import OnboardingFlow from './components/onboarding/OnboardingFlow'
+import { getBankDisplayName, fetchBanks } from './utils/bank'
+import { supabase } from './lib/supabase'
 
 function AppContent() {
   const { t } = useTranslation()
@@ -24,9 +26,30 @@ function AppContent() {
   const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0)
   const [prefsVersion, setPrefsVersion] = useState(0)
   const [txFilter, setTxFilter] = useState(null)
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   const bumpDashboard = () => setDashboardRefreshKey(k => k + 1)
   const bumpPrefs = () => setPrefsVersion(v => v + 1)
+
+  const completeOnboarding = () => {
+    localStorage.setItem('onboarding_complete', 'true')
+    setShowOnboarding(false)
+    bumpDashboard()
+  }
+
+  useEffect(() => {
+    if (!user) return
+    if (localStorage.getItem('onboarding_complete') === 'true') return
+
+    let active = true
+    ;(async () => {
+      const { data } = await fetchBanks(supabase, user.id)
+      if (!active) return
+      if ((data ?? []).length === 0) setShowOnboarding(true)
+    })()
+
+    return () => { active = false }
+  }, [user])
 
   const viewAccountTransactions = (bank) => {
     setTxFilter({ bankId: bank.id, bankName: getBankDisplayName(bank), from: 'settings' })
@@ -55,6 +78,7 @@ function AppContent() {
           <Dashboard
             refreshKey={`${dashboardRefreshKey}-${prefsVersion}`}
             onViewReports={() => setShowReports(true)}
+            onNavigateToAccounts={() => setActiveTab('accounts')}
           />
         )}
         {activeTab === 'transactions' && (
@@ -110,6 +134,16 @@ function AppContent() {
           </button>
           <ReportsScreen key={prefsVersion} />
         </div>
+      )}
+
+      {showOnboarding && (
+        <OnboardingFlow
+          onComplete={completeOnboarding}
+          onGoToDashboard={() => {
+            completeOnboarding()
+            setActiveTab('home')
+          }}
+        />
       )}
     </div>
   )

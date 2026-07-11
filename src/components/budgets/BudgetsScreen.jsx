@@ -388,13 +388,15 @@ export default function BudgetsScreen() {
         {loading ? (
           <p className="text-gray-400 text-sm text-center py-10">{t('loading')}</p>
         ) : rows.length === 0 ? (
-          <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
-            <p className="text-gray-400 text-sm">{t('noBudgetSet')}</p>
+          <div className="text-center py-12 text-gray-400">
+            <p className="text-4xl mb-3">🎯</p>
+            <p className="font-medium text-gray-600">{t('noBudgets')}</p>
+            <p className="text-sm mt-1">{t('addBudgetPrompt')}</p>
             {!allCategoriesBudgeted && (
               <button
                 type="button"
                 onClick={() => setShowAddBudget(true)}
-                className="mt-3 text-purple-600 text-sm font-medium"
+                className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-xl text-sm"
               >
                 + {t('addBudget')}
               </button>

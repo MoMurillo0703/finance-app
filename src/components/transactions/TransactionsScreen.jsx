@@ -12,6 +12,7 @@ import { formatMoney } from '../../utils/currency'
 import { formatDate } from '../../utils/date'
 import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
 import { txTypeLabel, txAmountClass, txAmountPrefix } from '../../utils/transactionType'
+import { TRANSACTION_FILTER_CHIPS, filterTransactions } from '../../utils/transactionFilters'
 
 function enrichTransactions(transactions, banks, cards) {
   const bankMap = Object.fromEntries(banks.map(b => [b.id, b]))
@@ -77,8 +78,14 @@ export default function TransactionsScreen({
   const [wizardPrefill, setWizardPrefill] = useState(null)
   const [showImport, setShowImport] = useState(false)
   const [expandedMonths, setExpandedMonths] = useState(new Set())
+  const [searchQuery, setSearchQuery] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('all')
 
-  const monthGroups = useMemo(() => groupByMonth(transactions), [transactions])
+  const filteredTransactions = useMemo(
+    () => filterTransactions(transactions, { search: searchQuery, categoryFilter }),
+    [transactions, searchQuery, categoryFilter],
+  )
+  const monthGroups = useMemo(() => groupByMonth(filteredTransactions), [filteredTransactions])
   const listKey = `${filterCreditCardId ?? ''}-${filterBankId ?? ''}-${refreshKey}`
 
   useEffect(() => {
@@ -255,12 +262,54 @@ export default function TransactionsScreen({
         )}
       </div>
 
+      {!isFiltered && (
+        <div className="bg-white px-6 py-3 border-b border-gray-100 space-y-3">
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none">🔍</span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder={t('searchTransactions')}
+              className="w-full border border-gray-200 rounded-xl pl-9 pr-9 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
+                aria-label={t('clearSearch')}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+            {TRANSACTION_FILTER_CHIPS.map(chip => (
+              <button
+                key={chip.id}
+                type="button"
+                onClick={() => setCategoryFilter(chip.id)}
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                  categoryFilter === chip.id
+                    ? 'bg-purple-600 text-white border-purple-600'
+                    : 'bg-white text-gray-600 border-gray-200'
+                }`}
+              >
+                {t(chip.labelKey)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="px-6 py-6">
         {loading ? (
           <p className="text-gray-400 text-sm text-center py-10">{t('loading')}</p>
         ) : transactions.length === 0 ? (
-          <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
-            <p className="text-gray-400 text-sm">
+          <div className="text-center py-12 text-gray-400">
+            <p className="text-4xl mb-3">📭</p>
+            <p className="font-medium text-gray-600">
               {filterCreditCardId
                 ? t('noCardTransactions')
                 : filterBankId
@@ -268,14 +317,28 @@ export default function TransactionsScreen({
                   : t('noTransactions')}
             </p>
             {!isFiltered && (
-              <button
-                onClick={() => setShowAdd(true)}
-                className="mt-3 text-purple-600 text-sm font-medium"
-              >
-                {t('addFirstTransaction')}
-              </button>
+              <p className="text-sm mt-1">{t('importOrAdd')}</p>
+            )}
+            {!isFiltered && (
+              <div className="flex justify-center gap-3 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowImport(true)}
+                  className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600"
+                >
+                  {t('importCsv')}
+                </button>
+                <button
+                  onClick={() => setShowAdd(true)}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-xl text-sm"
+                >
+                  {t('addTransaction')}
+                </button>
+              </div>
             )}
           </div>
+        ) : filteredTransactions.length === 0 ? (
+          <p className="text-gray-400 text-sm text-center py-10">{t('noTransactionsFound')}</p>
         ) : (
           renderMonthGroups()
         )}

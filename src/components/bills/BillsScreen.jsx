@@ -186,13 +186,15 @@ export default function BillsScreen({ onBillPaid }) {
         {loading ? (
           <p className="text-gray-400 text-xs text-center py-8">{t('loading')}</p>
         ) : bills.length === 0 ? (
-          <div className="bg-white rounded-xl p-4 text-center border border-gray-100">
-            <p className="text-gray-400 text-xs">{t('noBills')}</p>
+          <div className="text-center py-12 text-gray-400">
+            <p className="text-4xl mb-3">🎉</p>
+            <p className="font-medium text-gray-600">{t('noBills')}</p>
+            <p className="text-sm mt-1">{t('addBillPrompt')}</p>
             <button
               onClick={() => setShowAdd(true)}
-              className="mt-2 text-purple-600 text-xs font-medium"
+              className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-xl text-sm"
             >
-              {t('addFirstBill')}
+              {t('addBill')}
             </button>
           </div>
         ) : (

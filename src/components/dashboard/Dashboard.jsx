@@ -13,10 +13,11 @@ import PurchaseSimulator from '../simulator/PurchaseSimulator'
 import { formatMoney } from '../../utils/currency'
 import { fetchBanks } from '../../utils/bank'
 
-export default function Dashboard({ refreshKey, onViewReports }) {
+export default function Dashboard({ refreshKey, onViewReports, onNavigateToAccounts }) {
   const { user } = useAuth()
   const { t } = useTranslation()
   const [vaults, setVaults] = useState([])
+  const [banks, setBanks] = useState([])
   const [totalBalance, setTotalBalance] = useState(0)
   const [loading, setLoading] = useState(true)
   const [showAddVault, setShowAddVault] = useState(false)
@@ -41,6 +42,7 @@ export default function Dashboard({ refreshKey, onViewReports }) {
       if (!active) return
 
       setVaults(vaultsData ?? [])
+      setBanks(banksData ?? [])
       setTotalBalance((banksData ?? []).reduce((sum, bank) => sum + (bank.balance || 0), 0))
       setLoading(false)
     })()
@@ -51,6 +53,8 @@ export default function Dashboard({ refreshKey, onViewReports }) {
   const protectedAmount = vaults.reduce((sum, v) => sum + (v.current_amount || 0), 0)
   const safeToSpend = totalBalance - protectedAmount
   const dataRefreshKey = `${refreshKey}-${modalRefreshKey}`
+  const onboardingComplete = localStorage.getItem('onboarding_complete') === 'true'
+  const showAccountsEmpty = onboardingComplete && banks.length === 0
 
   if (loading) {
     return (
@@ -63,6 +67,21 @@ export default function Dashboard({ refreshKey, onViewReports }) {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="px-4 pt-4 pb-6 space-y-4">
+        {showAccountsEmpty ? (
+          <div className="text-center py-12 text-gray-400">
+            <p className="text-4xl mb-3">🏦</p>
+            <p className="font-medium text-gray-600">{t('noAccounts')}</p>
+            <p className="text-sm mt-1">{t('noAccountsHint')}</p>
+            <button
+              type="button"
+              onClick={onNavigateToAccounts}
+              className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-xl text-sm"
+            >
+              {t('addAccount')}
+            </button>
+          </div>
+        ) : (
+          <>
         <div className="bg-gradient-to-br from-purple-600 to-purple-800 rounded-3xl p-5 text-white shadow-lg">
           <p className="text-xs font-medium text-purple-200 uppercase tracking-wider mb-1">{t('safeToSpend')}</p>
           <p className="text-4xl font-bold mb-1">{formatMoney(safeToSpend)}</p>
@@ -105,7 +124,7 @@ export default function Dashboard({ refreshKey, onViewReports }) {
           🤔 {t('canIAfford')}
         </button>
 
-        {totalBalance === 0 && vaults.length === 0 && (
+        {!onboardingComplete && totalBalance === 0 && vaults.length === 0 && (
           <div className="bg-purple-50 border border-purple-100 rounded-2xl p-5 text-center">
             <p className="text-2xl mb-2">👋</p>
             <p className="text-sm font-semibold text-purple-700 mb-1">{t('welcomeOnboardingTitle')}</p>
@@ -123,19 +142,27 @@ export default function Dashboard({ refreshKey, onViewReports }) {
         <MonthSnapshot refreshKey={dataRefreshKey} onViewReports={onViewReports} />
 
         <BillsThisWeek refreshKey={dataRefreshKey} />
+          </>
+        )}
 
-        {vaults.length > 0 && (
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('vaults')}</p>
-              <button
-                type="button"
-                onClick={() => setShowAddVault(true)}
-                className="text-xs text-purple-600 font-medium"
-              >
-                + {t('addVault')}
-              </button>
+        <div>
+          <div className="flex justify-between items-center mb-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('vaults')}</p>
+            <button
+              type="button"
+              onClick={() => setShowAddVault(true)}
+              className="text-xs text-purple-600 font-medium"
+            >
+              + {t('addVault')}
+            </button>
+          </div>
+          {vaults.length === 0 ? (
+            <div className="text-center py-8 text-gray-400 bg-white rounded-2xl border border-gray-100">
+              <p className="text-3xl mb-2">🏦</p>
+              <p className="font-medium text-gray-600 text-sm">{t('noVaults')}</p>
+              <p className="text-xs mt-1">{t('noVaultsEmptyHint')}</p>
             </div>
+          ) : (
             <div className="flex gap-3 overflow-x-auto pb-1">
               {vaults.map(vault => (
                 <VaultMiniCard
@@ -145,8 +172,8 @@ export default function Dashboard({ refreshKey, onViewReports }) {
                 />
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {showAddVault && (
