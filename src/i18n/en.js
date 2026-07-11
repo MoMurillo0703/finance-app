@@ -254,7 +254,7 @@ export default {
       noBanksHint: "No banks found",
       noTransactions: "No transactions yet",
       importOrAdd: "Import a CSV or add one manually",
-      noTransactionsFound: "No transactions found 🔍",
+      noTransactionsFound: "No results found 🔍",
       searchTransactions: "Search transactions…",
       clearSearch: "Clear search",
       all: "All",

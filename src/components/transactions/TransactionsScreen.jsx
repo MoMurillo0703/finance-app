@@ -20,7 +20,7 @@ function enrichTransactions(transactions, banks, cards) {
 
   return transactions.map(tx => ({
     ...tx,
-    banks: tx.bank_id ? bankMap[tx.bank_id] ?? null : null,
+    banks: tx.banks ?? (tx.bank_id ? bankMap[tx.bank_id] ?? null : null),
     credit_cards: tx.credit_card_id ? cardMap[tx.credit_card_id] ?? null : null,
   }))
 }
@@ -177,7 +177,7 @@ export default function TransactionsScreen({
     ;(async () => {
       let txQuery = supabase
         .from('transactions')
-        .select('id, type, amount, description, transaction_date, category, bank_id, credit_card_id, vault_id')
+        .select('id, type, amount, description, category, transaction_date, bank_id, credit_card_id, vault_id, banks(name, nickname)')
         .eq('user_id', user.id)
         .order('transaction_date', { ascending: false })
 
@@ -262,46 +262,45 @@ export default function TransactionsScreen({
         )}
       </div>
 
-      {!isFiltered && (
-        <div className="bg-white px-6 py-3 border-b border-gray-100 space-y-3">
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none">🔍</span>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder={t('searchTransactions')}
-              className="w-full border border-gray-200 rounded-xl pl-9 pr-9 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
-                aria-label={t('clearSearch')}
-              >
-                ✕
-              </button>
-            )}
-          </div>
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-            {TRANSACTION_FILTER_CHIPS.map(chip => (
-              <button
-                key={chip.id}
-                type="button"
-                onClick={() => setCategoryFilter(chip.id)}
-                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                  categoryFilter === chip.id
-                    ? 'bg-purple-600 text-white border-purple-600'
-                    : 'bg-white text-gray-600 border-gray-200'
-                }`}
-              >
-                {t(chip.labelKey)}
-              </button>
-            ))}
-          </div>
+      <div className="bg-white px-6 py-3 border-b border-gray-100 space-y-3">
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none">🔍</span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder={t('searchTransactions')}
+            className="w-full border border-gray-200 rounded-xl pl-9 pr-9 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
+              aria-label={t('clearSearch')}
+            >
+              ✕
+            </button>
+          )}
         </div>
-      )}
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+          {TRANSACTION_FILTER_CHIPS.map(chip => (
+            <button
+              key={chip.id}
+              type="button"
+              onClick={() => setCategoryFilter(chip.id)}
+              className={`shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                categoryFilter === chip.id
+                  ? 'bg-purple-600 text-white border-purple-600'
+                  : 'bg-white text-gray-600 border-gray-200'
+              }`}
+            >
+              {chip.emoji && <span>{chip.emoji}</span>}
+              <span>{t(chip.labelKey)}</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="px-6 py-6">
         {loading ? (

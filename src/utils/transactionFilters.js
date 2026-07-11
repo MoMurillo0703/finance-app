@@ -1,23 +1,15 @@
-import { getRecategorizeHighlight } from './transactionCategories'
+import { BUDGET_CATEGORIES, getRecategorizeHighlight } from './transactionCategories'
 
 export const TRANSACTION_FILTER_CHIPS = [
   { id: 'all', labelKey: 'all' },
-  { id: 'income', labelKey: 'income', match: tx => tx.type === 'income' },
-  { id: 'dining', labelKey: 'categoryDining', match: tx => tx.type === 'expense' && getRecategorizeHighlight(tx) === 'dining' },
-  { id: 'groceries', labelKey: 'categoryGroceries', match: tx => tx.type === 'expense' && getRecategorizeHighlight(tx) === 'groceries' },
-  { id: 'transport', labelKey: 'categoryTransport', match: tx => tx.type === 'expense' && getRecategorizeHighlight(tx) === 'transport' },
-  { id: 'utilities', labelKey: 'categoryUtilities', match: tx => tx.type === 'expense' && getRecategorizeHighlight(tx) === 'utilities' },
-  { id: 'subscriptions', labelKey: 'categorySubscriptions', match: tx => tx.type === 'expense' && getRecategorizeHighlight(tx) === 'subscriptions' },
-  { id: 'health', labelKey: 'categoryHealth', match: tx => tx.type === 'expense' && getRecategorizeHighlight(tx) === 'health' },
-  { id: 'shopping', labelKey: 'categoryShopping', match: tx => tx.type === 'expense' && getRecategorizeHighlight(tx) === 'shopping' },
-  { id: 'entertainment', labelKey: 'categoryEntertainment', match: tx => tx.type === 'expense' && getRecategorizeHighlight(tx) === 'entertainment' },
-  { id: 'travel', labelKey: 'categoryTravel', match: tx => tx.type === 'expense' && getRecategorizeHighlight(tx) === 'travel' },
-  { id: 'gas', labelKey: 'categoryGas', match: tx => tx.type === 'expense' && getRecategorizeHighlight(tx) === 'gas' },
-  { id: 'insurance', labelKey: 'categoryInsurance', match: tx => tx.type === 'expense' && getRecategorizeHighlight(tx) === 'insurance' },
-  { id: 'auto', labelKey: 'categoryAuto', match: tx => tx.type === 'expense' && getRecategorizeHighlight(tx) === 'auto' },
-  { id: 'business', labelKey: 'categoryBusiness', match: tx => tx.type === 'expense' && getRecategorizeHighlight(tx) === 'business' },
-  { id: 'personal', labelKey: 'categoryPersonal', match: tx => tx.type === 'expense' && getRecategorizeHighlight(tx) === 'personal' },
-  { id: 'other', labelKey: 'categoryOther', match: tx => tx.type === 'expense' && getRecategorizeHighlight(tx) === 'other' },
+  { id: 'income', labelKey: 'income', emoji: '💰', match: tx => tx.type === 'income' },
+  { id: 'expense', labelKey: 'expense', emoji: '💸', match: tx => tx.type === 'expense' },
+  ...BUDGET_CATEGORIES.map(({ key, emoji }) => ({
+    id: key,
+    labelKey: `category${key.charAt(0).toUpperCase()}${key.slice(1)}`,
+    emoji,
+    match: tx => tx.type === 'expense' && getRecategorizeHighlight(tx) === key,
+  })),
 ]
 
 export function filterTransactions(transactions, { search = '', categoryFilter = 'all' } = {}) {
