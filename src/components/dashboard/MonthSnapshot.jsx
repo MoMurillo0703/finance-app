@@ -16,6 +16,7 @@ import {
   getSpendingByBudgetCategory,
   getNearOrOverBudgetCategories,
 } from '../../utils/budgets'
+import { isIntroRateExpiringSoon, getIntroRateDaysLeft } from '../../utils/creditCard'
 
 export default function MonthSnapshot({ refreshKey, onViewReports }) {
   const { t } = useTranslation()
@@ -23,6 +24,7 @@ export default function MonthSnapshot({ refreshKey, onViewReports }) {
   const [transactions, setTransactions] = useState([])
   const [loans, setLoans] = useState([])
   const [budgets, setBudgets] = useState([])
+  const [creditCards, setCreditCards] = useState([])
   const [loading, setLoading] = useState(true)
 
   const now = new Date()
@@ -36,7 +38,7 @@ export default function MonthSnapshot({ refreshKey, onViewReports }) {
     let active = true
 
     ;(async () => {
-      const [txRes, loansRes, budgetsRes] = await Promise.all([
+      const [txRes, loansRes, budgetsRes, cardsRes] = await Promise.all([
         supabase
           .from('transactions')
           .select('id, type, amount, description, transaction_date, category')
@@ -52,12 +54,18 @@ export default function MonthSnapshot({ refreshKey, onViewReports }) {
           .select('*')
           .eq('user_id', user.id)
           .eq('is_active', true),
+        supabase
+          .from('credit_cards')
+          .select('id, name, intro_rate, intro_rate_expires')
+          .eq('user_id', user.id)
+          .eq('is_active', true),
       ])
 
       if (!active) return
       setTransactions(txRes.data ?? [])
       setLoans(loansRes.data ?? [])
       setBudgets(budgetsRes.data ?? [])
+      setCreditCards(cardsRes.data ?? [])
       setLoading(false)
     })()
 
@@ -112,6 +120,8 @@ export default function MonthSnapshot({ refreshKey, onViewReports }) {
     .filter(tx => tx.type === 'expense' && recurringMerchants.has(cleanMerchantName(tx.description)))
     .reduce((sum, tx) => sum + tx.amount, 0)
 
+  const expiringIntroCards = creditCards.filter(card => isIntroRateExpiringSoon(card))
+
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
       <div className="flex justify-between items-center mb-3">
@@ -160,6 +170,15 @@ export default function MonthSnapshot({ refreshKey, onViewReports }) {
           ⚠️ {overBudgetCategories.map(c => c.label).join(', ')} {t('budgetWarning')}
         </p>
       )}
+
+      {expiringIntroCards.map(card => {
+        const daysLeft = getIntroRateDaysLeft(card)
+        return (
+          <p key={card.id} className="text-xs text-amber-700 mt-1 font-medium">
+            ⚠️ {card.name} {t('introRateWarning')} {daysLeft} {t('daysLeft')}
+          </p>
+        )
+      })}
 
       {recurringThisMonth > 0 && (
         <button

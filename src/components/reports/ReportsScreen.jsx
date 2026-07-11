@@ -3,11 +3,16 @@ import { useTranslation } from 'react-i18next'
 import {
   BarChart,
   Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   ResponsiveContainer,
   LabelList,
   Cell,
+  CartesianGrid,
+  Tooltip,
+  Legend,
 } from 'recharts'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -27,6 +32,12 @@ import {
   loanTypeLabel,
   summarizeLoans,
 } from '../../utils/loans'
+import {
+  buildMonthlyTrends,
+  averageTrendMetrics,
+  formatTrendMonthLabel,
+  buildTrendInsight,
+} from '../../utils/financialTrends'
 
 export default function ReportsScreen() {
   const { t, i18n } = useTranslation()
@@ -39,6 +50,7 @@ export default function ReportsScreen() {
   const [interestTransactions, setInterestTransactions] = useState([])
   const [cards, setCards] = useState([])
   const [loans, setLoans] = useState([])
+  const [trendTransactions, setTrendTransactions] = useState([])
   const [loading, setLoading] = useState(true)
 
   const { firstDay, lastDay, daysInMonth } = useMemo(
@@ -57,6 +69,9 @@ export default function ReportsScreen() {
     [recurringEnd],
   )
   const yearStart = `${now.getFullYear()}-01-01`
+  const sixMonthsAgo = new Date()
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+  const trendStart = sixMonthsAgo.toISOString().split('T')[0]
 
   useEffect(() => {
     let active = true
@@ -70,6 +85,7 @@ export default function ReportsScreen() {
         interestRes,
         cardsRes,
         loansRes,
+        trendRes,
       ] = await Promise.all([
         supabase
           .from('transactions')
@@ -102,6 +118,12 @@ export default function ReportsScreen() {
           .eq('user_id', user.id)
           .eq('is_active', true)
           .order('name'),
+        supabase
+          .from('transactions')
+          .select('type, amount, transaction_date')
+          .eq('user_id', user.id)
+          .gte('transaction_date', trendStart)
+          .order('transaction_date', { ascending: false }),
       ])
 
       if (!active) return
@@ -116,11 +138,35 @@ export default function ReportsScreen() {
       setInterestTransactions(interestRows)
       setCards(cardsRes.data ?? [])
       setLoans(loansRes.data ?? [])
+      setTrendTransactions(trendRes.data ?? [])
       setLoading(false)
     })()
 
     return () => { active = false }
-  }, [user.id, firstDay, lastDay, recurringStart, recurringBounds.lastDay, yearStart])
+  }, [user.id, firstDay, lastDay, recurringStart, recurringBounds.lastDay, yearStart, trendStart])
+
+  const trendBuckets = useMemo(
+    () => buildMonthlyTrends(trendTransactions, 6),
+    [trendTransactions],
+  )
+
+  const trendMetrics = useMemo(
+    () => averageTrendMetrics(trendBuckets),
+    [trendBuckets],
+  )
+
+  const trendChartData = useMemo(
+    () => trendBuckets.map(bucket => ({
+      ...bucket,
+      label: formatTrendMonthLabel(bucket.year, bucket.month, i18n.language),
+    })),
+    [trendBuckets, i18n.language],
+  )
+
+  const trendInsight = useMemo(
+    () => buildTrendInsight(trendMetrics, t, formatMoney),
+    [trendMetrics, t],
+  )
 
   const shiftMonth = (delta) => {
     const date = new Date(year, month - 1 + delta, 1)
@@ -181,6 +227,41 @@ export default function ReportsScreen() {
   return (
     <div className="bg-gray-50 pb-6">
       <div className="px-6 py-6 space-y-6">
+        <section className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+          <h2 className="text-sm font-semibold text-gray-800 mb-4">{t('financialTrends')}</h2>
+          {loading ? (
+            <p className="text-xs text-gray-400">{t('loading')}</p>
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={trendChartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#6b7280' }} />
+                  <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} width={48} />
+                  <Tooltip formatter={(value) => formatMoney(value)} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Line type="monotone" dataKey="income" name={t('income')} stroke="#16a34a" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="expenses" name={t('expense')} stroke="#dc2626" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="net" name={t('netCashflow')} stroke="#9333ea" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+
+              <div className="mt-4 space-y-2 text-xs text-gray-600">
+                <p>
+                  <span className="font-semibold text-gray-700">3-month avg:</span>{' '}
+                  {t('avgIncome')} {formatMoney(trendMetrics.avg3Income)} · {t('avgExpenses')} {formatMoney(trendMetrics.avg3Expenses)} · {t('avgNet')} {trendMetrics.avg3Net >= 0 ? '+' : ''}{formatMoney(trendMetrics.avg3Net)}
+                </p>
+                <p>
+                  <span className="font-semibold text-gray-700">6-month avg:</span>{' '}
+                  {t('avgIncome')} {formatMoney(trendMetrics.avg6Income)} · {t('avgExpenses')} {formatMoney(trendMetrics.avg6Expenses)} · {t('avgNet')} {trendMetrics.avg6Net >= 0 ? '+' : ''}{formatMoney(trendMetrics.avg6Net)}
+                </p>
+              </div>
+
+              <p className="mt-3 text-sm text-gray-700">{trendInsight}</p>
+            </>
+          )}
+        </section>
+
         <section className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <button

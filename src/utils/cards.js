@@ -1,7 +1,9 @@
-export const DEFAULT_CARD_APR = 24.99
+import { getEffectiveRate, DEFAULT_CARD_APR } from './creditCard'
+
+export { DEFAULT_CARD_APR }
 
 export function getCardApr(card) {
-  return card?.interest_rate ?? DEFAULT_CARD_APR
+  return getEffectiveRate(card)
 }
 
 export function calculateMinimumPayment(card, cuotas = []) {

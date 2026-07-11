@@ -18,6 +18,8 @@ export default function AddCardModal({ onClose, onSaved }) {
   const [statementDate, setStatementDate] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [interestRate, setInterestRate] = useState('')
+  const [introRate, setIntroRate] = useState('')
+  const [introRateExpires, setIntroRateExpires] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -45,11 +47,37 @@ export default function AddCardModal({ onClose, onSaved }) {
     if (interestRate !== '' && !isNaN(interestRate)) {
       row.interest_rate = parseFloat(interestRate)
     }
+    if (introRate !== '' && !isNaN(introRate)) {
+      row.intro_rate = parseFloat(introRate)
+    }
+    if (introRateExpires) {
+      row.intro_rate_expires = introRateExpires
+    }
 
-    const { error: dbError } = await supabase.from('credit_cards').insert(row)
+    const { data: newCard, error: dbError } = await supabase
+      .from('credit_cards')
+      .insert(row)
+      .select('id')
+      .single()
 
     if (dbError) {
       setError(dbError.message)
+      setSaving(false)
+      return
+    }
+
+    const { error: billError } = await supabase.from('bills').insert({
+      user_id: user.id,
+      name: `${name.trim()} - Minimum Payment`,
+      amount: 0,
+      due_day: parseInt(dueDate, 10),
+      credit_card_id: newCard.id,
+      is_auto_card_bill: true,
+      is_active: true,
+    })
+
+    if (billError) {
+      setError(billError.message)
       setSaving(false)
     } else {
       onSaved()
@@ -122,6 +150,28 @@ export default function AddCardModal({ onClose, onSaved }) {
               step="0.01"
               value={interestRate}
               onChange={e => setInterestRate(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">{t('introRate')}</label>
+            <input
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              placeholder="e.g. 0.00"
+              type="number"
+              step="0.01"
+              value={introRate}
+              onChange={e => setIntroRate(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">{t('introRateExpires')}</label>
+            <input
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              type="date"
+              value={introRateExpires}
+              onChange={e => setIntroRateExpires(e.target.value)}
             />
           </div>
 

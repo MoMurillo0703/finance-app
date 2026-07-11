@@ -10,6 +10,12 @@ export default function EditCardModal({ card, onClose, onSaved }) {
   const [interestRate, setInterestRate] = useState(
     card.interest_rate != null ? String(card.interest_rate) : '',
   )
+  const [introRate, setIntroRate] = useState(
+    card.intro_rate != null ? String(card.intro_rate) : '',
+  )
+  const [introRateExpires, setIntroRateExpires] = useState(
+    card.intro_rate_expires ? card.intro_rate_expires.slice(0, 10) : '',
+  )
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
@@ -31,6 +37,10 @@ export default function EditCardModal({ card, onClose, onSaved }) {
       interest_rate: interestRate !== '' && !isNaN(interestRate)
         ? parseFloat(interestRate)
         : null,
+      intro_rate: introRate !== '' && !isNaN(introRate)
+        ? parseFloat(introRate)
+        : null,
+      intro_rate_expires: introRateExpires || null,
     }
 
     const { error: dbError } = await supabase
@@ -103,6 +113,28 @@ export default function EditCardModal({ card, onClose, onSaved }) {
               step="0.01"
               value={interestRate}
               onChange={e => setInterestRate(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">{t('introRate')}</label>
+            <input
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              placeholder="e.g. 0.00"
+              type="number"
+              step="0.01"
+              value={introRate}
+              onChange={e => setIntroRate(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">{t('introRateExpires')}</label>
+            <input
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              type="date"
+              value={introRateExpires}
+              onChange={e => setIntroRateExpires(e.target.value)}
             />
           </div>
         </div>

@@ -5,6 +5,13 @@ import { useAuth } from '../../context/AuthContext'
 import { formatMoney, isCOPUser } from '../../utils/currency'
 import { formatDate } from '../../utils/date'
 import { calculateMinimumPayment, getCardApr } from '../../utils/cards'
+import {
+  getBillingCycleStart,
+  isIntroRateActive,
+  isIntroRateExpiringSoon,
+  getIntroRateDaysLeft,
+  calculateAutoBillMinimum,
+} from '../../utils/creditCard'
 import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
 import { adjustBankBalance, adjustCardBalance, bankDelta, cardDelta } from '../../lib/payments'
 import { CATEGORY_EMOJI, normalizeSpendingCategory } from '../../utils/reports'
@@ -56,6 +63,7 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
   const [paymentBankId, setPaymentBankId] = useState('')
   const [paying, setPaying] = useState(false)
   const [paymentError, setPaymentError] = useState('')
+  const [statementSnapshot, setStatementSnapshot] = useState(null)
 
   const currency = liveCard.currency || 'COP'
   const limit = liveCard.credit_limit || 0
@@ -67,6 +75,28 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
   const visibleTabs = copUser ? TABS : TABS.filter(tab => tab !== 'cuotas')
   const estimate = useMemo(() => calculateMinimumPayment(liveCard, copUser ? cuotas : []), [liveCard, cuotas, copUser])
   const totalMinimum = estimate.totalMinimum
+  const introActive = isIntroRateActive(liveCard)
+  const introExpiringSoon = isIntroRateExpiringSoon(liveCard)
+  const introDaysLeft = getIntroRateDaysLeft(liveCard)
+
+  const loadStatementSnapshot = async (card) => {
+    const cycleStart = getBillingCycleStart(card.statement_date)
+    const { data: cycleTransactions } = await supabase
+      .from('transactions')
+      .select('amount, type')
+      .eq('credit_card_id', card.id)
+      .gte('transaction_date', cycleStart)
+
+    const newCharges = (cycleTransactions ?? [])
+      .filter(tx => tx.type === 'expense')
+      .reduce((sum, tx) => sum + tx.amount, 0)
+
+    setStatementSnapshot({
+      newCharges,
+      payToAvoidInterest: newCharges,
+      minimumDue: calculateAutoBillMinimum(card),
+    })
+  }
 
   const refreshData = async () => {
     const [cardRes, cuotasRes, txRes] = await Promise.all([
@@ -85,7 +115,10 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
         .order('transaction_date', { ascending: false }),
     ])
 
-    if (cardRes.data) setLiveCard(cardRes.data)
+    if (cardRes.data) {
+      setLiveCard(cardRes.data)
+      await loadStatementSnapshot(cardRes.data)
+    }
     setCuotas(cuotasRes.data ?? [])
     setTransactions(txRes.data ?? [])
     setLoadingTx(false)
@@ -184,6 +217,11 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
                   <p className="text-xs text-gray-400 mb-0.5">{liveCard.network}</p>
                   <div className="flex items-center gap-2 flex-wrap mb-3">
                     <p className="text-lg font-bold text-white">{liveCard.name}</p>
+                    {introActive && (
+                      <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full">
+                        {liveCard.intro_rate}% intro · {t('introRateExpires')} {formatDate(liveCard.intro_rate_expires)}
+                      </span>
+                    )}
                     {isOverLimit && (
                       <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full shrink-0">
                         ⚠️ {t('overLimit')}
@@ -205,6 +243,11 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
                   </button>
                 </div>
               </div>
+              {introExpiringSoon && introDaysLeft != null && (
+                <p className="text-xs text-amber-300 mb-2">
+                  ⚠️ {liveCard.name} {t('introRateWarning')} {introDaysLeft} {t('daysLeft')}
+                </p>
+              )}
               <p className={`text-xs mb-1 ${isOverLimit ? 'text-red-400' : 'text-gray-400'}`}>
                 {t('availableCredit')}
               </p>
@@ -225,6 +268,40 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
                 <span>{t('limit')}: {formatMoney(limit, currency)}</span>
               </div>
             </div>
+
+            {statementSnapshot && (
+              <div className="mx-4 mt-4 bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                  {t('statementSnapshot')}
+                </p>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600">{t('newCharges')}</span>
+                    <span className="font-semibold text-gray-800">
+                      {formatMoney(statementSnapshot.newCharges, currency)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-green-700">{t('payToAvoidInterest')}</span>
+                    <span className="font-semibold text-green-700">
+                      {formatMoney(statementSnapshot.payToAvoidInterest, currency)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-amber-700">{t('minimumDue')}</span>
+                    <span className="font-semibold text-amber-700">
+                      {formatMoney(statementSnapshot.minimumDue, currency)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm pt-1 border-t border-gray-100">
+                    <span className="text-gray-500">{t('dueDate')}</span>
+                    <span className="text-gray-600">
+                      {t('dueDayOfMonth', { day: liveCard.due_date })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="flex justify-between items-center px-5 py-3 bg-amber-50 border-b border-amber-100">
               <div>

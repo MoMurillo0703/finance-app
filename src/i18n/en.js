@@ -455,5 +455,22 @@ export default {
       seeAll: 'See all',
       spentOfProjected: 'Spent {{spent}} of projected {{projected}} this month',
       recurringThisMonth: '{{amount}} in recurring charges this month.',
+
+      // Statement snapshot & intro rates
+      statementSnapshot: 'This billing cycle',
+      newCharges: 'New charges',
+      payToAvoidInterest: 'Pay to avoid interest',
+      minimumDue: 'Minimum due',
+      introRate: 'Intro rate',
+      introRateExpires: 'Intro rate expires',
+      introRateWarning: 'intro rate expires in',
+      daysLeft: 'days',
+      financialTrends: 'Financial Trends',
+      avgIncome: 'Avg income',
+      avgExpenses: 'Avg expenses',
+      avgNet: 'Avg net',
+      trendImproving: 'Your financial trend is improving',
+      trendDeclining: 'Your expenses are trending up',
+      payWithCard: 'Pay with credit card',
     }
   }

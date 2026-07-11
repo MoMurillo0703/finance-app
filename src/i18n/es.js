@@ -455,5 +455,22 @@ export default {
       seeAll: 'Ver todo',
       spentOfProjected: 'Gastado {{spent}} de {{projected}} proyectado este mes',
       recurringThisMonth: '{{amount}} en cargos recurrentes este mes.',
+
+      // Statement snapshot & intro rates
+      statementSnapshot: 'Este ciclo de facturación',
+      newCharges: 'Nuevos cargos',
+      payToAvoidInterest: 'Pagar para evitar intereses',
+      minimumDue: 'Pago mínimo',
+      introRate: 'Tasa introductoria',
+      introRateExpires: 'Tasa intro vence',
+      introRateWarning: 'tasa intro vence en',
+      daysLeft: 'días',
+      financialTrends: 'Tendencias Financieras',
+      avgIncome: 'Ingreso promedio',
+      avgExpenses: 'Gastos promedio',
+      avgNet: 'Neto promedio',
+      trendImproving: 'Tu tendencia financiera está mejorando',
+      trendDeclining: 'Tus gastos están aumentando',
+      payWithCard: 'Pagar con tarjeta',
     }
   }
