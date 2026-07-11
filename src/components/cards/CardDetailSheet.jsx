@@ -58,7 +58,8 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
   const currency = liveCard.currency || 'COP'
   const limit = liveCard.credit_limit || 0
   const balance = liveCard.current_balance || 0
-  const available = limit - balance
+  const availableCredit = Math.max(0, limit - balance)
+  const isOverLimit = balance > limit
   const utilization = limit > 0 ? Math.min((balance / limit) * 100, 100) : 0
   const estimate = useMemo(() => calculateMinimumPayment(liveCard, cuotas), [liveCard, cuotas])
   const totalMinimum = estimate.totalMinimum
@@ -193,9 +194,19 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
                   </button>
                 </div>
               </div>
-              <p className="text-3xl font-bold mb-1">{formatMoney(available, currency)}</p>
+              {isOverLimit && (
+                <span className="inline-block text-xs bg-red-500 text-white px-2 py-1 rounded-full mb-2">
+                  ⚠️ {t('overLimit')}
+                </span>
+              )}
+              <p className={`text-xs mb-1 ${isOverLimit ? 'text-red-400' : 'text-gray-400'}`}>
+                {isOverLimit ? t('overLimit') : t('availableCredit')}
+              </p>
+              <p className={`text-3xl font-bold mb-1 ${isOverLimit ? 'text-red-400' : ''}`}>
+                {formatMoney(isOverLimit ? 0 : availableCredit, currency)}
+              </p>
               <p className="text-xs text-gray-400 mb-3">
-                {t('availableCredit')} · {formatMoney(limit, currency)}
+                {t('of')} {formatMoney(limit, currency)}
               </p>
               <div className="w-full bg-white/20 rounded-full h-1.5 mb-1">
                 <div
@@ -289,7 +300,7 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
                                     {CATEGORY_EMOJI[cat] || CATEGORY_EMOJI.other}
                                   </span>
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-medium text-gray-800 truncate">
+                                    <p className="text-xs font-medium text-gray-800 truncate max-w-[60%]">
                                       {tx.description || t(tx.type)}
                                     </p>
                                     <p className="text-[10px] text-gray-400">

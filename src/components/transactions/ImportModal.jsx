@@ -466,46 +466,79 @@ export default function ImportModal({ onClose, onComplete }) {
     const bankId = account.accountType === 'bank' ? account.id : null
     const cardId = account.accountType === 'card' ? account.id : null
 
-    const inserts = checked.map(row => ({
-      user_id: user.id,
-      bank_id: bankId,
-      credit_card_id: cardId,
-      type: row.type,
-      amount: row.amount,
-      description: row.description,
-      category: categoryForDb(row.category),
-      transaction_date: row.date,
-    }))
+    const inserts = []
+    const importedRows = []
+    let skippedDuplicates = 0
 
-    try {
-      const { data: inserted, error: insertError } = await supabase
-        .from('transactions')
-        .insert(inserts)
-        .select('id')
+    for (const row of checked) {
+      const desc = row.description?.trim()
+      if (desc) {
+        let dupQuery = supabase
+          .from('transactions')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('transaction_date', row.date)
+          .eq('amount', Math.abs(row.amount))
+          .ilike('description', desc.substring(0, 20) + '%')
+          .limit(1)
 
-      if (insertError) {
-        console.error('Import insert failed:', insertError)
-        setError(insertError.message)
-        setImporting(false)
-        return
+        if (cardId) {
+          dupQuery = dupQuery.eq('credit_card_id', cardId)
+        } else if (bankId) {
+          dupQuery = dupQuery.eq('bank_id', bankId)
+        }
+
+        const { data: existing } = await dupQuery
+        if (existing?.length > 0) {
+          skippedDuplicates++
+          continue
+        }
       }
 
-      if (!inserted || inserted.length === 0) {
-        console.error('Import insert returned no rows — check RLS policies')
-        setError(t('importInsertFailed'))
-        setImporting(false)
-        return
+      importedRows.push(row)
+      inserts.push({
+        user_id: user.id,
+        bank_id: bankId,
+        credit_card_id: cardId,
+        type: row.type,
+        amount: row.amount,
+        description: row.description,
+        category: categoryForDb(row.category),
+        transaction_date: row.date,
+      })
+    }
+
+    try {
+      if (inserts.length > 0) {
+        const { data: inserted, error: insertError } = await supabase
+          .from('transactions')
+          .insert(inserts)
+          .select('id')
+
+        if (insertError) {
+          console.error('Import insert failed:', insertError)
+          setError(insertError.message)
+          setImporting(false)
+          return
+        }
+
+        if (!inserted || inserted.length === 0) {
+          console.error('Import insert returned no rows — check RLS policies')
+          setError(t('importInsertFailed'))
+          setImporting(false)
+          return
+        }
       }
 
       let incomeTotal = 0
       let expenseTotal = 0
-      checked.forEach(row => {
+      importedRows.forEach(row => {
         if (row.type === 'income') incomeTotal += row.amount
         else expenseTotal += row.amount
       })
 
-      if (bankId) {
-        const delta = checked.reduce((sum, row) => sum + bankDelta(row.type, row.amount), 0)
+      if (bankId && importedRows.length > 0) {
+        const delta = importedRows.reduce((sum, row) => sum + bankDelta(row.type, row.amount), 0)
         const balanceError = await adjustBankBalance(bankId, delta)
         if (balanceError) {
           console.error('Import bank balance update failed:', balanceError)
@@ -515,8 +548,8 @@ export default function ImportModal({ onClose, onComplete }) {
         }
       }
 
-      if (cardId) {
-        const delta = checked.reduce((sum, row) => sum + cardDelta(row.type, row.amount), 0)
+      if (cardId && importedRows.length > 0) {
+        const delta = importedRows.reduce((sum, row) => sum + cardDelta(row.type, row.amount), 0)
         const balanceError = await adjustCardBalance(cardId, delta)
         if (balanceError) {
           console.error('Import card balance update failed:', balanceError)
@@ -526,9 +559,10 @@ export default function ImportModal({ onClose, onComplete }) {
         }
       }
 
-      const summaryData = buildSummary(checked)
+      const summaryData = buildSummary(importedRows)
       setPendingSummary({
-        count: checked.length,
+        count: importedRows.length,
+        skippedDuplicates,
         incomeTotal,
         expenseTotal,
         ...summaryData,
@@ -540,7 +574,8 @@ export default function ImportModal({ onClose, onComplete }) {
         setShowInterestPrompt(true)
       } else {
         setSummary({
-          count: checked.length,
+          count: importedRows.length,
+          skippedDuplicates,
           incomeTotal,
           expenseTotal,
           ...summaryData,
@@ -925,14 +960,22 @@ export default function ImportModal({ onClose, onComplete }) {
 
         {step === 4 && summary && (
           <div className="space-y-6">
-            <div className="bg-green-50 border border-green-100 rounded-xl p-4">
+            <div className="bg-green-50 border border-green-100 rounded-xl p-4 space-y-1">
               <p className="text-sm text-green-800">
-                {t('importSummary', {
-                  count: summary.count,
-                  expenses: formatMoney(summary.expenseTotal, currency),
-                  income: formatMoney(summary.incomeTotal, currency),
+                {t('importDuplicateSummary', {
+                  imported: summary.count,
+                  skipped: summary.skippedDuplicates || 0,
                 })}
               </p>
+              {summary.count > 0 && (
+                <p className="text-xs text-green-700">
+                  {t('importSummary', {
+                    count: summary.count,
+                    expenses: formatMoney(summary.expenseTotal, currency),
+                    income: formatMoney(summary.incomeTotal, currency),
+                  })}
+                </p>
+              )}
             </div>
 
             <div>
