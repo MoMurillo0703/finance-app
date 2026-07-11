@@ -49,7 +49,7 @@ function SectionTitle({ children }) {
   return <p className="text-sm font-semibold text-gray-700 mb-3">{children}</p>
 }
 
-export default function ReportsScreen() {
+export default function ReportsScreen({ setHideNav }) {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const now = new Date()
@@ -85,6 +85,11 @@ export default function ReportsScreen() {
   const sixMonthsAgo = new Date()
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
   const trendStart = sixMonthsAgo.toISOString().split('T')[0]
+
+  useEffect(() => {
+    setHideNav?.(showBudgets)
+    return () => setHideNav?.(false)
+  }, [showBudgets, setHideNav])
 
   useEffect(() => {
     let active = true

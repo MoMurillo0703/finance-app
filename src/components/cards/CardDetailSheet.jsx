@@ -57,7 +57,7 @@ function formatMonthLabel(monthKey, language) {
   })
 }
 
-export default function CardDetailSheet({ card: initialCard, onClose, onUpdated }) {
+export default function CardDetailSheet({ card: initialCard, onClose, onUpdated, setHideNav }) {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const [liveCard, setLiveCard] = useState(initialCard)
@@ -80,6 +80,11 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
   const [statements, setStatements] = useState([])
   const [showLogStatement, setShowLogStatement] = useState(false)
   const [showEditCard, setShowEditCard] = useState(false)
+
+  useEffect(() => {
+    setHideNav?.(true)
+    return () => setHideNav?.(false)
+  }, [setHideNav])
 
   const currency = liveCard.currency || 'COP'
   const limit = liveCard.credit_limit || 0

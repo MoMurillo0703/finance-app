@@ -65,6 +65,7 @@ export default function TransactionsScreen({
   filterBankName,
   filterFrom,
   onClearFilter,
+  setHideNav,
 }) {
   const { t, i18n } = useTranslation()
   const isFiltered = Boolean(filterCreditCardId || filterBankId)
@@ -381,6 +382,7 @@ export default function TransactionsScreen({
         <ImportModal
           onClose={() => setShowImport(false)}
           onComplete={handleTransactionSaved}
+          setHideNav={setHideNav}
         />
       )}
 

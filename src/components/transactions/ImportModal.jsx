@@ -296,11 +296,16 @@ function amountsSimilar(a, b) {
   return avg > 0 && Math.abs(a - b) / avg <= 0.1
 }
 
-export default function ImportModal({ onClose, onComplete }) {
+export default function ImportModal({ onClose, onComplete, setHideNav }) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const fileInputRef = useRef(null)
   const currency = getUserCurrency()
+
+  useEffect(() => {
+    setHideNav?.(true)
+    return () => setHideNav?.(false)
+  }, [setHideNav])
 
   const [step, setStep] = useState(1)
   const [dragOver, setDragOver] = useState(false)

@@ -19,6 +19,7 @@ function AppContent() {
   const [showSignup, setShowSignup] = useState(false)
   const [activeTab, setActiveTab] = useState('home')
   const [showSettings, setShowSettings] = useState(false)
+  const [hideNav, setHideNav] = useState(false)
   const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0)
   const [prefsVersion, setPrefsVersion] = useState(0)
   const [txFilter, setTxFilter] = useState(null)
@@ -26,6 +27,7 @@ function AppContent() {
 
   const bumpDashboard = () => setDashboardRefreshKey(k => k + 1)
   const bumpPrefs = () => setPrefsVersion(v => v + 1)
+  const navHidden = hideNav || showSettings || showOnboarding
 
   const completeOnboarding = () => {
     localStorage.setItem('onboarding_complete', 'true')
@@ -68,12 +70,12 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-20">
       <AppHeader
         activeTab={activeTab}
         onSettings={() => setShowSettings(true)}
       />
-      <main className="pt-14 pb-20">
+      <div className="pt-14">
         {activeTab === 'home' && (
           <Dashboard
             refreshKey={`${dashboardRefreshKey}-${prefsVersion}`}
@@ -94,6 +96,7 @@ function AppContent() {
               setActiveTab(dest)
             }}
             onTransactionSaved={bumpDashboard}
+            setHideNav={setHideNav}
           />
         )}
         {activeTab === 'bills' && <BillsScreen key={prefsVersion} onBillPaid={bumpDashboard} />}
@@ -102,11 +105,18 @@ function AppContent() {
             key={prefsVersion}
             refreshKey={dashboardRefreshKey}
             onAccountSaved={bumpDashboard}
+            setHideNav={setHideNav}
           />
         )}
-        {activeTab === 'reports' && <ReportsScreen key={prefsVersion} />}
-      </main>
-      <BottomNav active={activeTab} onChange={handleTabChange} />
+        {activeTab === 'reports' && (
+          <ReportsScreen
+            key={prefsVersion}
+            setHideNav={setHideNav}
+          />
+        )}
+      </div>
+
+      {!navHidden && <BottomNav active={activeTab} onChange={handleTabChange} />}
 
       {showSettings && (
         <SettingsScreen

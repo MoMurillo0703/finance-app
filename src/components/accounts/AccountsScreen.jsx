@@ -24,7 +24,7 @@ function accountTypeLabel(type, t) {
   return type
 }
 
-export default function AccountsScreen({ onAccountSaved, refreshKey = 0 }) {
+export default function AccountsScreen({ onAccountSaved, refreshKey = 0, setHideNav }) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [banks, setBanks] = useState([])
@@ -337,6 +337,7 @@ export default function AccountsScreen({ onAccountSaved, refreshKey = 0 }) {
       {detailCard && (
         <CardDetailSheet
           card={detailCard}
+          setHideNav={setHideNav}
           onClose={() => setDetailCard(null)}
           onUpdated={async () => {
             setDataRefreshKey(k => k + 1)

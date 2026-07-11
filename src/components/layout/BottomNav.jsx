@@ -13,7 +13,7 @@ export default function BottomNav({ active, onChange }) {
   const { t } = useTranslation()
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex z-40">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex z-[125]">
       {TAB_CONFIG.map(tab => {
         const Icon = tab.icon
         const isActive = active === tab.key
