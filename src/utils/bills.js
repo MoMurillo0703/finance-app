@@ -28,6 +28,9 @@ export function isBillPaidThisMonth(bill) {
 }
 
 export function getBillDisplayAmount(bill, cardMap = {}) {
+  if (bill.loan_id) {
+    return Number(bill.amount) || 0
+  }
   if (bill.is_auto_card_bill && bill.credit_card_id) {
     const card = cardMap[bill.credit_card_id]
     if (card) return calculateAutoBillMinimum(card)

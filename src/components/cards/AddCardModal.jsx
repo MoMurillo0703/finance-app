@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import { formatMoney, getUserCurrency } from '../../utils/currency'
 import { useCurrencyInput, currencyAmountPlaceholder } from '../../hooks/useCurrencyInput'
 
-const NETWORKS = ['Visa', 'Mastercard', 'Amex', 'Discover']
+const NETWORKS = ['Visa', 'Mastercard', 'Amex', 'Discover', 'Store']
 
 const inputClass =
   'w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400'
@@ -136,7 +136,9 @@ export default function AddCardModal({ onClose, onSaved }) {
             <p className="text-white text-sm font-medium opacity-80">
               {name.trim() || t('cardName')}
             </p>
-            <p className="text-white text-xs font-bold uppercase">{network}</p>
+            <p className="text-white text-xs font-bold uppercase">
+              {network === 'Store' ? `🏪 ${t('storeCredit')}` : network}
+            </p>
           </div>
           <div className="flex justify-between items-end">
             <div>
@@ -170,8 +172,8 @@ export default function AddCardModal({ onClose, onSaved }) {
 
             <div>
               <FieldLabel>{t('network')}</FieldLabel>
-              <div className="grid grid-cols-4 gap-2">
-                {NETWORKS.map(n => (
+              <div className="grid grid-cols-3 gap-2">
+                {NETWORKS.slice(0, 3).map(n => (
                   <button
                     key={n}
                     type="button"
@@ -183,6 +185,22 @@ export default function AddCardModal({ onClose, onSaved }) {
                     }`}
                   >
                     {n}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-2 mt-2 max-w-[66%] mx-auto">
+                {NETWORKS.slice(3).map(n => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setNetwork(n)}
+                    className={`py-2 rounded-xl text-xs font-medium border ${
+                      network === n
+                        ? 'bg-purple-600 text-white border-purple-600'
+                        : 'border-gray-200 text-gray-500'
+                    }`}
+                  >
+                    {n === 'Store' ? `🏪 ${n}` : n}
                   </button>
                 ))}
               </div>

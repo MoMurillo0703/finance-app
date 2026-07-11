@@ -17,11 +17,19 @@ import { adjustBankBalance, adjustCardBalance, bankDelta, cardDelta } from '../.
 import { CATEGORY_EMOJI, normalizeSpendingCategory } from '../../utils/reports'
 import CuotasSection from './CuotasSection'
 import CardEstimatorPanel from './CardEstimatorPanel'
+import PromoSection from './PromoSection'
 import AddTransactionModal from '../transactions/AddTransactionModal'
 import AddCuotaModal from './AddCuotaModal'
 import PurchaseSimulator from '../simulator/PurchaseSimulator'
 
-const TABS = ['transactions', 'cuotas', 'estimator']
+
+function getPromoDaysLeft(expirationDate) {
+  const expires = new Date(expirationDate)
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
+  expires.setHours(0, 0, 0, 0)
+  return Math.ceil((expires - now) / (1000 * 60 * 60 * 24))
+}
 
 function groupByMonth(transactions) {
   const groups = {}
@@ -64,6 +72,7 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
   const [paying, setPaying] = useState(false)
   const [paymentError, setPaymentError] = useState('')
   const [statementSnapshot, setStatementSnapshot] = useState(null)
+  const [urgentPromos, setUrgentPromos] = useState([])
 
   const currency = liveCard.currency || 'COP'
   const limit = liveCard.credit_limit || 0
@@ -72,7 +81,13 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
   const isOverLimit = balance > limit
   const utilization = limit > 0 ? Math.min((balance / limit) * 100, 100) : 0
   const copUser = isCOPUser()
-  const visibleTabs = copUser ? TABS : TABS.filter(tab => tab !== 'cuotas')
+  const visibleTabs = useMemo(() => {
+    const tabs = ['transactions']
+    if (copUser) tabs.push('cuotas')
+    if (!copUser) tabs.push('promotions')
+    tabs.push('estimator')
+    return tabs
+  }, [copUser])
   const estimate = useMemo(() => calculateMinimumPayment(liveCard, copUser ? cuotas : []), [liveCard, cuotas, copUser])
   const totalMinimum = estimate.totalMinimum
   const introActive = isIntroRateActive(liveCard)
@@ -99,7 +114,7 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
   }
 
   const refreshData = async () => {
-    const [cardRes, cuotasRes, txRes] = await Promise.all([
+    const [cardRes, cuotasRes, txRes, promosRes] = await Promise.all([
       supabase.from('credit_cards').select('*').eq('id', initialCard.id).single(),
       supabase
         .from('cuotas')
@@ -113,6 +128,12 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
         .eq('user_id', user.id)
         .eq('credit_card_id', initialCard.id)
         .order('transaction_date', { ascending: false }),
+      supabase
+        .from('promotional_purchases')
+        .select('*')
+        .eq('credit_card_id', initialCard.id)
+        .eq('is_active', true)
+        .gt('remaining_balance', 0),
     ])
 
     if (cardRes.data) {
@@ -121,6 +142,10 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
     }
     setCuotas(cuotasRes.data ?? [])
     setTransactions(txRes.data ?? [])
+    setUrgentPromos((promosRes.data ?? []).filter(promo => {
+      const daysLeft = getPromoDaysLeft(promo.expiration_date)
+      return daysLeft <= 60 && daysLeft > 0
+    }))
     setLoadingTx(false)
     setRefreshKey(k => k + 1)
     onUpdated?.()
@@ -214,7 +239,11 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
             <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-5 text-white">
               <div className="flex justify-between items-start">
                 <div className="flex-1 min-w-0 pr-3">
-                  <p className="text-xs text-gray-400 mb-0.5">{liveCard.network}</p>
+                  <p className="text-xs text-gray-400 mb-0.5">
+                    {liveCard.network === 'Store'
+                      ? `🏪 ${t('storeCredit')}`
+                      : liveCard.network}
+                  </p>
                   <div className="flex items-center gap-2 flex-wrap mb-3">
                     <p className="text-lg font-bold text-white">{liveCard.name}</p>
                     {introActive && (
@@ -268,6 +297,12 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
                 <span>{t('limit')}: {formatMoney(limit, currency)}</span>
               </div>
             </div>
+
+            {urgentPromos.length > 0 && (
+              <div className="mx-4 mt-2 bg-amber-100 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-800">
+                ⚠️ {t('promosExpiringBanner', { count: urgentPromos.length })}
+              </div>
+            )}
 
             {statementSnapshot && (
               <div className="mx-4 mt-4 bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
@@ -364,7 +399,10 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
                       : 'text-gray-400'
                   }`}
                 >
-                  {tab === 'transactions' ? t('transactions') : tab === 'cuotas' ? t('cuotas') : t('estimator')}
+                  {tab === 'transactions' ? t('transactions')
+                    : tab === 'cuotas' ? t('cuotas')
+                      : tab === 'promotions' ? t('promotions')
+                        : t('estimator')}
                 </button>
               ))}
             </div>
@@ -424,6 +462,15 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
                   refreshKey={refreshKey}
                   onUpdated={refreshData}
                   hideEstimator
+                />
+              )}
+
+              {!copUser && activeTab === 'promotions' && (
+                <PromoSection
+                  card={liveCard}
+                  currency={currency}
+                  refreshKey={refreshKey}
+                  onUpdated={refreshData}
                 />
               )}
 

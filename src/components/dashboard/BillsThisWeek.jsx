@@ -110,7 +110,10 @@ export default function BillsThisWeek({ refreshKey }) {
                 key={bill.id}
                 className={`min-w-[130px] bg-white rounded-2xl p-3 border border-gray-100 border-l-4 shadow-sm flex-shrink-0 ${getBillBorderClass(bill, today)}`}
               >
-                <p className="text-xs font-semibold text-gray-700 truncate">{bill.name}</p>
+                <p className="text-xs font-semibold text-gray-700 truncate">
+                  {bill.loan_id && <span className="mr-0.5">🏦</span>}
+                  {bill.name}
+                </p>
                 <p className="text-base font-bold text-gray-800 mt-1">{formatMoney(displayAmount)}</p>
                 <p className="text-[10px] text-gray-400 mt-0.5">
                   {t('dueDay')} {bill.due_day}

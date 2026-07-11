@@ -484,5 +484,23 @@ export default {
       paymentDue: 'Pago vence',
       hasIntroRate: 'Esta tarjeta tiene tasa introductoria/promocional',
       dayPlaceholder: 'Día',
+
+      // Promotions & store credit
+      promotions: 'Promociones',
+      promoBalances: 'Saldos promocionales',
+      addPromo: 'Agregar promo',
+      remainingBalance: 'Saldo restante',
+      deferredInterest: 'Interés diferido',
+      payInFullBy: 'Pagar en su totalidad antes del',
+      originalPurchase: 'Compra original',
+      promoExpiringSoon: 'saldo promo por vencer',
+      payToAvoidDeferred: 'para evitar interés diferido',
+      storeCredit: 'Crédito de tienda',
+      loanPayment: 'Pago',
+      noPromos: 'Sin compras promocionales registradas',
+      expired: 'Vencido',
+      promoMonthlyPay: 'Paga {{amount}}/mes para evitar {{deferred}} en interés diferido',
+      promosExpiringWarning: '{{count}} saldo(s) promo por vencer — paga en su totalidad para evitar interés diferido',
+      promosExpiringBanner: '{{count}} saldo(s) promocional(es) por vencer. Toca la pestaña Promociones.',
     }
   }

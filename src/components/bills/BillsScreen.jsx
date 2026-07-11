@@ -110,7 +110,10 @@ export default function BillsScreen({ onBillPaid }) {
                   >
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-sm font-medium text-gray-700">{bill.name}</p>
+                        <p className="text-sm font-medium text-gray-700">
+                          {bill.loan_id && <span className="mr-1">🏦</span>}
+                          {bill.name}
+                        </p>
                         <p className="text-xs text-gray-400 mt-0.5">
                           {t('dueDay')}: {bill.due_day}
                         </p>

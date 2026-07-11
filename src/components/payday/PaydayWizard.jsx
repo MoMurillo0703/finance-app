@@ -70,7 +70,7 @@ export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefi
       type: 'income',
       category: 'salary',
       amount: parsedAmount,
-      description: t('nomina'),
+      description: 'Paycheck',
       transaction_date: today,
     })
 

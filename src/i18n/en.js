@@ -484,5 +484,23 @@ export default {
       paymentDue: 'Payment due',
       hasIntroRate: 'This card has an intro/promotional rate',
       dayPlaceholder: 'Day',
+
+      // Promotions & store credit
+      promotions: 'Promotions',
+      promoBalances: 'Promotional Balances',
+      addPromo: 'Add promo',
+      remainingBalance: 'Remaining balance',
+      deferredInterest: 'Deferred interest',
+      payInFullBy: 'Pay in full by',
+      originalPurchase: 'Original purchase',
+      promoExpiringSoon: 'promo balance expiring soon',
+      payToAvoidDeferred: 'to avoid deferred interest',
+      storeCredit: 'Store credit',
+      loanPayment: 'Payment',
+      noPromos: 'No promotional purchases tracked',
+      expired: 'Expired',
+      promoMonthlyPay: 'Pay {{amount}}/mo to avoid {{deferred}} in deferred interest',
+      promosExpiringWarning: '{{count}} promo balance(s) expiring soon — pay in full to avoid deferred interest',
+      promosExpiringBanner: '{{count}} promotional balance(s) expiring soon. Tap Promotions tab to view.',
     }
   }

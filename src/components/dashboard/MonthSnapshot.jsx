@@ -25,6 +25,7 @@ export default function MonthSnapshot({ refreshKey, onViewReports }) {
   const [loans, setLoans] = useState([])
   const [budgets, setBudgets] = useState([])
   const [creditCards, setCreditCards] = useState([])
+  const [expiringPromos, setExpiringPromos] = useState([])
   const [loading, setLoading] = useState(true)
 
   const now = new Date()
@@ -37,8 +38,13 @@ export default function MonthSnapshot({ refreshKey, onViewReports }) {
   useEffect(() => {
     let active = true
 
+    const sixtyDaysFromNow = new Date()
+    sixtyDaysFromNow.setDate(sixtyDaysFromNow.getDate() + 60)
+    const promoCutoff = sixtyDaysFromNow.toISOString().split('T')[0]
+    const today = new Date().toISOString().split('T')[0]
+
     ;(async () => {
-      const [txRes, loansRes, budgetsRes, cardsRes] = await Promise.all([
+      const [txRes, loansRes, budgetsRes, cardsRes, promosRes] = await Promise.all([
         supabase
           .from('transactions')
           .select('id, type, amount, description, transaction_date, category')
@@ -59,6 +65,14 @@ export default function MonthSnapshot({ refreshKey, onViewReports }) {
           .select('id, name, intro_rate, intro_rate_expires')
           .eq('user_id', user.id)
           .eq('is_active', true),
+        supabase
+          .from('promotional_purchases')
+          .select('*, credit_cards(name)')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .lte('expiration_date', promoCutoff)
+          .gt('expiration_date', today)
+          .gt('remaining_balance', 0),
       ])
 
       if (!active) return
@@ -66,6 +80,7 @@ export default function MonthSnapshot({ refreshKey, onViewReports }) {
       setLoans(loansRes.data ?? [])
       setBudgets(budgetsRes.data ?? [])
       setCreditCards(cardsRes.data ?? [])
+      setExpiringPromos(promosRes.data ?? [])
       setLoading(false)
     })()
 
@@ -179,6 +194,12 @@ export default function MonthSnapshot({ refreshKey, onViewReports }) {
           </p>
         )
       })}
+
+      {expiringPromos.length > 0 && (
+        <p className="text-xs text-amber-600 mt-1 font-medium">
+          ⚠️ {t('promosExpiringWarning', { count: expiringPromos.length })}
+        </p>
+      )}
 
       {recurringThisMonth > 0 && (
         <button

@@ -57,7 +57,11 @@ export default function AddLoanModal({ onClose, onSaved }) {
     const resolvedEndDate = resolveEndDate(endDate, balance, rate, payment)
 
     setSaving(true)
-    const { error: dbError } = await supabase.from('loans').insert({
+    const dueDayNum = dueDay ? parseInt(dueDay, 10) : null
+
+    const { data: newLoan, error: dbError } = await supabase
+      .from('loans')
+      .insert({
       user_id: user.id,
       name: name.trim(),
       loan_type: loanType,
@@ -66,18 +70,40 @@ export default function AddLoanModal({ onClose, onSaved }) {
       current_balance: balance,
       interest_rate: rate,
       monthly_payment: payment,
-      due_day: dueDay ? parseInt(dueDay, 10) : null,
+      due_day: dueDayNum,
       start_date: startDate || null,
       end_date: resolvedEndDate,
       is_active: true,
     })
+      .select('id')
+      .single()
 
     if (dbError) {
       setError(dbError.message)
       setSaving(false)
-    } else {
-      onSaved()
+      return
     }
+
+    if (dueDayNum) {
+      const { error: billError } = await supabase.from('bills').insert({
+        user_id: user.id,
+        name: `${name.trim()} - ${t('loanPayment')}`,
+        amount: payment,
+        due_day: dueDayNum,
+        loan_id: newLoan.id,
+        is_auto_card_bill: true,
+        is_active: true,
+      })
+
+      if (billError) {
+        setError(billError.message)
+        setSaving(false)
+        return
+      }
+    }
+
+    setSaving(false)
+    onSaved()
   }
 
   return (

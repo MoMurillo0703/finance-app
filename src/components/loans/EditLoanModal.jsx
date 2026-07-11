@@ -144,9 +144,15 @@ export default function EditLoanModal({ loan, onClose, onSaved }) {
     if (dbError) {
       setError(dbError.message)
       setDeleting(false)
-    } else {
-      onSaved()
+      return
     }
+
+    await supabase
+      .from('bills')
+      .update({ is_active: false })
+      .eq('loan_id', loan.id)
+
+    onSaved()
   }
 
   return (
