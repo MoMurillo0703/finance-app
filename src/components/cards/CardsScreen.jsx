@@ -4,20 +4,19 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import AddCardModal from './AddCardModal'
 import EditCardModal from './EditCardModal'
-import AddCuotaModal from './AddCuotaModal'
-import CuotasSection from './CuotasSection'
+import CardDetailSheet from './CardDetailSheet'
 
 import { formatMoney } from '../../utils/currency'
+import { getCardApr } from '../../utils/cards'
 
-export default function CardsScreen({ onCardSaved, onViewTransactions }) {
+export default function CardsScreen({ onCardSaved }) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [cards, setCards] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
   const [editingCard, setEditingCard] = useState(null)
-  const [expandedCardId, setExpandedCardId] = useState(null)
-  const [addCuotaCard, setAddCuotaCard] = useState(null)
+  const [detailCard, setDetailCard] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
@@ -42,18 +41,26 @@ export default function CardsScreen({ onCardSaved, onViewTransactions }) {
   const handleSaved = () => {
     setShowAdd(false)
     setEditingCard(null)
-    setAddCuotaCard(null)
     setRefreshKey(k => k + 1)
     onCardSaved?.()
   }
 
-  const toggleCuotas = (cardId) => {
-    setExpandedCardId(prev => (prev === cardId ? null : cardId))
+  const handleDetailUpdated = () => {
+    setRefreshKey(k => k + 1)
+    onCardSaved?.()
+    supabase
+      .from('credit_cards')
+      .select('*')
+      .eq('id', detailCard?.id)
+      .single()
+      .then(({ data }) => {
+        if (data) setDetailCard(data)
+      })
   }
 
   return (
     <div className="bg-gray-50">
-      <div className="px-5 py-4">
+      <div className="px-5 py-4 pb-24">
         {loading ? (
           <p className="text-gray-400 text-xs text-center py-8">{t('loading')}</p>
         ) : cards.length === 0 ? (
@@ -73,24 +80,30 @@ export default function CardsScreen({ onCardSaved, onViewTransactions }) {
               const balance = card.current_balance || 0
               const limit = card.credit_limit || 0
               const utilization = limit > 0 ? Math.min((balance / limit) * 100, 100) : 0
-              const isExpanded = expandedCardId === card.id
 
               return (
                 <div
                   key={card.id}
-                  className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm"
+                  className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm flex items-start gap-3"
                 >
                   <button
                     type="button"
-                    onClick={() => onViewTransactions?.(card)}
-                    className="w-full text-left"
+                    onClick={() => setDetailCard(card)}
+                    className="flex-1 min-w-0 text-left"
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <p className="text-sm font-medium text-gray-700">{card.name}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{card.network}</p>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                            {card.network}
+                          </span>
+                          <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                            {t('interestRateShort', { rate: getCardApr(card).toFixed(2) })}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right shrink-0 pl-2">
                         <p className="text-sm font-bold text-gray-800">{formatMoney(balance, currency)}</p>
                         <p className="text-xs text-gray-400 mt-0.5">
                           {t('limit')}: {formatMoney(limit, currency)}
@@ -108,42 +121,14 @@ export default function CardsScreen({ onCardSaved, onViewTransactions }) {
                         {t('utilization')}: {Math.round(utilization)}%
                       </p>
                     )}
-                    <p className="text-[10px] text-purple-600 mt-2 font-medium">
-                      {t('viewTransactions')} →
-                    </p>
                   </button>
-
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      type="button"
-                      onClick={() => toggleCuotas(card.id)}
-                      className="flex-1 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-[10px] font-medium"
-                    >
-                      {isExpanded ? t('hideCuotas') : t('viewCuotas')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setAddCuotaCard(card)}
-                      className="flex-1 py-1.5 rounded-lg border border-purple-200 text-purple-600 text-[10px] font-medium"
-                    >
-                      + {t('addCuota')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditingCard(card)}
-                      className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 text-[10px] font-medium"
-                    >
-                      {t('edit')}
-                    </button>
-                  </div>
-
-                  {isExpanded && (
-                    <CuotasSection
-                      card={card}
-                      refreshKey={refreshKey}
-                      onUpdated={handleSaved}
-                    />
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setEditingCard(card)}
+                    className="text-[10px] text-purple-600 shrink-0 pt-0.5"
+                  >
+                    {t('edit')}
+                  </button>
                 </div>
               )
             })}
@@ -174,11 +159,11 @@ export default function CardsScreen({ onCardSaved, onViewTransactions }) {
         />
       )}
 
-      {addCuotaCard && (
-        <AddCuotaModal
-          card={addCuotaCard}
-          onClose={() => setAddCuotaCard(null)}
-          onSaved={handleSaved}
+      {detailCard && (
+        <CardDetailSheet
+          card={detailCard}
+          onClose={() => setDetailCard(null)}
+          onUpdated={handleDetailUpdated}
         />
       )}
     </div>

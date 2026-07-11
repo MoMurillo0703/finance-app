@@ -27,11 +27,6 @@ function AppContent() {
   const bumpDashboard = () => setDashboardRefreshKey(k => k + 1)
   const bumpPrefs = () => setPrefsVersion(v => v + 1)
 
-  const viewCardTransactions = (card, from = 'cards') => {
-    setTxFilter({ creditCardId: card.id, cardName: card.name, from })
-    setActiveTab('transactions')
-  }
-
   const viewAccountTransactions = (bank) => {
     setTxFilter({ bankId: bank.id, bankName: getBankDisplayName(bank), from: 'settings' })
     setActiveTab('transactions')
@@ -82,7 +77,6 @@ function AppContent() {
           <AccountsScreen
             key={prefsVersion}
             refreshKey={dashboardRefreshKey}
-            onViewCardTransactions={viewCardTransactions}
             onAccountSaved={bumpDashboard}
           />
         )}
@@ -90,7 +84,6 @@ function AppContent() {
           <CardsScreen
             key={prefsVersion}
             onCardSaved={bumpDashboard}
-            onViewTransactions={viewCardTransactions}
           />
         )}
         {activeTab === 'settings' && (

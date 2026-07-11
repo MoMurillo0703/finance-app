@@ -88,6 +88,14 @@ export default {
       sectionCards: "Cards",
       balance: "Balance",
       limit: "Limit",
+      availableCredit: 'Available credit',
+      estMinimumDue: 'Est. minimum due',
+      payCard: 'Pay card',
+      paymentAmount: 'Payment amount',
+      cardTransactions: 'Card transactions',
+      dueDayOfMonth: 'Day {{day}} of month',
+      transaction: 'Transaction',
+      cuota: 'Cuota',
   
       // Cuotas
       cuotas: "Installments",

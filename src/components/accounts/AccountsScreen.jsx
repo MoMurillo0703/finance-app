@@ -9,6 +9,7 @@ import AddBankModal from '../dashboard/AddBankModal'
 import AddCardModal from '../cards/AddCardModal'
 import EditBankModal from '../settings/EditBankModal'
 import EditCardModal from '../cards/EditCardModal'
+import CardDetailSheet from '../cards/CardDetailSheet'
 import AccountHistoryModal from './AccountHistoryModal'
 import LoansSection from '../loans/LoansSection'
 import AddLoanModal from '../loans/AddLoanModal'
@@ -21,7 +22,7 @@ function accountTypeLabel(type, t) {
   return type
 }
 
-export default function AccountsScreen({ onViewCardTransactions, onAccountSaved, refreshKey = 0 }) {
+export default function AccountsScreen({ onAccountSaved, refreshKey = 0 }) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [banks, setBanks] = useState([])
@@ -35,6 +36,7 @@ export default function AccountsScreen({ onViewCardTransactions, onAccountSaved,
   const [editingBank, setEditingBank] = useState(null)
   const [editingCard, setEditingCard] = useState(null)
   const [editingLoan, setEditingLoan] = useState(null)
+  const [detailCard, setDetailCard] = useState(null)
   const [historyBank, setHistoryBank] = useState(null)
   const [dataRefreshKey, setDataRefreshKey] = useState(0)
 
@@ -168,7 +170,7 @@ export default function AccountsScreen({ onViewCardTransactions, onAccountSaved,
                   >
                     <button
                       type="button"
-                      onClick={() => onViewCardTransactions?.(card, 'accounts')}
+                      onClick={() => setDetailCard(card)}
                       className="flex-1 min-w-0 text-left"
                     >
                       <p className="text-sm font-semibold text-gray-800">{card.name}</p>
@@ -304,6 +306,23 @@ export default function AccountsScreen({ onViewCardTransactions, onAccountSaved,
         <AccountHistoryModal
           bank={historyBank}
           onClose={() => setHistoryBank(null)}
+        />
+      )}
+
+      {detailCard && (
+        <CardDetailSheet
+          card={detailCard}
+          onClose={() => setDetailCard(null)}
+          onUpdated={async () => {
+            setDataRefreshKey(k => k + 1)
+            const { data } = await supabase
+              .from('credit_cards')
+              .select('*')
+              .eq('id', detailCard.id)
+              .single()
+            if (data) setDetailCard(data)
+            onAccountSaved?.()
+          }}
         />
       )}
     </div>

@@ -9,7 +9,13 @@ import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
 const EXPENSE_CATEGORIES = ['essential', 'food', 'travel', 'fun', 'bills', 'debt', 'weeklyLiving', 'emergency']
 const INCOME_CATEGORIES = ['salary', 'commission', 'reimbursement']
 
-export default function AddTransactionModal({ onClose, onSaved, onOpenWizard }) {
+export default function AddTransactionModal({
+  onClose,
+  onSaved,
+  onOpenWizard,
+  prefillCardId,
+  lockToCardExpense = false,
+}) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [type, setType] = useState('expense')
@@ -17,9 +23,9 @@ export default function AddTransactionModal({ onClose, onSaved, onOpenWizard }) 
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
-  const [paymentMethod, setPaymentMethod] = useState('bank')
+  const [paymentMethod, setPaymentMethod] = useState(lockToCardExpense ? 'card' : 'bank')
   const [bankId, setBankId] = useState('')
-  const [creditCardId, setCreditCardId] = useState('')
+  const [creditCardId, setCreditCardId] = useState(prefillCardId || '')
   const [vaultId, setVaultId] = useState('')
   const [useInstallments, setUseInstallments] = useState(false)
   const [numCuotas, setNumCuotas] = useState('12')
@@ -30,6 +36,10 @@ export default function AddTransactionModal({ onClose, onSaved, onOpenWizard }) 
   const [error, setError] = useState('')
   const [showDistributePrompt, setShowDistributePrompt] = useState(false)
   const [savedIncome, setSavedIncome] = useState(null)
+
+  useEffect(() => {
+    if (prefillCardId) setCreditCardId(prefillCardId)
+  }, [prefillCardId])
 
   useEffect(() => {
     fetchBanks(supabase, user.id).then(({ data }) => {
@@ -173,7 +183,7 @@ export default function AddTransactionModal({ onClose, onSaved, onOpenWizard }) 
   }
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-end justify-center">
+    <div className={`fixed inset-0 ${lockToCardExpense ? 'z-[120]' : 'z-[110]'} flex items-end justify-center`}>
       <div
         className="absolute inset-0 bg-black opacity-40"
         onClick={onClose}
@@ -189,6 +199,7 @@ export default function AddTransactionModal({ onClose, onSaved, onOpenWizard }) 
         {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
         <div className="space-y-4">
+          {!lockToCardExpense && (
           <div className="flex gap-3">
             <button
               onClick={() => handleTypeChange('expense')}
@@ -203,6 +214,7 @@ export default function AddTransactionModal({ onClose, onSaved, onOpenWizard }) 
               {t('income')}
             </button>
           </div>
+          )}
 
           <div>
             <label className="text-xs text-gray-400 mb-1 block">{t('category')}</label>
@@ -257,7 +269,7 @@ export default function AddTransactionModal({ onClose, onSaved, onOpenWizard }) 
             />
           </div>
 
-          {type === 'expense' && (
+          {type === 'expense' && !lockToCardExpense && (
             <div>
               <label className="text-xs text-gray-400 mb-1 block">{t('paymentMethod')}</label>
               <div className="flex gap-2">
@@ -287,8 +299,10 @@ export default function AddTransactionModal({ onClose, onSaved, onOpenWizard }) 
             </div>
           )}
 
-          {type === 'expense' && paymentMethod === 'card' ? (
+          {type === 'expense' && (lockToCardExpense || paymentMethod === 'card') ? (
             <div>
+              {!lockToCardExpense && (
+              <>
               <label className="text-xs text-gray-400 mb-1 block">{t('creditCard')}</label>
               <select
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
@@ -302,6 +316,8 @@ export default function AddTransactionModal({ onClose, onSaved, onOpenWizard }) 
                   <option key={card.id} value={card.id}>{card.name}</option>
                 ))}
               </select>
+              </>
+              )}
 
               <label className="flex items-center gap-2 mt-3 cursor-pointer">
                 <input
