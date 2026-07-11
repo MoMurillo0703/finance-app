@@ -41,3 +41,30 @@ export function useCurrencyInput(initialValue = '') {
 export function currencyAmountPlaceholder(currency) {
   return currency === 'COP' ? '0' : '0.00'
 }
+
+export function sanitizeCurrencyRaw(val, currency = getUserCurrency()) {
+  if (currency === 'COP') {
+    return val.replace(/\D/g, '')
+  }
+
+  let cleaned = val.replace(/[^\d.]/g, '')
+  const parts = cleaned.split('.')
+  if (parts.length > 2) cleaned = parts[0] + '.' + parts.slice(1).join('')
+  if (parts[1]?.length > 2) cleaned = parts[0] + '.' + parts[1].slice(0, 2)
+  return cleaned
+}
+
+export function formatCurrencyRaw(raw, currency = getUserCurrency()) {
+  if (!raw) return ''
+  const [intPart, decPart] = raw.split('.')
+  const formatted = currency === 'COP'
+    ? Number(intPart || 0).toLocaleString('es-CO')
+    : Number(intPart || 0).toLocaleString('en-US')
+  if (decPart !== undefined) return formatted + '.' + decPart
+  if (raw.endsWith('.')) return formatted + '.'
+  return formatted
+}
+
+export function parseCurrencyRaw(raw) {
+  return parseFloat(raw) || 0
+}

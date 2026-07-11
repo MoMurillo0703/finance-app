@@ -181,6 +181,15 @@ export default {
       commission: "Comisión",
       reimbursement: "Reembolso",
       allocate: "Distribuir",
+      allocated: "Asignado",
+      fullyAllocated: "Totalmente asignado",
+      overAllocatedWarning: "Asignaste más que tu pago",
+      overAllocated: "Sobre asignado — ajusta los montos",
+      saveFullyAllocated: "Guardar — totalmente asignado",
+      saveKeepInChecking: "Guardar y dejar {{amount}} en cuenta",
+      max: "Máx",
+      goalReached: "¡Meta alcanzada!",
+      neededToReachGoal: "Faltan {{amount}} para la meta",
   
       // Manolo
       pet: "Mascota",

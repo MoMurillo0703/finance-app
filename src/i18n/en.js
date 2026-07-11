@@ -181,6 +181,15 @@ export default {
       commission: "Commission",
       reimbursement: "Reimbursement",
       allocate: "Allocate",
+      allocated: "Allocated",
+      fullyAllocated: "Fully allocated",
+      overAllocatedWarning: "You've allocated more than your paycheck",
+      overAllocated: "Over allocated — adjust amounts",
+      saveFullyAllocated: "Save — fully allocated",
+      saveKeepInChecking: "Save & keep {{amount}} in checking",
+      max: "Max",
+      goalReached: "Goal reached!",
+      neededToReachGoal: "{{amount}} needed to reach goal",
   
       // Manolo
       pet: "Pet",

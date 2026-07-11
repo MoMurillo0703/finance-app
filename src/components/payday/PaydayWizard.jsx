@@ -1,25 +1,93 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { adjustBankBalance, adjustVaultBalance } from '../../lib/payments'
-
 import { formatMoney, getUserCurrency } from '../../utils/currency'
 import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
+import {
+  useCurrencyInput,
+  currencyAmountPlaceholder,
+  sanitizeCurrencyRaw,
+  formatCurrencyRaw,
+  parseCurrencyRaw,
+} from '../../hooks/useCurrencyInput'
+
+function VaultAllocationRow({ vault, amount, onAmountChange, onMax, t, currency }) {
+  const [localRaw, setLocalRaw] = useState('')
+  const [editing, setEditing] = useState(false)
+  const newBalance = (vault.current_amount || 0) + amount
+  const toGoal = Math.max(0, (vault.target_amount || 0) - (vault.current_amount || 0))
+
+  useEffect(() => {
+    if (!editing) {
+      setLocalRaw(amount > 0 ? String(amount) : '')
+    }
+  }, [amount, editing])
+
+  const handleChange = (e) => {
+    const val = sanitizeCurrencyRaw(e.target.value, currency)
+    setLocalRaw(val)
+    onAmountChange(vault.id, parseCurrencyRaw(val))
+  }
+
+  const displayValue = editing
+    ? formatCurrencyRaw(localRaw, currency)
+    : formatCurrencyRaw(amount > 0 ? String(amount) : '', currency)
+
+  return (
+    <div className="bg-white rounded-2xl p-4 mb-3 border border-gray-100">
+      <div className="flex justify-between items-start mb-2">
+        <div>
+          <p className="font-medium text-gray-800 text-sm">{vault.name}</p>
+          <p className="text-xs text-gray-400">
+            {formatMoney(vault.current_amount, currency)} → {formatMoney(newBalance, currency)}
+            {vault.target_amount > 0 && ` of ${formatMoney(vault.target_amount, currency)}`}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onMax}
+          className="text-xs text-purple-600 font-medium px-2 py-1 bg-purple-50 rounded-lg"
+        >
+          {t('max')}
+        </button>
+      </div>
+      <input
+        type="text"
+        inputMode="decimal"
+        value={displayValue}
+        onFocus={() => setEditing(true)}
+        onBlur={() => setEditing(false)}
+        onChange={handleChange}
+        placeholder={currencyAmountPlaceholder(currency)}
+        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+      />
+      {vault.target_amount > 0 && toGoal > 0 && amount === 0 && (
+        <p className="text-xs text-gray-400 mt-1">
+          {t('neededToReachGoal', { amount: formatMoney(toGoal, currency) })}
+        </p>
+      )}
+      {vault.target_amount > 0 && newBalance >= vault.target_amount && (
+        <p className="text-xs text-green-500 mt-1">✓ {t('goalReached')}</p>
+      )}
+    </div>
+  )
+}
 
 export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefillBankId }) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const currency = getUserCurrency()
-  const skippedStep1 = prefillAmount != null && prefillAmount > 0
+  const incomeAlreadyRecorded = prefillAmount != null && prefillAmount > 0
 
-  const [step, setStep] = useState(skippedStep1 ? 2 : 1)
-  const [amount, setAmount] = useState(skippedStep1 ? String(prefillAmount) : '')
+  const [step, setStep] = useState(incomeAlreadyRecorded ? 2 : 1)
+  const [payAmount, setPayAmount] = useState(incomeAlreadyRecorded ? prefillAmount : 0)
+  const amountInput = useCurrencyInput(incomeAlreadyRecorded ? prefillAmount : '')
   const [bankId, setBankId] = useState(prefillBankId ?? '')
-  const [incomeRecorded, setIncomeRecorded] = useState(skippedStep1)
   const [banks, setBanks] = useState([])
-  const [vaultFills, setVaultFills] = useState([])
-  const [summary, setSummary] = useState(null)
+  const [vaults, setVaults] = useState([])
+  const [vaultAllocations, setVaultAllocations] = useState([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -37,101 +105,103 @@ export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefi
   const loadVaults = async () => {
     const { data } = await supabase
       .from('vaults')
-      .select('id, name, current_amount')
+      .select('id, name, current_amount, target_amount')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .order('name')
 
-    setVaultFills((data ?? []).map(vault => ({
-      vaultId: vault.id,
-      vaultName: vault.name,
-      currentAmount: vault.current_amount || 0,
-      fillAmount: '0',
-    })))
+    const list = data ?? []
+    setVaults(list)
+    setVaultAllocations(list.map(v => ({ id: v.id, amount: 0 })))
   }
 
   useEffect(() => {
     if (step === 2) loadVaults()
   }, [step])
 
-  const handleStep1Next = async () => {
-    if (!amount || isNaN(amount)) { setError(t('invalidAmount')); return }
-    if (!bankId) { setError(t('selectBank')); return }
+  const totalAllocated = useMemo(
+    () => vaultAllocations.reduce((sum, v) => sum + (v.amount || 0), 0),
+    [vaultAllocations],
+  )
+  const remaining = payAmount - totalAllocated
 
-    setSaving(true)
+  const setVaultAllocation = (vaultId, amount) => {
+    setVaultAllocations(prev =>
+      prev.map(v => (v.id === vaultId ? { ...v, amount: Math.max(0, amount) } : v)),
+    )
+  }
+
+  const handleStep1Next = () => {
+    if (!amountInput.raw || amountInput.numericValue <= 0) {
+      setError(t('invalidAmount'))
+      return
+    }
+    if (!bankId) {
+      setError(t('selectBank'))
+      return
+    }
+
     setError('')
-
-    const parsedAmount = parseFloat(amount)
-    const today = new Date().toISOString().split('T')[0]
-
-    const { error: txError } = await supabase.from('transactions').insert({
-      user_id: user.id,
-      bank_id: bankId,
-      type: 'income',
-      category: 'salary',
-      amount: parsedAmount,
-      description: 'Paycheck',
-      transaction_date: today,
-    })
-
-    if (txError) {
-      setError(txError.message)
-      setSaving(false)
-      return
-    }
-
-    const bankError = await adjustBankBalance(bankId, parsedAmount)
-    if (bankError) {
-      setError(bankError.message)
-      setSaving(false)
-      return
-    }
-
-    setIncomeRecorded(true)
-    setSaving(false)
+    setPayAmount(amountInput.numericValue)
     setStep(2)
   }
 
-  const handleStep2Next = async () => {
+  const handleSave = async () => {
+    if (remaining < 0) return
+
     setSaving(true)
     setError('')
 
-    const filledVaults = []
-    let totalDistributed = 0
+    const today = new Date().toISOString().split('T')[0]
 
-    for (const fill of vaultFills) {
-      const fillAmount = parseFloat(fill.fillAmount)
-      if (!fillAmount || fillAmount <= 0) continue
+    if (!incomeAlreadyRecorded) {
+      const { error: txError } = await supabase.from('transactions').insert({
+        user_id: user.id,
+        bank_id: bankId,
+        type: 'income',
+        category: 'salary',
+        amount: payAmount,
+        description: 'Paycheck',
+        transaction_date: today,
+      })
 
-      const vaultError = await adjustVaultBalance(fill.vaultId, fillAmount)
+      if (txError) {
+        setError(txError.message)
+        setSaving(false)
+        return
+      }
+
+      const bankError = await adjustBankBalance(bankId, payAmount)
+      if (bankError) {
+        setError(bankError.message)
+        setSaving(false)
+        return
+      }
+    }
+
+    for (const allocation of vaultAllocations) {
+      if (!allocation.amount || allocation.amount <= 0) continue
+
+      const vaultError = await adjustVaultBalance(allocation.id, allocation.amount)
       if (vaultError) {
         setError(vaultError.message)
         setSaving(false)
         return
       }
-
-      filledVaults.push({ name: fill.vaultName, amount: fillAmount })
-      totalDistributed += fillAmount
     }
 
-    setSummary({
-      income: incomeRecorded ? parseFloat(amount) : null,
-      filledVaults,
-      totalDistributed,
-    })
-
     setSaving(false)
-    setStep(3)
+    onComplete()
   }
 
-  const updateFill = (vaultId, value) => {
-    setVaultFills(fills =>
-      fills.map(f => (f.vaultId === vaultId ? { ...f, fillAmount: value } : f)),
-    )
-  }
+  const saveLabel = remaining < 0
+    ? t('overAllocated')
+    : remaining === 0
+      ? t('saveFullyAllocated')
+      : t('saveKeepInChecking', { amount: formatMoney(remaining, currency) })
 
-  const stepTitle = [t('wizardIncome'), t('wizardVaults'), t('wizardSummary')][step - 1]
-  const totalSteps = 3
+  const stepTitle = [t('wizardIncome'), t('wizardVaults')][step - 1]
+  const totalSteps = 2
 
   return (
     <div className="fixed inset-0 z-[110] flex items-end justify-center">
@@ -145,7 +215,7 @@ export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefi
         <p className="text-xs text-gray-400 mb-4">{step}/{totalSteps} · {stepTitle}</p>
 
         <div className="flex gap-1 mb-6">
-          {[1, 2, 3].map(s => (
+          {[1, 2].map(s => (
             <div
               key={s}
               className={`h-1 flex-1 rounded-full ${s <= step ? 'bg-amber-500' : 'bg-gray-200'}`}
@@ -161,10 +231,11 @@ export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefi
               <label className="text-xs text-gray-400 mb-1 block">{t('paycheck')} ({currency})</label>
               <input
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                placeholder="0"
-                type="number"
-                value={amount}
-                onChange={e => setAmount(e.target.value)}
+                type="text"
+                inputMode="decimal"
+                placeholder={currencyAmountPlaceholder(currency)}
+                value={amountInput.displayValue}
+                onChange={amountInput.handleChange}
               />
             </div>
             <div>
@@ -184,83 +255,113 @@ export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefi
         )}
 
         {step === 2 && (
-          <div className="space-y-3">
-            {vaultFills.length === 0 ? (
+          <div>
+            <div
+              className={`sticky top-0 z-10 rounded-2xl px-4 py-3 mb-4 ${
+                remaining < 0
+                  ? 'bg-red-50 border border-red-200'
+                  : remaining === 0
+                    ? 'bg-green-50 border border-green-200'
+                    : 'bg-purple-50 border border-purple-100'
+              }`}
+            >
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-xs text-gray-500">{t('paycheck')}</p>
+                  <p className="font-bold text-gray-800">{formatMoney(payAmount, currency)}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-gray-500">{t('allocated')}</p>
+                  <p className="font-bold text-purple-600">{formatMoney(totalAllocated, currency)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-500">{t('remaining')}</p>
+                  <p className={`font-bold text-lg ${
+                    remaining < 0
+                      ? 'text-red-500'
+                      : remaining === 0
+                        ? 'text-green-500'
+                        : 'text-gray-800'
+                  }`}
+                  >
+                    {formatMoney(remaining, currency)}
+                  </p>
+                </div>
+              </div>
+              {remaining < 0 && (
+                <p className="text-xs text-red-500 mt-1">⚠️ {t('overAllocatedWarning')}</p>
+              )}
+              {remaining === 0 && (
+                <p className="text-xs text-green-600 mt-1">✅ {t('fullyAllocated')}</p>
+              )}
+            </div>
+
+            {vaults.length === 0 ? (
               <p className="text-sm text-gray-400 py-4 text-center">{t('noVaults')}</p>
             ) : (
-              vaultFills.map(fill => (
-                <div key={fill.vaultId} className="bg-gray-50 border border-gray-100 rounded-xl p-3">
-                  <div className="flex justify-between items-center mb-2">
-                    <p className="text-sm font-medium text-gray-700">{fill.vaultName}</p>
-                    <p className="text-xs text-gray-400">{formatMoney(fill.currentAmount, currency)}</p>
-                  </div>
-                  <input
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    value={fill.fillAmount}
-                    onChange={e => updateFill(fill.vaultId, e.target.value)}
+              vaults.map(vault => {
+                const allocation = vaultAllocations.find(v => v.id === vault.id)?.amount || 0
+                return (
+                  <VaultAllocationRow
+                    key={vault.id}
+                    vault={vault}
+                    amount={allocation}
+                    currency={currency}
+                    t={t}
+                    onAmountChange={setVaultAllocation}
+                    onMax={() => setVaultAllocation(vault.id, remaining + allocation)}
                   />
-                </div>
-              ))
+                )
+              })
             )}
-          </div>
-        )}
-
-        {step === 3 && summary && (
-          <div className="space-y-3">
-            {summary.income != null && (
-              <div className="bg-green-50 border border-green-100 rounded-xl p-4">
-                <p className="text-xs text-green-600 mb-1">{t('incomeAdded')}</p>
-                <p className="text-lg font-bold text-green-700">{formatMoney(summary.income, currency)}</p>
-              </div>
-            )}
-            {summary.filledVaults.length > 0 ? (
-              <div className="bg-purple-50 border border-purple-100 rounded-xl p-4">
-                <p className="text-xs text-purple-600 mb-2">{t('vaultsFilled')}</p>
-                <div className="space-y-1">
-                  {summary.filledVaults.map(v => (
-                    <div key={v.name} className="flex justify-between text-sm">
-                      <span className="text-gray-700">{v.name}</span>
-                      <span className="font-medium text-purple-700">{formatMoney(v.amount, currency)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-400 text-center py-2">{t('noVaults')}</p>
-            )}
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-              <p className="text-xs text-amber-700 mb-1">{t('totalDistributed')}</p>
-              <p className="text-2xl font-bold text-amber-900">{formatMoney(summary.totalDistributed, currency)}</p>
-            </div>
           </div>
         )}
 
         <div className="flex gap-3 mt-6">
-          {step === 1 && (
+          {step === 1 ? (
             <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-3 rounded-xl border border-gray-200 text-sm text-gray-500"
+            >
+              {t('cancel')}
+            </button>
+          ) : !incomeAlreadyRecorded ? (
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="flex-1 py-3 rounded-xl border border-gray-200 text-sm text-gray-500"
+            >
+              {t('back')}
+            </button>
+          ) : (
+            <button
+              type="button"
               onClick={onClose}
               className="flex-1 py-3 rounded-xl border border-gray-200 text-sm text-gray-500"
             >
               {t('cancel')}
             </button>
           )}
-          {step < 3 ? (
+
+          {step === 1 ? (
             <button
-              onClick={step === 1 ? handleStep1Next : handleStep2Next}
-              disabled={saving}
-              className="flex-1 py-3 rounded-xl bg-amber-500 text-white text-sm font-medium disabled:opacity-50"
+              type="button"
+              onClick={handleStep1Next}
+              className="flex-1 py-3 rounded-xl bg-amber-500 text-white text-sm font-medium"
             >
-              {saving ? '...' : t('next')}
+              {t('next')}
             </button>
           ) : (
             <button
-              onClick={onComplete}
-              className="flex-1 py-3 rounded-xl bg-amber-500 text-white text-sm font-medium"
+              type="button"
+              onClick={handleSave}
+              disabled={saving || remaining < 0}
+              className={`flex-1 py-3 rounded-xl text-white text-sm font-medium disabled:opacity-50 ${
+                remaining < 0 ? 'bg-red-500' : 'bg-amber-500'
+              }`}
             >
-              {t('allDone')}
+              {saving ? '...' : saveLabel}
             </button>
           )}
         </div>
