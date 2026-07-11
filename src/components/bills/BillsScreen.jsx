@@ -118,24 +118,58 @@ export default function BillsScreen({ onBillPaid }) {
     let active = true
 
     ;(async () => {
-      const [billsRes, cardsRes] = await Promise.all([
-        supabase
-          .from('bills')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('is_active', true)
-          .order('due_day'),
-        supabase
-          .from('credit_cards')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('is_active', true),
-      ])
+      const { data: billsData, error: billsError } = await supabase
+        .from('bills')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('due_day')
 
       if (!active) return
-      if (billsRes.error) setError(billsRes.error.message)
-      else setBills(billsRes.data ?? [])
-      setCards(cardsRes.data ?? [])
+      if (billsError) {
+        setError(billsError.message)
+        setLoading(false)
+        return
+      }
+
+      const billsList = billsData ?? []
+      const autoCardIds = [
+        ...new Set(
+          billsList
+            .filter(b => b.is_auto_card_bill && b.credit_card_id)
+            .map(b => b.credit_card_id),
+        ),
+      ]
+
+      const cardSelect = 'id, name, current_balance, interest_rate, intro_rate, intro_rate_expires, is_active'
+
+      const cardQueries = [
+        supabase
+          .from('credit_cards')
+          .select(cardSelect)
+          .eq('user_id', user.id)
+          .eq('is_active', true),
+      ]
+
+      if (autoCardIds.length > 0) {
+        cardQueries.push(
+          supabase
+            .from('credit_cards')
+            .select(cardSelect)
+            .in('id', autoCardIds),
+        )
+      }
+
+      const cardResults = await Promise.all(cardQueries)
+      const cardsById = new Map()
+      for (const result of cardResults) {
+        for (const card of result.data ?? []) {
+          cardsById.set(card.id, card)
+        }
+      }
+
+      setBills(billsList)
+      setCards([...cardsById.values()])
       setLoading(false)
     })()
 
