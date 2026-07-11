@@ -12,12 +12,17 @@ import {
   CATEGORY_EMOJI,
 } from '../../utils/reports'
 import { summarizeLoans } from '../../utils/loans'
+import {
+  getSpendingByBudgetCategory,
+  getNearOrOverBudgetCategories,
+} from '../../utils/budgets'
 
 export default function MonthSnapshot({ refreshKey, onViewReports }) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [transactions, setTransactions] = useState([])
   const [loans, setLoans] = useState([])
+  const [budgets, setBudgets] = useState([])
   const [loading, setLoading] = useState(true)
 
   const now = new Date()
@@ -31,7 +36,7 @@ export default function MonthSnapshot({ refreshKey, onViewReports }) {
     let active = true
 
     ;(async () => {
-      const [txRes, loansRes] = await Promise.all([
+      const [txRes, loansRes, budgetsRes] = await Promise.all([
         supabase
           .from('transactions')
           .select('id, type, amount, description, transaction_date, category')
@@ -42,11 +47,17 @@ export default function MonthSnapshot({ refreshKey, onViewReports }) {
           .select('current_balance, interest_rate, monthly_payment, is_active')
           .eq('user_id', user.id)
           .eq('is_active', true),
+        supabase
+          .from('budgets')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true),
       ])
 
       if (!active) return
       setTransactions(txRes.data ?? [])
       setLoans(loansRes.data ?? [])
+      setBudgets(budgetsRes.data ?? [])
       setLoading(false)
     })()
 
@@ -85,6 +96,14 @@ export default function MonthSnapshot({ refreshKey, onViewReports }) {
 
   const { breakdown } = summarizeByCategory(thisMonth, t)
   const topCategories = breakdown.slice(0, 3)
+
+  const spendingByCategory = getSpendingByBudgetCategory(thisMonth)
+  const overBudgetCategories = getNearOrOverBudgetCategories({
+    spendingByCategory,
+    budgets,
+    t,
+    threshold: 90,
+  })
 
   const recurringMerchants = new Set(
     detectRecurringCharges(transactions, monthKeys).map(item => item.merchant),
@@ -134,6 +153,12 @@ export default function MonthSnapshot({ refreshKey, onViewReports }) {
             </button>
           ))}
         </div>
+      )}
+
+      {overBudgetCategories.length > 0 && (
+        <p className="text-xs text-red-500 mt-1">
+          ⚠️ {overBudgetCategories.map(c => c.label).join(', ')} {t('budgetWarning')}
+        </p>
       )}
 
       {recurringThisMonth > 0 && (

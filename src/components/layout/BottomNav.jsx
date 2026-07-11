@@ -32,6 +32,17 @@ export default function BottomNav({ active, onChange }) {
       ),
     },
     {
+      key: 'budgets',
+      label: t('budgets'),
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <circle cx="12" cy="12" r="9" strokeWidth={2} />
+          <circle cx="12" cy="12" r="5" strokeWidth={2} />
+          <circle cx="12" cy="12" r="1.5" strokeWidth={2} fill="currentColor" />
+        </svg>
+      ),
+    },
+    {
       key: 'accounts',
       label: t('accounts'),
       icon: (

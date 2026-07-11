@@ -74,6 +74,16 @@ export default {
       noBills: "No tienes cuentas todavía.",
       addFirstBill: "+ Agregar primera cuenta",
       deductFrom: "Descontar de",
+
+      // Budgets
+      budgets: 'Presupuestos',
+      monthlyLimit: 'Límite mensual',
+      setBudget: 'Establecer presupuesto',
+      removeBudget: 'Eliminar presupuesto',
+      leftThisMonth: 'restante este mes',
+      overBy: 'Excedido por',
+      noBudgetSet: 'Sin presupuesto',
+      budgetWarning: 'cerca o sobre el presupuesto',
   
       // Cards
       creditCards: "Tarjetas",

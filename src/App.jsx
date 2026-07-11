@@ -8,6 +8,7 @@ import TransactionsScreen from './components/transactions/TransactionsScreen'
 import BillsScreen from './components/bills/BillsScreen'
 import CardsScreen from './components/cards/CardsScreen'
 import AccountsScreen from './components/accounts/AccountsScreen'
+import BudgetsScreen from './components/budgets/BudgetsScreen'
 import ReportsScreen from './components/reports/ReportsScreen'
 import SettingsScreen from './components/settings/SettingsScreen'
 import BottomNav from './components/layout/BottomNav'
@@ -73,6 +74,7 @@ function AppContent() {
           />
         )}
         {activeTab === 'bills' && <BillsScreen key={prefsVersion} onBillPaid={bumpDashboard} />}
+        {activeTab === 'budgets' && <BudgetsScreen key={prefsVersion} />}
         {activeTab === 'accounts' && (
           <AccountsScreen
             key={prefsVersion}

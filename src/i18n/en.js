@@ -74,6 +74,16 @@ export default {
       noBills: "No bills yet.",
       addFirstBill: "+ Add first bill",
       deductFrom: "Deduct from",
+
+      // Budgets
+      budgets: 'Budgets',
+      monthlyLimit: 'Monthly limit',
+      setBudget: 'Set budget',
+      removeBudget: 'Remove budget',
+      leftThisMonth: 'left this month',
+      overBy: 'Over by',
+      noBudgetSet: 'No budget set',
+      budgetWarning: 'near or over budget',
   
       // Cards
       creditCards: "Credit cards",
