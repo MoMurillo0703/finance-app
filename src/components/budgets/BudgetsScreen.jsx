@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -295,7 +296,7 @@ function BudgetCard({ row, onEdit }) {
   )
 }
 
-export default function BudgetsScreen() {
+export default function BudgetsScreen({ onClose }) {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const [rows, setRows] = useState([])
@@ -365,12 +366,24 @@ export default function BudgetsScreen() {
   const budgetedKeys = new Set(budgetRecords.map(b => b.category))
   const allCategoriesBudgeted = budgetedKeys.size >= BUDGET_CATEGORIES.length
 
-  return (
+  const content = (
     <div className="bg-gray-50 min-h-full">
       <div className="bg-white px-6 py-4 border-b border-gray-100 flex justify-between items-start gap-3">
-        <div>
-          <h1 className="text-lg font-bold text-gray-800">{t('budgets')}</h1>
-          <p className="text-xs text-gray-400 capitalize mt-0.5">{monthLabel}</p>
+        <div className="flex items-start gap-3 min-w-0">
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 pt-0.5 shrink-0"
+              aria-label={t('close')}
+            >
+              <X size={22} />
+            </button>
+          )}
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-gray-800">{t('budgets')}</h1>
+            <p className="text-xs text-gray-400 capitalize mt-0.5">{monthLabel}</p>
+          </div>
         </div>
         {allCategoriesBudgeted ? (
           <p className="text-xs text-gray-500 text-right shrink-0 pt-1">{t('allCategoriesBudgeted')}</p>
@@ -436,4 +449,14 @@ export default function BudgetsScreen() {
       )}
     </div>
   )
+
+  if (onClose) {
+    return (
+      <div className="fixed inset-0 z-[120] bg-gray-50 overflow-y-auto">
+        {content}
+      </div>
+    )
+  }
+
+  return content
 }

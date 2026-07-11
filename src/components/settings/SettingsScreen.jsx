@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -8,7 +9,7 @@ import { formatMoney, getUserCurrency, notifyPrefsChanged } from '../../utils/cu
 import { getUserDateFormat } from '../../utils/date'
 import { fetchBanks } from '../../utils/bank'
 
-export default function SettingsScreen({ onBankSaved, onPrefsChanged, onViewAccount }) {
+export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, onViewAccount }) {
   const { user } = useAuth()
   const { t, i18n } = useTranslation()
   const [banks, setBanks] = useState([])
@@ -80,9 +81,23 @@ export default function SettingsScreen({ onBankSaved, onPrefsChanged, onViewAcco
     }
   }
 
-  return (
-    <div className="bg-gray-50">
-      <div className="px-6 py-6 space-y-8">
+  const content = (
+    <div className="bg-gray-50 min-h-full">
+      <div className="flex justify-between items-center px-6 pt-6 pb-4">
+        <h1 className="text-xl font-bold text-gray-800">{t('settings')}</h1>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+            aria-label={t('close')}
+          >
+            <X size={22} />
+          </button>
+        )}
+      </div>
+
+      <div className="px-6 pb-6 space-y-8">
         <section>
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-sm font-semibold text-gray-700">{t('myAccounts')}</h2>
@@ -211,4 +226,14 @@ export default function SettingsScreen({ onBankSaved, onPrefsChanged, onViewAcco
       )}
     </div>
   )
+
+  if (onClose) {
+    return (
+      <div className="fixed inset-0 z-[110] bg-gray-50 overflow-y-auto pt-14 pb-6">
+        {content}
+      </div>
+    )
+  }
+
+  return content
 }

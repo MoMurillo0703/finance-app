@@ -1,14 +1,11 @@
 import { useState, useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Login from './components/auth/Login'
 import Signup from './components/auth/Signup'
 import Dashboard from './components/dashboard/Dashboard'
 import TransactionsScreen from './components/transactions/TransactionsScreen'
 import BillsScreen from './components/bills/BillsScreen'
-import CardsScreen from './components/cards/CardsScreen'
 import AccountsScreen from './components/accounts/AccountsScreen'
-import BudgetsScreen from './components/budgets/BudgetsScreen'
 import ReportsScreen from './components/reports/ReportsScreen'
 import SettingsScreen from './components/settings/SettingsScreen'
 import BottomNav from './components/layout/BottomNav'
@@ -18,11 +15,10 @@ import { getBankDisplayName, fetchBanks } from './utils/bank'
 import { supabase } from './lib/supabase'
 
 function AppContent() {
-  const { t } = useTranslation()
   const { user } = useAuth()
   const [showSignup, setShowSignup] = useState(false)
   const [activeTab, setActiveTab] = useState('home')
-  const [showReports, setShowReports] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0)
   const [prefsVersion, setPrefsVersion] = useState(0)
   const [txFilter, setTxFilter] = useState(null)
@@ -52,7 +48,8 @@ function AppContent() {
   }, [user])
 
   const viewAccountTransactions = (bank) => {
-    setTxFilter({ bankId: bank.id, bankName: getBankDisplayName(bank), from: 'settings' })
+    setShowSettings(false)
+    setTxFilter({ bankId: bank.id, bankName: getBankDisplayName(bank), from: 'home' })
     setActiveTab('transactions')
   }
 
@@ -72,13 +69,15 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AppHeader activeTab={activeTab} />
+      <AppHeader
+        activeTab={activeTab}
+        onSettings={() => setShowSettings(true)}
+      />
       <main className="pt-14 pb-20">
         {activeTab === 'home' && (
           <Dashboard
             refreshKey={`${dashboardRefreshKey}-${prefsVersion}`}
-            onViewReports={() => setShowReports(true)}
-            onNavigateToAccounts={() => setActiveTab('accounts')}
+            onNavigate={setActiveTab}
           />
         )}
         {activeTab === 'transactions' && (
@@ -98,7 +97,6 @@ function AppContent() {
           />
         )}
         {activeTab === 'bills' && <BillsScreen key={prefsVersion} onBillPaid={bumpDashboard} />}
-        {activeTab === 'budgets' && <BudgetsScreen key={prefsVersion} />}
         {activeTab === 'accounts' && (
           <AccountsScreen
             key={prefsVersion}
@@ -106,34 +104,18 @@ function AppContent() {
             onAccountSaved={bumpDashboard}
           />
         )}
-        {activeTab === 'cards' && (
-          <CardsScreen
-            key={prefsVersion}
-            onCardSaved={bumpDashboard}
-          />
-        )}
-        {activeTab === 'settings' && (
-          <SettingsScreen
-            key={prefsVersion}
-            onBankSaved={bumpDashboard}
-            onPrefsChanged={bumpPrefs}
-            onViewAccount={viewAccountTransactions}
-          />
-        )}
+        {activeTab === 'reports' && <ReportsScreen key={prefsVersion} />}
       </main>
       <BottomNav active={activeTab} onChange={handleTabChange} />
 
-      {showReports && (
-        <div className="fixed inset-0 z-[110] bg-gray-50 overflow-y-auto pt-14 pb-20">
-          <button
-            type="button"
-            onClick={() => setShowReports(false)}
-            className="px-4 py-3 text-purple-600 text-sm font-medium"
-          >
-            ← {t('back')}
-          </button>
-          <ReportsScreen key={prefsVersion} />
-        </div>
+      {showSettings && (
+        <SettingsScreen
+          key={prefsVersion}
+          onClose={() => setShowSettings(false)}
+          onBankSaved={bumpDashboard}
+          onPrefsChanged={bumpPrefs}
+          onViewAccount={viewAccountTransactions}
+        />
       )}
 
       {showOnboarding && (

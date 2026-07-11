@@ -13,7 +13,7 @@ import PurchaseSimulator from '../simulator/PurchaseSimulator'
 import { formatMoney } from '../../utils/currency'
 import { fetchBanks } from '../../utils/bank'
 
-export default function Dashboard({ refreshKey, onViewReports, onNavigateToAccounts }) {
+export default function Dashboard({ refreshKey, onNavigate }) {
   const { user } = useAuth()
   const { t } = useTranslation()
   const [vaults, setVaults] = useState([])
@@ -74,7 +74,7 @@ export default function Dashboard({ refreshKey, onViewReports, onNavigateToAccou
             <p className="text-sm mt-1">{t('noAccountsHint')}</p>
             <button
               type="button"
-              onClick={onNavigateToAccounts}
+              onClick={() => onNavigate?.('accounts')}
               className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-xl text-sm"
             >
               {t('addAccount')}
@@ -139,7 +139,10 @@ export default function Dashboard({ refreshKey, onViewReports, onNavigateToAccou
           </div>
         )}
 
-        <MonthSnapshot refreshKey={dataRefreshKey} onViewReports={onViewReports} />
+        <MonthSnapshot
+          refreshKey={dataRefreshKey}
+          onViewReports={() => onNavigate?.('reports')}
+        />
 
         <BillsThisWeek refreshKey={dataRefreshKey} />
           </>

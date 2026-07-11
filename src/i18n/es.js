@@ -197,6 +197,7 @@ export default {
       settings: "Configuración",
       language: "Idioma",
       logout: "Cerrar sesión",
+      signOut: "Cerrar sesión",
       loading: 'Cargando...',
       safeToSpendSubtitle: 'Puedes gastar esto hoy',
       noVaults: 'Sin metas de ahorro aún',

@@ -197,6 +197,7 @@ export default {
       settings: "Settings",
       language: "Language",
       logout: "Sign out",
+      signOut: "Sign out",
       loading: 'Loading...',
       safeToSpendSubtitle: 'You can spend this today',
       noVaults: 'No savings goals yet',

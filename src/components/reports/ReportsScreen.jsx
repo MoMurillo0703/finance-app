@@ -39,10 +39,13 @@ import {
   buildTrendInsight,
 } from '../../utils/financialTrends'
 
+import BudgetsScreen from '../budgets/BudgetsScreen'
+
 export default function ReportsScreen() {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const now = new Date()
+  const [showBudgets, setShowBudgets] = useState(false)
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [monthTransactions, setMonthTransactions] = useState([])
@@ -226,7 +229,18 @@ export default function ReportsScreen() {
 
   return (
     <div className="bg-gray-50 pb-6">
-      <div className="px-6 py-6 space-y-6">
+      <div className="flex justify-between items-center px-6 pt-6 pb-2">
+        <h1 className="text-2xl font-bold text-gray-800">{t('reports')}</h1>
+        <button
+          type="button"
+          onClick={() => setShowBudgets(true)}
+          className="text-sm text-purple-600 font-medium flex items-center gap-1"
+        >
+          🎯 {t('budgets')}
+        </button>
+      </div>
+
+      <div className="px-6 py-4 space-y-6">
         <section className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-800 mb-4">{t('financialTrends')}</h2>
           {loading ? (
@@ -458,6 +472,10 @@ export default function ReportsScreen() {
           )}
         </section>
       </div>
+
+      {showBudgets && (
+        <BudgetsScreen onClose={() => setShowBudgets(false)} />
+      )}
     </div>
   )
 }
