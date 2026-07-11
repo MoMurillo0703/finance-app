@@ -79,6 +79,8 @@ export default {
       budgets: 'Budgets',
       monthlyLimit: 'Monthly limit',
       setBudget: 'Set budget',
+      addBudget: 'Add budget',
+      allCategoriesBudgeted: 'All categories budgeted 🎯',
       removeBudget: 'Remove budget',
       leftThisMonth: 'left this month',
       overBy: 'Over by',

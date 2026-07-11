@@ -6,6 +6,7 @@ import { formatMoney } from '../../utils/currency'
 import { BUDGET_CATEGORIES } from '../../utils/transactionCategories'
 import {
   buildBudgetRows,
+  getBudgetCategoryLabel,
   getProgressBarColor,
   getSpendingByBudgetCategory,
 } from '../../utils/budgets'
@@ -120,6 +121,120 @@ function BudgetEditSheet({ category, budget, onClose, onSaved }) {
   )
 }
 
+function AddBudgetSheet({ budgetedKeys, onClose, onSaved }) {
+  const { t } = useTranslation()
+  const { user } = useAuth()
+  const [selectedKey, setSelectedKey] = useState(null)
+  const [limit, setLimit] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const availableCategories = BUDGET_CATEGORIES.filter(c => !budgetedKeys.has(c.key))
+  const selected = availableCategories.find(c => c.key === selectedKey)
+
+  const handleSave = async () => {
+    const parsed = parseFloat(limit)
+    if (!limit || isNaN(parsed) || parsed <= 0) {
+      setError(t('invalidAmount'))
+      return
+    }
+
+    setSaving(true)
+    setError('')
+
+    const { error: dbError } = await supabase
+      .from('budgets')
+      .upsert(
+        {
+          user_id: user.id,
+          category: selectedKey,
+          monthly_limit: parsed,
+          is_active: true,
+        },
+        { onConflict: 'user_id,category' },
+      )
+
+    if (dbError) {
+      setError(dbError.message)
+      setSaving(false)
+      return
+    }
+
+    onSaved?.()
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-[120] flex items-end justify-center">
+      <div className="absolute inset-0 bg-black opacity-40" onClick={onClose} />
+      <div className="relative bg-white w-full rounded-t-3xl p-6 pb-10 max-h-[85vh] flex flex-col">
+        <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4 shrink-0" />
+
+        {!selected ? (
+          <>
+            <h2 className="text-lg font-bold text-gray-800 mb-4 shrink-0">{t('addBudget')}</h2>
+            <div className="overflow-y-auto -mx-1 px-1 space-y-1">
+              {availableCategories.map(cat => (
+                <button
+                  key={cat.key}
+                  type="button"
+                  onClick={() => setSelectedKey(cat.key)}
+                  className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-gray-50 text-left"
+                >
+                  <span className="text-xl">{cat.emoji}</span>
+                  <span className="text-sm font-medium text-gray-800">
+                    {getBudgetCategoryLabel(cat.key, t)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => { setSelectedKey(null); setLimit(''); setError('') }}
+              className="text-xs text-purple-600 font-medium mb-3 shrink-0 self-start"
+            >
+              ← {t('back')}
+            </button>
+            <div className="flex items-center gap-2 mb-5 shrink-0">
+              <span className="text-2xl">{selected.emoji}</span>
+              <h2 className="text-lg font-bold text-gray-800">
+                {getBudgetCategoryLabel(selected.key, t)}
+              </h2>
+            </div>
+
+            {error && <p className="text-red-500 text-sm mb-4 shrink-0">{error}</p>}
+
+            <div className="mb-6 shrink-0">
+              <label className="text-xs text-gray-400 mb-1 block">{t('monthlyLimit')}</label>
+              <input
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                type="number"
+                min="1"
+                placeholder="0"
+                value={limit}
+                onChange={e => setLimit(e.target.value)}
+                autoFocus
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="w-full py-3 rounded-xl bg-purple-600 text-white text-sm font-medium disabled:opacity-50 shrink-0"
+            >
+              {saving ? '...' : t('save')}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function BudgetCard({ row, onEdit }) {
   const { t } = useTranslation()
   const pct = row.hasBudget ? Math.min(row.pct ?? 0, 100) : 0
@@ -186,6 +301,7 @@ export default function BudgetsScreen() {
   const [error, setError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
   const [editingCategory, setEditingCategory] = useState(null)
+  const [showAddBudget, setShowAddBudget] = useState(false)
 
   const now = new Date()
   const monthLabel = now.toLocaleDateString(i18n.language === 'es' ? 'es-CO' : 'en-US', {
@@ -243,11 +359,27 @@ export default function BudgetsScreen() {
     ? budgetRecords.find(b => b.category === editingCategory.key) ?? null
     : null
 
+  const budgetedKeys = new Set(budgetRecords.map(b => b.category))
+  const allCategoriesBudgeted = budgetedKeys.size >= BUDGET_CATEGORIES.length
+
   return (
     <div className="bg-gray-50 min-h-full">
-      <div className="bg-white px-6 py-4 border-b border-gray-100">
-        <h1 className="text-lg font-bold text-gray-800">{t('budgets')}</h1>
-        <p className="text-xs text-gray-400 capitalize mt-0.5">{monthLabel}</p>
+      <div className="bg-white px-6 py-4 border-b border-gray-100 flex justify-between items-start gap-3">
+        <div>
+          <h1 className="text-lg font-bold text-gray-800">{t('budgets')}</h1>
+          <p className="text-xs text-gray-400 capitalize mt-0.5">{monthLabel}</p>
+        </div>
+        {allCategoriesBudgeted ? (
+          <p className="text-xs text-gray-500 text-right shrink-0 pt-1">{t('allCategoriesBudgeted')}</p>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowAddBudget(true)}
+            className="text-xs text-purple-600 font-medium shrink-0 pt-1"
+          >
+            + {t('addBudget')}
+          </button>
+        )}
       </div>
 
       <div className="px-6 py-6">
@@ -258,9 +390,15 @@ export default function BudgetsScreen() {
         ) : rows.length === 0 ? (
           <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
             <p className="text-gray-400 text-sm">{t('noBudgetSet')}</p>
-            <p className="text-xs text-gray-400 mt-2">
-              {t('setBudget')}
-            </p>
+            {!allCategoriesBudgeted && (
+              <button
+                type="button"
+                onClick={() => setShowAddBudget(true)}
+                className="mt-3 text-purple-600 text-sm font-medium"
+              >
+                + {t('addBudget')}
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
@@ -274,6 +412,14 @@ export default function BudgetsScreen() {
           </div>
         )}
       </div>
+
+      {showAddBudget && (
+        <AddBudgetSheet
+          budgetedKeys={budgetedKeys}
+          onClose={() => setShowAddBudget(false)}
+          onSaved={handleSaved}
+        />
+      )}
 
       {editingCategory && (
         <BudgetEditSheet

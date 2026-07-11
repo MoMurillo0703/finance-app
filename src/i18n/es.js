@@ -79,6 +79,8 @@ export default {
       budgets: 'Presupuestos',
       monthlyLimit: 'Límite mensual',
       setBudget: 'Establecer presupuesto',
+      addBudget: 'Agregar presupuesto',
+      allCategoriesBudgeted: 'Todas las categorías con presupuesto 🎯',
       removeBudget: 'Eliminar presupuesto',
       leftThisMonth: 'restante este mes',
       overBy: 'Excedido por',
