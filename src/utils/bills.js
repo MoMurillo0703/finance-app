@@ -37,3 +37,50 @@ export function getBillDisplayAmount(bill, cardMap = {}) {
   }
   return Number(bill.amount) || 0
 }
+
+export function getDueDaysThisWeek(asOf = new Date()) {
+  const today = asOf.getDate()
+  const lastDayOfMonth = new Date(asOf.getFullYear(), asOf.getMonth() + 1, 0).getDate()
+  const days = []
+  for (let i = 0; i < 7; i += 1) {
+    const day = today + i
+    if (day <= lastDayOfMonth) days.push(day)
+  }
+  return days
+}
+
+export function getBillStatus(bill, asOf = new Date()) {
+  if (isBillPaidThisMonth(bill)) return 'paid'
+
+  const today = asOf.getDate()
+  const dueDay = Number(bill.due_day) || 0
+
+  if (dueDay > 0 && dueDay < today) return 'overdue'
+
+  if (getDueDaysThisWeek(asOf).includes(dueDay)) return 'dueThisWeek'
+
+  return 'upcoming'
+}
+
+export const BILL_STATUS_BAR = {
+  overdue: 'bg-red-500',
+  dueThisWeek: 'bg-amber-500',
+  upcoming: 'bg-gray-300',
+  paid: 'bg-green-500',
+}
+
+export function groupBillsByStatus(bills, asOf = new Date()) {
+  const groups = {
+    overdue: [],
+    dueThisWeek: [],
+    upcoming: [],
+    paid: [],
+  }
+
+  for (const bill of bills) {
+    const status = getBillStatus(bill, asOf)
+    groups[status].push(bill)
+  }
+
+  return groups
+}

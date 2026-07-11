@@ -75,6 +75,14 @@ export default {
       addBillPrompt: "Add a recurring bill to track due dates",
       addFirstBill: "+ Add first bill",
       deductFrom: "Deduct from",
+      totalDueThisMonth: "Total due this month",
+      paidSoFar: "Paid so far",
+      showCalendar: "Show calendar",
+      hideCalendar: "Hide calendar",
+      sectionOverdue: "Overdue",
+      sectionUpcoming: "Upcoming",
+      paidThisMonthToggle: "{{count}} paid this month",
+      markBillAsPaidConfirm: "Mark {{name}} as paid?",
 
       // Budgets
       budgets: 'Budgets',
@@ -183,6 +191,7 @@ export default {
       // General
       save: "Save",
       cancel: "Cancel",
+      confirm: "Confirm",
       delete: "Delete",
       edit: "Edit",
       close: "Close",
@@ -483,6 +492,7 @@ export default {
       statementCloses: 'Statement closes',
       paymentDue: 'Payment due',
       hasIntroRate: 'This card has an intro/promotional rate',
+      storePromoHint: 'Store cards use per-purchase promotional rates (like "No interest if paid in full by..."). After saving this card, use the Promotions tab inside the card to track each promotional purchase separately.',
       dayPlaceholder: 'Day',
 
       // Promotions & store credit

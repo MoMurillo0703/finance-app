@@ -75,6 +75,14 @@ export default {
       addBillPrompt: "Agrega una factura recurrente para rastrear fechas de vencimiento",
       addFirstBill: "+ Agregar primera cuenta",
       deductFrom: "Descontar de",
+      totalDueThisMonth: "Total del mes",
+      paidSoFar: "Pagado hasta ahora",
+      showCalendar: "Mostrar calendario",
+      hideCalendar: "Ocultar calendario",
+      sectionOverdue: "Vencidas",
+      sectionUpcoming: "Próximas",
+      paidThisMonthToggle: "{{count}} pagadas este mes",
+      markBillAsPaidConfirm: "¿Marcar {{name}} como pagada?",
 
       // Budgets
       budgets: 'Presupuestos',
@@ -183,6 +191,7 @@ export default {
       // General
       save: "Guardar",
       cancel: "Cancelar",
+      confirm: "Confirmar",
       delete: "Eliminar",
       edit: "Editar",
       close: "Cerrar",
@@ -483,6 +492,7 @@ export default {
       statementCloses: 'Corte de estado',
       paymentDue: 'Pago vence',
       hasIntroRate: 'Esta tarjeta tiene tasa introductoria/promocional',
+      storePromoHint: 'Las tarjetas de tienda usan tasas promocionales por compra (como "Sin intereses si pagas el total antes de..."). Después de guardar, usa la pestaña Promociones dentro de la tarjeta para rastrear cada compra promocional por separado.',
       dayPlaceholder: 'Día',
 
       // Promotions & store credit

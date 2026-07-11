@@ -5,11 +5,15 @@ import { useAuth } from '../../context/AuthContext'
 import { adjustBankBalance, adjustCardBalance, bankDelta } from '../../lib/payments'
 import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
 import { getCurrentBillingMonth, getBillDisplayAmount } from '../../utils/bills'
-import { formatMoney } from '../../utils/currency'
+import { formatMoney, getUserCurrency } from '../../utils/currency'
+import { useCurrencyInput, currencyAmountPlaceholder } from '../../hooks/useCurrencyInput'
 
 export default function PayBillModal({ bill, cardMap, onClose, onPaid }) {
   const { t } = useTranslation()
   const { user } = useAuth()
+  const currency = getUserCurrency()
+  const defaultAmount = getBillDisplayAmount(bill, cardMap)
+  const amountInput = useCurrencyInput(defaultAmount)
   const [paymentSource, setPaymentSource] = useState('bank')
   const [bankId, setBankId] = useState('')
   const [creditCardId, setCreditCardId] = useState('')
@@ -17,8 +21,6 @@ export default function PayBillModal({ bill, cardMap, onClose, onPaid }) {
   const [creditCards, setCreditCards] = useState([])
   const [paying, setPaying] = useState(false)
   const [error, setError] = useState('')
-
-  const billAmount = getBillDisplayAmount(bill, cardMap)
 
   useEffect(() => {
     fetchBanks(supabase, user.id, { orderByName: true }).then(({ data }) => {
@@ -43,6 +45,12 @@ export default function PayBillModal({ bill, cardMap, onClose, onPaid }) {
   }, [user.id, bill.bank_id])
 
   const handlePay = async () => {
+    const billAmount = amountInput.numericValue
+    if (!amountInput.raw || billAmount <= 0) {
+      setError(t('invalidAmount'))
+      return
+    }
+
     setPaying(true)
     setError('')
 
@@ -162,12 +170,25 @@ export default function PayBillModal({ bill, cardMap, onClose, onPaid }) {
       <div className="absolute inset-0 bg-black opacity-40" onClick={onClose} />
       <div className="relative bg-white w-full rounded-t-3xl p-6 pb-10">
         <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-6" />
-        <h2 className="text-lg font-bold text-gray-800 mb-1">{t('markAsPaid')}</h2>
-        <p className="text-sm text-gray-500 mb-4">{bill.name} · {formatMoney(billAmount)}</p>
+        <h2 className="text-lg font-bold text-gray-800 mb-4">
+          {t('markBillAsPaidConfirm', { name: bill.name })}
+        </h2>
 
         {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
         <div className="space-y-4">
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">{t('amount')} ({currency})</label>
+            <input
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+              type="text"
+              inputMode="decimal"
+              placeholder={currencyAmountPlaceholder(currency)}
+              value={amountInput.displayValue}
+              onChange={amountInput.handleChange}
+            />
+          </div>
+
           <div>
             <label className="text-xs text-gray-400 mb-1 block">{t('paymentMethod')}</label>
             <div className="flex gap-2">
@@ -233,17 +254,19 @@ export default function PayBillModal({ bill, cardMap, onClose, onPaid }) {
 
         <div className="flex gap-3 mt-6">
           <button
+            type="button"
             onClick={onClose}
             className="flex-1 py-3 rounded-xl border border-gray-200 text-sm text-gray-500"
           >
             {t('cancel')}
           </button>
           <button
+            type="button"
             onClick={handlePay}
             disabled={paying}
             className="flex-1 py-3 rounded-xl bg-purple-600 text-white text-sm font-medium disabled:opacity-50"
           >
-            {paying ? '...' : t('pay')}
+            {paying ? '...' : t('confirm')}
           </button>
         </div>
       </div>

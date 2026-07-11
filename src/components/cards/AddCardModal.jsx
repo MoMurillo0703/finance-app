@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -39,6 +39,14 @@ export default function AddCardModal({ onClose, onSaved }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  useEffect(() => {
+    if (network === 'Store') {
+      setHasIntroRate(false)
+      setIntroRate('')
+      setIntroRateExpires('')
+    }
+  }, [network])
+
   const validateDay = (day) => day && !isNaN(day) && day >= 1 && day <= 31
 
   const handleAprChange = (setter) => (e) => {
@@ -62,7 +70,7 @@ export default function AddCardModal({ onClose, onSaved }) {
     if (!currentBalanceInput.raw || currentBalanceInput.numericValue < 0) { setError(t('invalidAmount')); return }
     if (!validateDay(statementDate)) { setError(t('invalidDueDay')); return }
     if (!validateDay(dueDate)) { setError(t('invalidDueDay')); return }
-    if (hasIntroRate && introRate !== '' && isNaN(introRate)) {
+    if (hasIntroRate && network !== 'Store' && introRate !== '' && isNaN(introRate)) {
       setError(t('invalidAmount'))
       return
     }
@@ -82,7 +90,7 @@ export default function AddCardModal({ onClose, onSaved }) {
     if (interestRate !== '' && !isNaN(interestRate)) {
       row.interest_rate = parseFloat(interestRate)
     }
-    if (hasIntroRate) {
+    if (hasIntroRate && network !== 'Store') {
       if (introRate !== '' && !isNaN(introRate)) {
         row.intro_rate = parseFloat(introRate)
       }
@@ -245,38 +253,46 @@ export default function AddCardModal({ onClose, onSaved }) {
             />
           </div>
 
-          <label className="flex items-center gap-2 cursor-pointer mt-4">
-            <input
-              type="checkbox"
-              checked={hasIntroRate}
-              onChange={e => setHasIntroRate(e.target.checked)}
-              className="rounded border-gray-300 text-purple-600 focus:ring-purple-400"
-            />
-            <span className="text-sm text-gray-600">{t('hasIntroRate')}</span>
-          </label>
-
-          {hasIntroRate && (
-            <div className="grid grid-cols-2 gap-3 mt-3">
-              <div>
-                <FieldLabel>{t('introRate')}</FieldLabel>
-                <input
-                  className={inputClass}
-                  placeholder="e.g. 0.00"
-                  inputMode="decimal"
-                  value={introRate}
-                  onChange={handleAprChange(setIntroRate)}
-                />
-              </div>
-              <div>
-                <FieldLabel>{t('introRateExpires')}</FieldLabel>
-                <input
-                  className={inputClass}
-                  type="date"
-                  value={introRateExpires}
-                  onChange={e => setIntroRateExpires(e.target.value)}
-                />
-              </div>
+          {network === 'Store' ? (
+            <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-700 mt-4">
+              💡 {t('storePromoHint')}
             </div>
+          ) : (
+            <>
+              <label className="flex items-center gap-2 cursor-pointer mt-4">
+                <input
+                  type="checkbox"
+                  checked={hasIntroRate}
+                  onChange={e => setHasIntroRate(e.target.checked)}
+                  className="rounded border-gray-300 text-purple-600 focus:ring-purple-400"
+                />
+                <span className="text-sm text-gray-600">{t('hasIntroRate')}</span>
+              </label>
+
+              {hasIntroRate && (
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <div>
+                    <FieldLabel>{t('introRate')}</FieldLabel>
+                    <input
+                      className={inputClass}
+                      placeholder="e.g. 0.00"
+                      inputMode="decimal"
+                      value={introRate}
+                      onChange={handleAprChange(setIntroRate)}
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel>{t('introRateExpires')}</FieldLabel>
+                    <input
+                      className={inputClass}
+                      type="date"
+                      value={introRateExpires}
+                      onChange={e => setIntroRateExpires(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           <SectionLabel>{t('billingDatesSection')}</SectionLabel>
