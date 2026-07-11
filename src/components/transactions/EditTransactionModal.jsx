@@ -11,16 +11,21 @@ import {
 } from '../../lib/payments'
 import { getUserCurrency, isCOPUser } from '../../utils/currency'
 import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
+import { useCurrencyInput, currencyAmountPlaceholder } from '../../hooks/useCurrencyInput'
+import { BUDGET_CATEGORIES, getRecategorizeHighlight } from '../../utils/transactionCategories'
+import DeleteConfirmBlock from '../shared/DeleteConfirmBlock'
 
-const EXPENSE_CATEGORIES = ['essential', 'food', 'travel', 'fun', 'bills', 'debt', 'weeklyLiving', 'emergency']
 const INCOME_CATEGORIES = ['salary', 'commission', 'reimbursement']
 
 export default function EditTransactionModal({ transaction, onClose, onSaved }) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [type, setType] = useState(transaction.type)
-  const [category, setCategory] = useState(transaction.category)
-  const [amount, setAmount] = useState(String(transaction.amount))
+  const [category, setCategory] = useState(
+    transaction.type === 'income' ? transaction.category : getRecategorizeHighlight(transaction),
+  )
+  const amountInput = useCurrencyInput(transaction.amount)
+  const currency = getUserCurrency()
   const [description, setDescription] = useState(transaction.description ?? '')
   const [date, setDate] = useState(transaction.transaction_date)
   const [paymentMethod, setPaymentMethod] = useState(transaction.credit_card_id ? 'card' : 'bank')
@@ -33,6 +38,7 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
   const [vaults, setVaults] = useState([])
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -74,7 +80,7 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
   }, [user.id, transaction.id, transaction.credit_card_id])
 
   const handleSave = async () => {
-    if (!amount || isNaN(amount)) { setError(t('invalidAmount')); return }
+    if (!amountInput.raw || amountInput.numericValue <= 0) { setError(t('invalidAmount')); return }
     if (!category) { setError(t('selectCategory')); return }
 
     const isCardExpense = type === 'expense' && paymentMethod === 'card'
@@ -88,7 +94,7 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
 
     setSaving(true)
 
-    const parsedAmount = parseFloat(amount)
+    const parsedAmount = amountInput.numericValue
     const oldAmount = Number(transaction.amount)
     const oldType = transaction.type
     const oldBankId = transaction.bank_id
@@ -214,16 +220,18 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
     onSaved()
   }
 
-  const categories = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
-
   const handleTypeChange = (nextType) => {
     setType(nextType)
-    setCategory(nextType === 'income' ? 'salary' : 'essential')
+    setCategory(nextType === 'income' ? 'salary' : 'other')
     if (nextType === 'income') {
       setVaultId('')
       setPaymentMethod('bank')
     }
   }
+
+  const categoryOptions = type === 'income'
+    ? INCOME_CATEGORIES.map(key => ({ key, emoji: key === 'salary' ? '💰' : key === 'commission' ? '📈' : '↩️' }))
+    : BUDGET_CATEGORIES
 
   return (
     <div className="fixed inset-0 z-[110] flex items-end justify-center">
@@ -242,32 +250,76 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
         {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
         <div className="space-y-4">
-          <div className="flex gap-3">
-            <button
-              onClick={() => handleTypeChange('expense')}
-              className={`flex-1 py-3 rounded-xl text-sm border ${type === 'expense' ? 'bg-red-500 text-white border-red-500' : 'border-gray-200 text-gray-500'}`}
-            >
-              {t('expense')}
-            </button>
-            <button
-              onClick={() => handleTypeChange('income')}
-              className={`flex-1 py-3 rounded-xl text-sm border ${type === 'income' ? 'bg-green-500 text-white border-green-500' : 'border-gray-200 text-gray-500'}`}
-            >
-              {t('income')}
-            </button>
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">{t('description')}</label>
+            <input
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">{t('amount')} ({currency})</label>
+            <input
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+              type="text"
+              inputMode="decimal"
+              placeholder={currencyAmountPlaceholder(currency)}
+              value={amountInput.displayValue}
+              onChange={amountInput.handleChange}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">{t('date')}</label>
+            <input
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+              type="date"
+              value={date}
+              onChange={e => setDate(e.target.value)}
+            />
           </div>
 
           <div>
             <label className="text-xs text-gray-400 mb-1 block">{t('category')}</label>
-            <select
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-              value={category}
-              onChange={e => setCategory(e.target.value)}
-            >
-              {categories.map(value => (
-                <option key={value} value={value}>{t(value)}</option>
+            <div className="grid grid-cols-4 gap-2 mt-1">
+              {categoryOptions.map(cat => (
+                <button
+                  key={cat.key}
+                  type="button"
+                  onClick={() => setCategory(cat.key)}
+                  className={`py-2 rounded-xl text-xs flex flex-col items-center gap-1 border ${
+                    category === cat.key
+                      ? 'bg-purple-600 text-white border-purple-600'
+                      : 'border-gray-200 text-gray-500'
+                  }`}
+                >
+                  <span>{cat.emoji}</span>
+                  <span className="truncate w-full text-center px-0.5">{t(cat.key, { defaultValue: cat.key })}</span>
+                </button>
               ))}
-            </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">{t('type')}</label>
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              <button
+                type="button"
+                onClick={() => handleTypeChange('expense')}
+                className={`py-2 rounded-xl text-sm border ${type === 'expense' ? 'bg-red-500 text-white border-red-500' : 'border-gray-200 text-gray-500'}`}
+              >
+                {t('expense')}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTypeChange('income')}
+                className={`py-2 rounded-xl text-sm border ${type === 'income' ? 'bg-green-500 text-white border-green-500' : 'border-gray-200 text-gray-500'}`}
+              >
+                {t('income')}
+              </button>
+            </div>
           </div>
 
           {type === 'expense' && (
@@ -285,27 +337,6 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
               </select>
             </div>
           )}
-
-          <div>
-            <label className="text-xs text-gray-400 mb-1 block">{t('amount')} ({getUserCurrency()})</label>
-            <input
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-              placeholder="0"
-              type="number"
-              value={amount}
-              onChange={e => setAmount(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className="text-xs text-gray-400 mb-1 block">{t('description')}</label>
-            <input
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-              placeholder={t('descriptionPlaceholder')}
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-            />
-          </div>
 
           {type === 'expense' && (
             <div>
@@ -373,40 +404,34 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
             </div>
           )}
 
-          <div>
-            <label className="text-xs text-gray-400 mb-1 block">{t('date')}</label>
-            <input
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-              type="date"
-              value={date}
-              onChange={e => setDate(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="flex gap-3 mt-6">
-          <button
-            onClick={onClose}
-            className="flex-1 py-3 rounded-xl border border-gray-200 text-sm text-gray-500"
-          >
-            {t('cancel')}
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving || deleting}
-            className="flex-1 py-3 rounded-xl bg-purple-600 text-white text-sm font-medium disabled:opacity-50"
-          >
-            {saving ? '...' : t('save')}
-          </button>
         </div>
 
         <button
-          onClick={handleDelete}
+          type="button"
+          onClick={handleSave}
           disabled={saving || deleting}
-          className="w-full mt-3 py-3 rounded-xl border border-red-200 text-sm text-red-500 font-medium disabled:opacity-50"
+          className="w-full py-3 rounded-2xl bg-purple-600 text-white font-semibold mt-4 disabled:opacity-50"
         >
-          {deleting ? '...' : t('deleteTransaction')}
+          {saving ? '...' : t('saveChanges')}
         </button>
+
+        <button
+          type="button"
+          onClick={() => setShowDeleteConfirm(true)}
+          disabled={saving || deleting}
+          className="w-full py-3 rounded-2xl border border-red-200 text-red-500 text-sm mt-2 disabled:opacity-50"
+        >
+          {t('deleteTransaction')}
+        </button>
+
+        <DeleteConfirmBlock
+          show={showDeleteConfirm}
+          message={t('deleteTransactionConfirm')}
+          onCancel={() => setShowDeleteConfirm(false)}
+          onConfirm={handleDelete}
+          confirming={deleting}
+          t={t}
+        />
       </div>
     </div>
   )

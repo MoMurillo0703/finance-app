@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Pencil } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -142,14 +143,15 @@ export default function AccountsScreen({ onAccountSaved, refreshKey = 0 }) {
                       {accountTypeLabel(bank.type, t)}
                     </span>
                   </button>
-                  <div className="text-right shrink-0 pl-3">
+                  <div className="text-right shrink-0 pl-3 flex flex-col items-end">
                     <p className="text-base font-bold text-gray-800">{formatMoney(bank.balance)}</p>
                     <button
                       type="button"
                       onClick={() => setEditingBank(bank)}
-                      className="text-[10px] text-purple-600 mt-1"
+                      className="text-gray-400 hover:text-purple-600 mt-1 p-1"
+                      aria-label={t('edit')}
                     >
-                      {t('edit')}
+                      <Pencil size={14} />
                     </button>
                   </div>
                 </div>
@@ -215,14 +217,15 @@ export default function AccountsScreen({ onAccountSaved, refreshKey = 0 }) {
                         </div>
                       </div>
                     </button>
-                    <div className="text-right shrink-0">
+                    <div className="text-right shrink-0 flex flex-col items-end">
                       <p className="text-base font-bold text-gray-800">{formatMoney(balance, currency)}</p>
                       <button
                         type="button"
                         onClick={() => setEditingCard(card)}
-                        className="text-[10px] text-purple-600 mt-1"
+                        className="text-gray-400 hover:text-purple-600 mt-1 p-1"
+                        aria-label={t('edit')}
                       >
-                        {t('edit')}
+                        <Pencil size={14} />
                       </button>
                     </div>
                   </div>

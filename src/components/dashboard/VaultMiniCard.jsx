@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { Pencil } from 'lucide-react'
 import { formatMoney, getUserCurrency } from '../../utils/currency'
 
 export default function VaultMiniCard({ vault, onClick }) {
@@ -15,11 +16,16 @@ export default function VaultMiniCard({ vault, onClick }) {
     <>
       <div className="flex justify-between items-start mb-2">
         <p className="text-xs font-semibold text-gray-700 leading-tight">{vault.name}</p>
-        {isReady && (
-          <span className="text-[9px] bg-green-100 text-green-600 px-1.5 py-0.5 rounded-full font-medium">
-            ✓
-          </span>
-        )}
+        <div className="flex items-center gap-1 shrink-0">
+          {isReady && (
+            <span className="text-[9px] bg-green-100 text-green-600 px-1.5 py-0.5 rounded-full font-medium">
+              ✓
+            </span>
+          )}
+          {onClick && (
+            <Pencil size={12} className="text-gray-300" />
+          )}
+        </div>
       </div>
       <p className="text-base font-bold text-gray-800">{formatMoney(vault.current_amount, currency)}</p>
       {vault.target_amount > 0 && (

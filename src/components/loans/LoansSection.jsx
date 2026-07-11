@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { Pencil } from 'lucide-react'
 import { formatMoney } from '../../utils/currency'
 import {
   LOAN_EMOJI,
@@ -55,15 +56,16 @@ export default function LoansSection({ loans, loading, onEdit }) {
                   {loan.lender ? `${loan.lender} · ` : ''}{loanTypeLabel(loan.loan_type, t)}
                 </p>
               </button>
-              <div className="text-right shrink-0 pl-3">
+              <div className="text-right shrink-0 pl-3 flex flex-col items-end">
                 <p className="text-base font-bold text-gray-800">{formatMoney(balance)}</p>
                 <p className="text-[10px] text-gray-400">{t('of')} {formatMoney(original)}</p>
                 <button
                   type="button"
                   onClick={() => onEdit?.(loan)}
-                  className="text-[10px] text-purple-600 mt-1"
+                  className="text-gray-400 hover:text-purple-600 mt-1 p-1"
+                  aria-label={t('edit')}
                 >
-                  {t('edit')}
+                  <Pencil size={14} />
                 </button>
               </div>
             </div>

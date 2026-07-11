@@ -109,7 +109,7 @@ export default function TransactionsScreen({
     <button
       key={tx.id}
       type="button"
-      onClick={() => setRecategorizeTransaction(tx)}
+      onClick={() => setEditingTransaction(tx)}
       className={`w-full border border-gray-100 flex justify-between items-center text-left ${
         nested
           ? 'bg-gray-50 rounded-xl p-3'

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { Pencil } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -22,6 +23,7 @@ import PromoSection from './PromoSection'
 import AddTransactionModal from '../transactions/AddTransactionModal'
 import AddCuotaModal from './AddCuotaModal'
 import PurchaseSimulator from '../simulator/PurchaseSimulator'
+import EditCardModal from './EditCardModal'
 import LogStatementModal from './LogStatementModal'
 
 
@@ -77,6 +79,7 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
   const [urgentPromos, setUrgentPromos] = useState([])
   const [statements, setStatements] = useState([])
   const [showLogStatement, setShowLogStatement] = useState(false)
+  const [showEditCard, setShowEditCard] = useState(false)
 
   const currency = liveCard.currency || 'COP'
   const limit = liveCard.credit_limit || 0
@@ -268,6 +271,14 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
                   </p>
                   <div className="flex items-center gap-2 flex-wrap mb-3">
                     <p className="text-lg font-bold text-white">{liveCard.name}</p>
+                    <button
+                      type="button"
+                      onClick={() => setShowEditCard(true)}
+                      className="text-white/60 hover:text-white p-0.5"
+                      aria-label={t('edit')}
+                    >
+                      <Pencil size={14} />
+                    </button>
                     {introActive && (
                       <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full">
                         {liveCard.intro_rate}% intro · {t('introRateExpires')} {formatDate(liveCard.intro_rate_expires)}
@@ -621,6 +632,17 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated 
           card={liveCard}
           onClose={() => setShowLogStatement(false)}
           onSaved={handleStatementLogged}
+        />
+      )}
+
+      {showEditCard && (
+        <EditCardModal
+          card={liveCard}
+          onClose={() => setShowEditCard(false)}
+          onSaved={() => {
+            setShowEditCard(false)
+            refreshData()
+          }}
         />
       )}
     </>

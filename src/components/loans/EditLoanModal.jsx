@@ -26,6 +26,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { LoanFormFields, LoanCalcPreview, resolveEndDate } from './LoanFormFields'
 import { useCurrencyInput } from '../../hooks/useCurrencyInput'
+import DeleteConfirmBlock from '../shared/DeleteConfirmBlock'
 
 export default function EditLoanModal({ loan, onClose, onSaved }) {
   const { t } = useTranslation()
@@ -43,6 +44,7 @@ export default function EditLoanModal({ loan, onClose, onSaved }) {
   const [saving, setSaving] = useState(false)
   const [paying, setPaying] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [error, setError] = useState('')
 
   const handleSave = async () => {
@@ -78,6 +80,15 @@ export default function EditLoanModal({ loan, onClose, onSaved }) {
       setError(dbError.message)
       setSaving(false)
     } else {
+      await supabase
+        .from('bills')
+        .update({
+          name: `${name.trim()} - ${t('loanPayment')}`,
+          amount: payment,
+          due_day: dueDay ? parseInt(dueDay, 10) : null,
+        })
+        .eq('loan_id', loan.id)
+
       onSaved()
     }
   }
@@ -209,12 +220,22 @@ export default function EditLoanModal({ loan, onClose, onSaved }) {
         </div>
 
         <button
-          onClick={handleDelete}
+          type="button"
+          onClick={() => setShowDeleteConfirm(true)}
           disabled={deleting}
-          className="w-full mt-3 py-3 rounded-xl border border-red-200 text-red-500 text-sm disabled:opacity-50"
+          className="w-full mt-3 py-3 rounded-2xl border border-red-200 text-red-500 text-sm font-medium disabled:opacity-50"
         >
-          {deleting ? '...' : t('delete')}
+          {t('delete')}
         </button>
+
+        <DeleteConfirmBlock
+          show={showDeleteConfirm}
+          message={t('deleteLoanConfirm')}
+          onCancel={() => setShowDeleteConfirm(false)}
+          onConfirm={handleDelete}
+          confirming={deleting}
+          t={t}
+        />
       </div>
     </div>
   )
