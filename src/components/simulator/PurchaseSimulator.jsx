@@ -502,7 +502,7 @@ export default function PurchaseSimulator({ onClose, onSaved, prefillCardId }) {
                 </div>
 
                 <div className="border border-gray-100 rounded-xl overflow-hidden text-xs">
-                  <div className="grid grid-cols-2 bg-gray-50 border-b border-gray-100">
+                  <div className="grid grid-cols-2 bg-lala-50 border-b border-gray-100">
                     <p className="p-2 font-semibold text-gray-600">{t('beforePurchase')}</p>
                     <p className="p-2 font-semibold text-gray-600 border-l border-gray-100">{t('afterPurchase')}</p>
                   </div>
@@ -612,7 +612,7 @@ export default function PurchaseSimulator({ onClose, onSaved, prefillCardId }) {
 
                 {step === 3 && (
                   <>
-                    <p className="text-xs text-gray-500 bg-gray-50 rounded-xl p-3">{tipText()}</p>
+                    <p className="text-xs text-gray-500 bg-lala-50 rounded-xl p-3">{tipText()}</p>
                     <div className="flex gap-3">
                       <button
                         type="button"

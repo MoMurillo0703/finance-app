@@ -283,7 +283,7 @@ export default function ReportsScreen({ setHideNav }) {
   const { active: activeLoans, totalInterestRemaining, totalMonthlyPayments } = summarizeLoans(loans)
 
   return (
-    <div className="bg-gray-50 pb-6 min-h-full">
+    <div className="bg-lala-50 pb-6 min-h-full">
       <div className="flex justify-between items-center px-6 pt-6 pb-2">
         <h1 className="text-2xl font-bold text-gray-800">{t('reports')}</h1>
         <button

@@ -496,7 +496,7 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated,
                               return (
                                 <div
                                   key={tx.id}
-                                  className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5"
+                                  className="flex items-center gap-3 bg-lala-50 rounded-xl px-3 py-2.5"
                                 >
                                   <span className="text-base shrink-0">
                                     {CATEGORY_EMOJI[cat] || CATEGORY_EMOJI.other}

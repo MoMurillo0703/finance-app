@@ -86,7 +86,7 @@ export default function AccountsScreen({ onAccountSaved, refreshKey = 0, setHide
   }
 
   return (
-    <div className="bg-gray-50 min-h-full">
+    <div className="bg-lala-50 min-h-full">
       <div className="px-4 py-4 pb-24 space-y-6">
         <button
           type="button"

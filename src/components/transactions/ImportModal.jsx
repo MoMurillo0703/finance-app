@@ -857,7 +857,7 @@ export default function ImportModal({ onClose, onComplete, setHideNav }) {
             )}
             <div className="overflow-x-auto border border-gray-100 rounded-xl">
               <table className="w-full text-xs">
-                <thead className="bg-gray-50 text-gray-500">
+                <thead className="bg-lala-50 text-gray-500">
                   <tr>
                     <th className="p-2 w-8" />
                     <th className="p-2 text-left">{t('date')}</th>
@@ -1017,7 +1017,7 @@ export default function ImportModal({ onClose, onComplete, setHideNav }) {
                 <h3 className="text-sm font-semibold text-gray-700 mb-3">{t('importRecurring')}</h3>
                 <div className="space-y-2">
                   {summary.recurring.map((r, i) => (
-                    <div key={i} className="flex justify-between text-sm bg-gray-50 rounded-lg px-3 py-2">
+                    <div key={i} className="flex justify-between text-sm bg-lala-50 rounded-lg px-3 py-2">
                       <span className="text-gray-600 truncate mr-2">🔁 {r.description}</span>
                       <span className="font-medium shrink-0">{formatMoney(r.amount, currency)}</span>
                     </div>

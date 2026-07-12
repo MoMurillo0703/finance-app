@@ -1,36 +1,51 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { Settings, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import VaultMiniCard from './VaultMiniCard'
-import AddVaultModal from './AddVaultModal'
 import AddBankModal from './AddBankModal'
-import EditVaultModal from '../vaults/EditVaultModal'
-import MonthSnapshot from './MonthSnapshot'
-import BillsThisWeek from './BillsThisWeek'
 import PaydayWizard from '../payday/PaydayWizard'
 import PurchaseSimulator from '../simulator/PurchaseSimulator'
 import DebtPayoffPlanner from '../debt/DebtPayoffPlanner'
+import QuickSpentSheet from './QuickSpentSheet'
+import QuickPayBillSheet from './QuickPayBillSheet'
 import { formatMoney } from '../../utils/currency'
+import { formatDate } from '../../utils/date'
 import { fetchBanks } from '../../utils/bank'
-import { calculateNetWorth } from '../../utils/netWorth'
+import { getMonthBounds } from '../../utils/reports'
+import { getSpendingByBudgetCategory, getBudgetCategoryLabel } from '../../utils/budgets'
+import { BUDGET_CATEGORIES, CATEGORY_EMOJIS } from '../../utils/transactionCategories'
+import {
+  getGreetingKey,
+  getFirstName,
+  getSmartAlert,
+  computeMonthlyInterest,
+  computeDebtPaidOffPct,
+} from '../../utils/dashboardHelpers'
 
-export default function Dashboard({ refreshKey, onNavigate, setHideNav }) {
+export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettings }) {
   const { user } = useAuth()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [vaults, setVaults] = useState([])
   const [banks, setBanks] = useState([])
   const [creditCards, setCreditCards] = useState([])
   const [loans, setLoans] = useState([])
+  const [bills, setBills] = useState([])
+  const [promos, setPromos] = useState([])
+  const [monthTransactions, setMonthTransactions] = useState([])
+  const [recentTransactions, setRecentTransactions] = useState([])
   const [totalBalance, setTotalBalance] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [showAddVault, setShowAddVault] = useState(false)
   const [showAddBank, setShowAddBank] = useState(false)
-  const [editingVault, setEditingVault] = useState(null)
   const [modalRefreshKey, setModalRefreshKey] = useState(0)
   const [showPaydayWizard, setShowPaydayWizard] = useState(false)
+  const [showSpent, setShowSpent] = useState(false)
+  const [showPayBill, setShowPayBill] = useState(false)
   const [showSimulator, setShowSimulator] = useState(false)
   const [showDebtPlanner, setShowDebtPlanner] = useState(false)
+
+  const now = new Date()
+  const { firstDay, daysInMonth } = getMonthBounds(now.getFullYear(), now.getMonth() + 1)
 
   useEffect(() => {
     let active = true
@@ -41,6 +56,10 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav }) {
         { data: banksData },
         { data: cardsData },
         { data: loansData },
+        { data: billsData },
+        { data: promosData },
+        { data: monthTx },
+        { data: recentTx },
       ] = await Promise.all([
         supabase
           .from('vaults')
@@ -58,6 +77,29 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav }) {
           .select('*')
           .eq('user_id', user.id)
           .eq('is_active', true),
+        supabase
+          .from('bills')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true),
+        supabase
+          .from('promotional_purchases')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .gt('remaining_balance', 0),
+        supabase
+          .from('transactions')
+          .select('id, type, amount, description, transaction_date, category')
+          .eq('user_id', user.id)
+          .gte('transaction_date', firstDay)
+          .order('transaction_date', { ascending: false }),
+        supabase
+          .from('transactions')
+          .select('id, type, amount, description, transaction_date, category')
+          .eq('user_id', user.id)
+          .order('transaction_date', { ascending: false })
+          .limit(3),
       ])
 
       if (!active) return
@@ -66,210 +108,336 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav }) {
       setBanks(banksData ?? [])
       setCreditCards(cardsData ?? [])
       setLoans(loansData ?? [])
+      setBills(billsData ?? [])
+      setPromos(promosData ?? [])
+      setMonthTransactions(monthTx ?? [])
+      setRecentTransactions(recentTx ?? [])
       setTotalBalance((banksData ?? []).reduce((sum, bank) => sum + (bank.balance || 0), 0))
       setLoading(false)
     })()
 
     return () => { active = false }
-  }, [user.id, refreshKey, modalRefreshKey])
+  }, [user.id, refreshKey, modalRefreshKey, firstDay])
 
   const protectedAmount = vaults.reduce((sum, v) => sum + (v.current_amount || 0), 0)
   const safeToSpend = totalBalance - protectedAmount
-  const {
-    netWorth,
-    totalAssets,
-    totalLiabilities,
-    totalCreditCardDebt,
-    totalLoanDebt,
-  } = calculateNetWorth({ banks, creditCards, loans })
-  const dataRefreshKey = `${refreshKey}-${modalRefreshKey}`
+  const firstName = getFirstName(user)
+
+  const monthSpent = monthTransactions
+    .filter(tx => tx.type === 'expense')
+    .reduce((sum, tx) => sum + tx.amount, 0)
+
+  const monthIncome = monthTransactions
+    .filter(tx => tx.type === 'income')
+    .reduce((sum, tx) => sum + tx.amount, 0)
+
+  const dayOfMonth = now.getDate()
+  const monthProjected = dayOfMonth > 0 ? (monthSpent / dayOfMonth) * daysInMonth : monthSpent
+  const monthlyNet = monthIncome - monthSpent
+  const spendingPct = monthProjected > 0 ? (monthSpent / monthProjected) * 100 : 0
+
+  const topCategories = useMemo(() => {
+    const spending = getSpendingByBudgetCategory(monthTransactions)
+    return BUDGET_CATEGORIES
+      .map(cat => ({
+        key: cat.key,
+        emoji: cat.emoji,
+        label: getBudgetCategoryLabel(cat.key, t),
+        amount: spending[cat.key] || 0,
+      }))
+      .filter(c => c.amount > 0)
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 2)
+  }, [monthTransactions, t])
+
+  const totalDebt = creditCards.reduce((s, c) => s + (c.current_balance || 0), 0)
+    + loans.reduce((s, l) => s + (l.current_balance || 0), 0)
+
+  const monthlyInterest = computeMonthlyInterest(creditCards, loans)
+  const debtPaidOffPct = computeDebtPaidOffPct(loans, creditCards)
+
+  const smartAlert = useMemo(
+    () => getSmartAlert({ bills, promos, safeToSpend, onNavigate, t }),
+    [bills, promos, safeToSpend, onNavigate, t],
+  )
+
+  const currentMonthName = now.toLocaleDateString(
+    i18n.language === 'es' ? 'es-CO' : 'en-US',
+    { month: 'long' },
+  )
+
   const onboardingComplete = localStorage.getItem('onboarding_complete') === 'true'
   const showAccountsEmpty = onboardingComplete && banks.length === 0
 
+  const bumpRefresh = () => setModalRefreshKey(k => k + 1)
+
+  const closeSheet = () => {
+    setShowSpent(false)
+    setShowPayBill(false)
+  }
+
   if (loading) {
     return (
-      <div className="bg-gray-50 flex items-center justify-center py-20">
+      <div className="bg-lala-50 flex items-center justify-center py-20 min-h-screen">
         <p className="text-gray-400">{t('loading')}</p>
       </div>
     )
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="px-4 pt-4 pb-6 space-y-4">
-        {showAccountsEmpty ? (
-          <div className="text-center py-12 text-gray-400">
-            <p className="text-4xl mb-3">🏦</p>
-            <p className="font-medium text-gray-600">{t('noAccounts')}</p>
-            <p className="text-sm mt-1">{t('noAccountsHint')}</p>
-            <button
-              type="button"
-              onClick={() => onNavigate?.('accounts')}
-              className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-xl text-sm"
-            >
-              {t('addAccount')}
-            </button>
-          </div>
-        ) : (
-          <>
-        <div className="bg-gradient-to-br from-purple-600 to-purple-800 rounded-3xl p-5 text-white shadow-lg">
-          <p className="text-xs font-medium text-purple-200 uppercase tracking-wider mb-1">{t('safeToSpend')}</p>
-          <p className="text-4xl font-bold mb-1">{formatMoney(safeToSpend)}</p>
-          <p className="text-xs text-purple-200 mb-4">{t('safeToSpendSubtitle')}</p>
-          <div className="flex gap-4 pt-3 border-t border-purple-500">
-            <div>
-              <p className="text-[10px] text-purple-300">{t('totalBalance')}</p>
-              <p className="text-sm font-semibold">{formatMoney(totalBalance)}</p>
-            </div>
-            <div className="w-px bg-purple-500" />
-            <div>
-              <p className="text-[10px] text-purple-300">{t('protected')}</p>
-              <p className="text-sm font-semibold">{formatMoney(protectedAmount)}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-          <div className="flex justify-between items-start mb-3">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{t('netWorth')}</p>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-              netWorth >= 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'
-            }`}>
-              {netWorth >= 0 ? `↑ ${t('positive')}` : `↓ ${t('negative')}`}
-            </span>
-          </div>
-
-          <p className={`text-3xl font-bold mb-4 ${netWorth >= 0 ? 'text-gray-900' : 'text-red-500'}`}>
-            {formatMoney(netWorth)}
-          </p>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-green-50 rounded-xl p-3">
-              <p className="text-xs text-gray-400 mb-1">{t('assets')}</p>
-              <p className="font-bold text-green-600">{formatMoney(totalAssets)}</p>
-              <p className="text-xs text-gray-400 mt-1">
-                {banks.filter(b => b.is_active).length} account{banks.length > 1 ? 's' : ''}
-              </p>
-            </div>
-            <div className="bg-red-50 rounded-xl p-3">
-              <p className="text-xs text-gray-400 mb-1">{t('liabilities')}</p>
-              <p className="font-bold text-red-500">{formatMoney(totalLiabilities)}</p>
-              <p className="text-xs text-gray-400 mt-1">
-                {formatMoney(totalCreditCardDebt)} {t('netWorthCards')} · {formatMoney(totalLoanDebt)} {t('netWorthLoans')}
-              </p>
-            </div>
-          </div>
-
-          {(totalCreditCardDebt > 0 || totalLoanDebt > 0) && (
-            <button
-              type="button"
-              onClick={() => setShowDebtPlanner(true)}
-              className="w-full mt-3 py-2.5 rounded-xl text-sm font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 transition-colors"
-            >
-              {t('payoffPlan')} →
-            </button>
-          )}
-        </div>
-
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={() => setShowPaydayWizard(true)}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-amber-500 text-white font-semibold text-sm shadow-sm hover:bg-amber-600 transition-colors"
-          >
-            💰 {t('gotPaid')}
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowAddVault(true)}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-white border border-gray-200 text-purple-600 font-semibold text-sm shadow-sm"
-          >
-            + {t('addVault')}
-          </button>
-        </div>
-
+  if (showAccountsEmpty) {
+    return (
+      <div className="min-h-screen bg-lala-50 pb-24 flex flex-col items-center justify-center px-6">
+        <p className="text-4xl mb-3">🏦</p>
+        <p className="font-medium text-gray-600">{t('noAccounts')}</p>
+        <p className="text-sm text-gray-400 mt-1 text-center">{t('noAccountsHint')}</p>
         <button
           type="button"
-          onClick={() => setShowSimulator(true)}
-          className="w-full py-2.5 rounded-2xl border border-purple-200 text-purple-600 font-medium text-sm"
+          onClick={() => onNavigate?.('accounts')}
+          className="mt-4 px-4 py-2 bg-lala-600 text-white rounded-xl text-sm"
         >
-          🤔 {t('canIAfford')}
+          {t('addAccount')}
         </button>
+      </div>
+    )
+  }
 
-        {!onboardingComplete && totalBalance === 0 && vaults.length === 0 && (
-          <div className="bg-purple-50 border border-purple-100 rounded-2xl p-5 text-center">
-            <p className="text-2xl mb-2">👋</p>
-            <p className="text-sm font-semibold text-purple-700 mb-1">{t('welcomeOnboardingTitle')}</p>
-            <p className="text-xs text-purple-500 mb-4">{t('welcomeOnboardingBody')}</p>
-            <button
-              type="button"
-              onClick={() => setShowAddBank(true)}
-              className="px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium"
-            >
-              {t('onboardingAddBank')}
-            </button>
-          </div>
+  return (
+    <div className="min-h-screen bg-lala-50 pb-24">
+      {/* HERO */}
+      <div className="relative bg-gradient-to-br from-lala-400 via-lala-300 to-lala-200 px-6 pt-14 pb-8 rounded-b-[2.5rem]">
+        <div className="absolute top-12 right-6">
+          <button
+            type="button"
+            onClick={onSettings}
+            className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center"
+            aria-label={t('settings')}
+          >
+            <Settings size={16} className="text-white" />
+          </button>
+        </div>
+
+        <p className="text-lala-700 text-sm font-medium mb-1">
+          {t(getGreetingKey())}, {firstName} 👋
+        </p>
+
+        <p className="text-white/70 text-xs uppercase tracking-widest mb-1">
+          {t('safeToSpend')}
+        </p>
+        <p className="text-white text-5xl font-bold tracking-tight mb-1">
+          {formatMoney(safeToSpend)}
+        </p>
+        <p className="text-white/60 text-xs">
+          {safeToSpend >= 0 ? t('safeToSpendSubtitle') : t('belowVaultTargets')}
+        </p>
+
+        {smartAlert && (
+          <button
+            type="button"
+            onClick={smartAlert.onTap ?? undefined}
+            disabled={!smartAlert.onTap}
+            className="mt-4 w-full bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-2.5 flex items-center justify-between disabled:cursor-default"
+          >
+            <p className="text-white text-xs font-medium text-left">{smartAlert.message}</p>
+            {smartAlert.onTap && <ChevronRight size={14} className="text-white/60 shrink-0" />}
+          </button>
         )}
+      </div>
 
-        <MonthSnapshot
-          refreshKey={dataRefreshKey}
-          onViewReports={() => onNavigate?.('reports')}
-        />
-
-        <BillsThisWeek refreshKey={dataRefreshKey} />
-          </>
-        )}
-
-        <div>
-          <div className="flex justify-between items-center mb-2">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('vaults')}</p>
+      {/* QUICK ACTIONS */}
+      <div className="mx-4 -mt-5 bg-white rounded-3xl shadow-lg border border-lala-100 p-4 mb-4">
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { icon: '💰', label: t('gotPaid'), action: () => setShowPaydayWizard(true) },
+            { icon: '🛍️', label: t('spent'), action: () => setShowSpent(true) },
+            { icon: '📋', label: t('payBill'), action: () => setShowPayBill(true) },
+            { icon: '🤔', label: t('afford'), action: () => setShowSimulator(true) },
+          ].map(btn => (
             <button
+              key={btn.label}
               type="button"
-              onClick={() => setShowAddVault(true)}
-              className="text-xs text-purple-600 font-medium"
+              onClick={btn.action}
+              className="flex flex-col items-center gap-1.5 py-2"
             >
-              + {t('addVault')}
+              <div className="w-12 h-12 rounded-2xl bg-lala-50 flex items-center justify-center text-xl">
+                {btn.icon}
+              </div>
+              <p className="text-xs text-gray-500 font-medium leading-tight text-center">
+                {btn.label}
+              </p>
             </button>
-          </div>
-          {vaults.length === 0 ? (
-            <div className="text-center py-8 text-gray-400 bg-white rounded-2xl border border-gray-100">
-              <p className="text-3xl mb-2">🏦</p>
-              <p className="font-medium text-gray-600 text-sm">{t('noVaults')}</p>
-              <p className="text-xs mt-1">{t('noVaultsEmptyHint')}</p>
-            </div>
-          ) : (
-            <div className="flex gap-3 overflow-x-auto pb-1">
-              {vaults.map(vault => (
-                <VaultMiniCard
-                  key={vault.id}
-                  vault={vault}
-                  onClick={() => setEditingVault(vault)}
-                />
-              ))}
-            </div>
-          )}
+          ))}
         </div>
       </div>
 
-      {showAddVault && (
-        <AddVaultModal
-          onClose={() => setShowAddVault(false)}
-          onSaved={() => { setShowAddVault(false); setModalRefreshKey(k => k + 1) }}
-        />
+      {/* MONTH PULSE */}
+      <div className="mx-4 mb-4 bg-white rounded-3xl border border-lala-100 p-4">
+        <div className="flex justify-between items-center mb-2">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide capitalize">
+            {currentMonthName}
+          </p>
+          <button
+            type="button"
+            onClick={() => onNavigate?.('reports')}
+            className="text-xs text-lala-600 font-medium"
+          >
+            {t('seeAll')} →
+          </button>
+        </div>
+        <div className="flex justify-between items-end mb-2">
+          <div>
+            <p className="text-2xl font-bold text-gray-900">{formatMoney(monthSpent)}</p>
+            <p className="text-xs text-gray-400">
+              {t('spentOfProjectedShort', {
+                spent: formatMoney(monthSpent),
+                projected: formatMoney(monthProjected),
+              })}
+            </p>
+          </div>
+          <p className={`text-sm font-semibold ${monthlyNet >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+            {monthlyNet >= 0 ? '+' : ''}{formatMoney(monthlyNet)} {t('netShort')}
+          </p>
+        </div>
+        <div className="h-2 bg-lala-100 rounded-full overflow-hidden">
+          <div
+            className={`h-2 rounded-full transition-all ${
+              spendingPct > 90 ? 'bg-red-400' :
+              spendingPct > 70 ? 'bg-amber-400' :
+              'bg-lala-400'
+            }`}
+            style={{ width: `${Math.min(100, spendingPct)}%` }}
+          />
+        </div>
+        {topCategories.length > 0 && (
+          <div className="flex gap-3 mt-3 flex-wrap">
+            {topCategories.map(cat => (
+              <div key={cat.key} className="flex items-center gap-1.5">
+                <span className="text-sm">{cat.emoji}</span>
+                <p className="text-xs text-gray-500">
+                  {cat.label}{' '}
+                  <span className="font-semibold text-gray-700">{formatMoney(cat.amount)}</span>
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* DEBT PULSE */}
+      {totalDebt > 0 && (
+        <div className="mx-4 mb-4 bg-white rounded-3xl border border-lala-100 p-4">
+          <div className="flex justify-between items-center mb-3">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+              {t('debtProgress')}
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowDebtPlanner(true)}
+              className="text-xs text-lala-600 font-medium"
+            >
+              {t('viewPlan')} →
+            </button>
+          </div>
+          <div className="flex justify-between items-end mb-2">
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{formatMoney(totalDebt)}</p>
+              <p className="text-xs text-gray-400">{t('totalDebtRemaining')}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-semibold text-red-500">{formatMoney(monthlyInterest)}/mo</p>
+              <p className="text-xs text-gray-400">{t('inInterest')}</p>
+            </div>
+          </div>
+          <div className="h-2 bg-red-100 rounded-full overflow-hidden">
+            <div
+              className="h-2 bg-gradient-to-r from-red-400 to-lala-400 rounded-full transition-all"
+              style={{ width: `${debtPaidOffPct}%` }}
+            />
+          </div>
+          <p className="text-xs text-gray-400 mt-1">
+            {debtPaidOffPct.toFixed(0)}% {t('paidOffFromOriginal')}
+          </p>
+        </div>
+      )}
+
+      {/* RECENT TRANSACTIONS */}
+      <div className="mx-4 mb-4 bg-white rounded-3xl border border-lala-100 p-4">
+        <div className="flex justify-between items-center mb-3">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{t('recent')}</p>
+          <button
+            type="button"
+            onClick={() => onNavigate?.('transactions')}
+            className="text-xs text-lala-600 font-medium"
+          >
+            {t('seeAll')} →
+          </button>
+        </div>
+        {recentTransactions.length === 0 ? (
+          <p className="text-xs text-gray-400 text-center py-3">{t('noTransactionsMonth')}</p>
+        ) : (
+          recentTransactions.map(tx => (
+            <div
+              key={tx.id}
+              className="flex justify-between items-center py-2 border-b border-lala-50 last:border-0"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-lala-50 flex items-center justify-center text-sm shrink-0">
+                  {CATEGORY_EMOJIS[tx.category] || '📦'}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-800 truncate max-w-[160px]">
+                    {tx.description}
+                  </p>
+                  <p className="text-xs text-gray-400">{formatDate(tx.transaction_date)}</p>
+                </div>
+              </div>
+              <p className={`text-sm font-bold shrink-0 ${tx.type === 'income' ? 'text-green-500' : 'text-gray-800'}`}>
+                {tx.type === 'income' ? '+' : '-'}{formatMoney(tx.amount)}
+              </p>
+            </div>
+          ))
+        )}
+      </div>
+
+      {!onboardingComplete && totalBalance === 0 && vaults.length === 0 && (
+        <div className="mx-4 mb-4 bg-lala-100 border border-lala-200 rounded-3xl p-5 text-center">
+          <p className="text-2xl mb-2">👋</p>
+          <p className="text-sm font-semibold text-lala-800 mb-1">{t('welcomeOnboardingTitle')}</p>
+          <p className="text-xs text-lala-600 mb-4">{t('welcomeOnboardingBody')}</p>
+          <button
+            type="button"
+            onClick={() => setShowAddBank(true)}
+            className="px-4 py-2 bg-lala-600 text-white rounded-xl text-sm font-medium"
+          >
+            {t('onboardingAddBank')}
+          </button>
+        </div>
+      )}
+
+      {(showSpent || showPayBill) && (
+        <div className="fixed inset-0 z-[110] flex items-end justify-center">
+          <div className="absolute inset-0 bg-black opacity-40" onClick={closeSheet} />
+          <div className="relative bg-white w-full rounded-t-3xl max-h-[92vh] overflow-y-auto">
+            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mt-3 mb-1" />
+            {showSpent && (
+              <QuickSpentSheet
+                onClose={closeSheet}
+                onSaved={bumpRefresh}
+              />
+            )}
+            {showPayBill && (
+              <QuickPayBillSheet
+                onClose={closeSheet}
+                onPaid={bumpRefresh}
+              />
+            )}
+          </div>
+        </div>
       )}
 
       {showAddBank && (
         <AddBankModal
           onClose={() => setShowAddBank(false)}
-          onSaved={() => { setShowAddBank(false); setModalRefreshKey(k => k + 1) }}
-        />
-      )}
-
-      {editingVault && (
-        <EditVaultModal
-          vault={editingVault}
-          onClose={() => setEditingVault(null)}
-          onSaved={() => { setEditingVault(null); setModalRefreshKey(k => k + 1) }}
+          onSaved={() => { setShowAddBank(false); bumpRefresh() }}
         />
       )}
 
@@ -278,7 +446,7 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav }) {
           onClose={() => setShowPaydayWizard(false)}
           onComplete={() => {
             setShowPaydayWizard(false)
-            setModalRefreshKey(k => k + 1)
+            bumpRefresh()
           }}
         />
       )}
@@ -286,7 +454,7 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav }) {
       {showSimulator && (
         <PurchaseSimulator
           onClose={() => setShowSimulator(false)}
-          onSaved={() => setModalRefreshKey(k => k + 1)}
+          onSaved={bumpRefresh}
         />
       )}
 

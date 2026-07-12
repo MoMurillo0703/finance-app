@@ -114,7 +114,7 @@ export default function CuotasSection({ card, refreshKey, onUpdated, hideEstimat
             return (
               <div
                 key={cuota.id}
-                className="bg-gray-50 border border-gray-100 rounded-lg p-3"
+                className="bg-lala-50 border border-gray-100 rounded-lg p-3"
               >
                 <div className="flex justify-between items-start mb-1">
                   <p className="text-xs font-medium text-gray-700">{cuota.description}</p>

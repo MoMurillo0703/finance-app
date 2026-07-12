@@ -70,17 +70,20 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      <AppHeader
-        activeTab={activeTab}
-        onSettings={() => setShowSettings(true)}
-      />
-      <div className="pt-14">
+    <div className="min-h-screen bg-lala-50 pb-20">
+      {activeTab !== 'home' && (
+        <AppHeader
+          activeTab={activeTab}
+          onSettings={() => setShowSettings(true)}
+        />
+      )}
+      <div className={activeTab === 'home' ? '' : 'pt-14'}>
         {activeTab === 'home' && (
           <Dashboard
             refreshKey={`${dashboardRefreshKey}-${prefsVersion}`}
             onNavigate={setActiveTab}
             setHideNav={setHideNav}
+            onSettings={() => setShowSettings(true)}
           />
         )}
         {activeTab === 'transactions' && (

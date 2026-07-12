@@ -183,7 +183,7 @@ function AddBudgetSheet({ budgetedKeys, onClose, onSaved }) {
                   key={cat.key}
                   type="button"
                   onClick={() => setSelectedKey(cat.key)}
-                  className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-gray-50 text-left"
+                  className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-lala-50 text-left"
                 >
                   <span className="text-xl">{cat.emoji}</span>
                   <span className="text-sm font-medium text-gray-800">
@@ -367,7 +367,7 @@ export default function BudgetsScreen({ onClose }) {
   const allCategoriesBudgeted = budgetedKeys.size >= BUDGET_CATEGORIES.length
 
   const content = (
-    <div className="bg-gray-50 min-h-full">
+    <div className="bg-lala-50 min-h-full">
       <div className="bg-white px-6 py-4 border-b border-gray-100 flex justify-between items-start gap-3">
         <div className="flex items-start gap-3 min-w-0">
           {onClose && (
@@ -452,7 +452,7 @@ export default function BudgetsScreen({ onClose }) {
 
   if (onClose) {
     return (
-      <div className="fixed inset-0 z-[120] bg-gray-50 overflow-y-auto">
+      <div className="fixed inset-0 z-[120] bg-lala-50 overflow-y-auto">
         {content}
       </div>
     )

@@ -113,7 +113,7 @@ export default function TransactionsScreen({
       onClick={() => setEditingTransaction(tx)}
       className={`w-full border border-gray-100 flex justify-between items-center text-left ${
         nested
-          ? 'bg-gray-50 rounded-xl p-3'
+          ? 'bg-lala-50 rounded-xl p-3'
           : 'bg-white rounded-2xl p-4 shadow-sm'
       }`}
     >
@@ -227,7 +227,7 @@ export default function TransactionsScreen({
   }
 
   return (
-    <div className="bg-gray-50">
+    <div className="bg-lala-50">
       <div className="bg-white px-6 py-3 border-b border-gray-100">
         {isFiltered && (
           <button

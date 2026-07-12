@@ -326,7 +326,7 @@ export default function BillsScreen({ onBillPaid }) {
   const seenDays = new Set()
 
   return (
-    <div className="bg-gray-50 min-h-full pb-24">
+    <div className="bg-lala-50 min-h-full pb-24">
       {error && <p className="text-red-500 text-xs px-4 pt-3">{error}</p>}
 
       {loading ? (

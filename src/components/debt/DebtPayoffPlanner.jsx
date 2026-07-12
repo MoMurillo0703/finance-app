@@ -186,7 +186,7 @@ export default function DebtPayoffPlanner({ onClose, setHideNav }) {
   ])
 
   return (
-    <div className="fixed inset-0 z-[130] bg-gray-50 flex flex-col">
+    <div className="fixed inset-0 z-[130] bg-lala-50 flex flex-col">
       <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-white shrink-0">
         <div>
           <p className="text-lg font-bold text-gray-800">{t('debtPayoffPlanner')}</p>
@@ -334,7 +334,7 @@ export default function DebtPayoffPlanner({ onClose, setHideNav }) {
               </div>
             ))}
 
-            <div className="bg-gray-50 rounded-2xl p-4 mt-2 mb-4 border border-gray-100">
+            <div className="bg-lala-50 rounded-2xl p-4 mt-2 mb-4 border border-gray-100">
               <div className="flex justify-between mb-2">
                 <p className="text-sm text-gray-500">{t('debtFreeIn')}</p>
                 <p className="font-bold text-purple-600 text-right">

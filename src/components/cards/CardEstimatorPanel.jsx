@@ -24,7 +24,7 @@ export default function CardEstimatorPanel({ card, cuotas = [] }) {
         </div>
       )}
 
-      <div className="bg-gray-50 border border-gray-100 rounded-lg overflow-hidden">
+      <div className="bg-lala-50 border border-gray-100 rounded-lg overflow-hidden">
         <div className="px-3 py-2 border-b border-gray-200 flex justify-between text-[10px] text-gray-600">
           <span>{t('interestRateShort', { rate: estimate.apr.toFixed(2) })}</span>
           <span>

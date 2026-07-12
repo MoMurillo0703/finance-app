@@ -170,7 +170,7 @@ export default function MonthSnapshot({ refreshKey, onViewReports }) {
               key={row.category}
               type="button"
               onClick={onViewReports}
-              className="flex items-center gap-1 rounded-full bg-gray-50 border border-gray-100 px-2.5 py-1 text-xs text-gray-700"
+              className="flex items-center gap-1 rounded-full bg-lala-50 border border-gray-100 px-2.5 py-1 text-xs text-gray-700"
             >
               <span>{CATEGORY_EMOJI[row.category] || CATEGORY_EMOJI.other}</span>
               <span className="font-medium">{row.label}</span>

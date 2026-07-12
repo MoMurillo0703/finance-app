@@ -74,7 +74,7 @@ export default function AccountHistoryModal({ bank, onClose }) {
   return (
     <div className="fixed inset-0 z-[110] flex items-end justify-center">
       <div className="absolute inset-0 bg-black opacity-40" onClick={onClose} />
-      <div className="relative bg-gray-50 w-full max-h-[85vh] rounded-t-3xl flex flex-col" style={{ zIndex: 2 }}>
+      <div className="relative bg-lala-50 w-full max-h-[85vh] rounded-t-3xl flex flex-col" style={{ zIndex: 2 }}>
         <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mt-3 mb-2 shrink-0" />
         <div className="px-5 pb-3 border-b border-gray-100 shrink-0">
           <p className="text-lg font-bold text-gray-800">{bank.nickname?.trim() || bank.name}</p>
@@ -110,7 +110,7 @@ export default function AccountHistoryModal({ bank, onClose }) {
                         {items.map(tx => (
                           <div
                             key={tx.id}
-                            className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 flex justify-between items-center"
+                            className="w-full bg-lala-50 border border-gray-100 rounded-xl p-3 flex justify-between items-center"
                           >
                             <div className="min-w-0 pr-2">
                               <p className="text-sm font-medium text-gray-700 truncate">

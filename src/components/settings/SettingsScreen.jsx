@@ -82,7 +82,7 @@ export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, o
   }
 
   const content = (
-    <div className="bg-gray-50 min-h-full">
+    <div className="bg-lala-50 min-h-full">
       <div className="flex justify-between items-center px-6 pt-6 pb-4">
         <h1 className="text-xl font-bold text-gray-800">{t('settings')}</h1>
         {onClose && (
@@ -229,7 +229,7 @@ export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, o
 
   if (onClose) {
     return (
-      <div className="fixed inset-0 z-[110] bg-gray-50 overflow-y-auto pt-14 pb-6">
+      <div className="fixed inset-0 z-[110] bg-lala-50 overflow-y-auto pt-14 pb-6">
         {content}
       </div>
     )

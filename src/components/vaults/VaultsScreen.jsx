@@ -35,7 +35,7 @@ export default function VaultsScreen({ onVaultSaved }) {
   }, [user.id, refreshKey])
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-lala-50">
       <div className="bg-white px-6 pt-12 pb-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">{t('vaults')}</h1>
         <button
