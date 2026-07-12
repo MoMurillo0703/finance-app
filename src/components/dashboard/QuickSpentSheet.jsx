@@ -12,6 +12,10 @@ import { formatMoney } from '../../utils/currency'
 
 const todayISO = () => new Date().toISOString().split('T')[0]
 
+const PRIMARY_BTN_CLASS =
+  'w-full py-4 rounded-2xl text-white font-semibold text-base disabled:opacity-40'
+const PRIMARY_BTN_STYLE = { backgroundColor: '#7C3AED' }
+
 export default function QuickSpentSheet({ onClose, onSaved }) {
   const { t } = useTranslation()
   const { user } = useAuth()
@@ -87,7 +91,7 @@ export default function QuickSpentSheet({ onClose, onSaved }) {
   }
 
   const stepHeader = (title, backStep) => (
-    <div className="flex items-center gap-2 mb-4">
+    <div className="flex items-center gap-2 px-6 pt-2 pb-3 shrink-0">
       {backStep && (
         <button
           type="button"
@@ -102,151 +106,173 @@ export default function QuickSpentSheet({ onClose, onSaved }) {
     </div>
   )
 
+  const stepFooter = (children) => (
+    <div className="px-6 pb-8 pt-3 shrink-0 border-t border-gray-100 bg-white">
+      {children}
+    </div>
+  )
+
   return (
     <div className="fixed inset-0 z-[140]">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div
-        className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl"
-        style={{ maxHeight: '90vh', overflowY: 'auto' }}
+        className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl flex flex-col overflow-hidden"
+        style={{ maxHeight: '90vh', minHeight: '60vh' }}
       >
-        <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mt-3 mb-4" />
+        <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mt-3 mb-2 shrink-0" />
 
         {step === 1 && (
-          <div className="px-6 pb-8">
-            {stepHeader(t('howMuchSpent'))}
-            <input
-              autoFocus
-              type="text"
-              inputMode="decimal"
-              value={displayValue}
-              onChange={handleChange}
-              placeholder={currencyAmountPlaceholder(currency)}
-              className="w-full text-5xl font-bold text-gray-900 border-0 outline-none text-center my-8 bg-transparent"
-            />
-            <button
-              type="button"
-              disabled={!numericValue || numericValue <= 0}
-              onClick={() => setStep(2)}
-              className="w-full py-4 rounded-2xl bg-lala-600 text-white font-semibold disabled:opacity-30"
-            >
-              {t('next')} →
-            </button>
+          <div className="flex flex-col flex-1 min-h-0">
+            <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide px-6 pt-2 shrink-0">
+              {t('howMuchSpent')}
+            </p>
+            <div className="flex-1 flex items-center justify-center min-h-0 px-6">
+              <input
+                autoFocus
+                type="text"
+                inputMode="decimal"
+                value={displayValue}
+                onChange={handleChange}
+                placeholder={currencyAmountPlaceholder(currency)}
+                className="text-6xl font-bold text-center text-gray-900 bg-transparent border-none outline-none w-full"
+              />
+            </div>
+            {stepFooter(
+              <button
+                type="button"
+                disabled={!numericValue || numericValue <= 0}
+                onClick={() => setStep(2)}
+                className={PRIMARY_BTN_CLASS}
+                style={PRIMARY_BTN_STYLE}
+              >
+                {t('next')} →
+              </button>,
+            )}
           </div>
         )}
 
         {step === 2 && (
-          <div className="px-6 pb-8">
+          <div className="flex flex-col flex-1 min-h-0">
             {stepHeader(t('whatWasItFor'), 1)}
-            <div className="grid grid-cols-3 gap-2 mb-6">
-              {BUDGET_CATEGORIES.map(cat => (
-                <button
-                  key={cat.key}
-                  type="button"
-                  onClick={() => setCategory(cat.key)}
-                  className={`flex flex-col items-center gap-1 p-3 rounded-2xl border text-xs transition-all ${
-                    category === cat.key
-                      ? 'border-lala-600 ring-2 ring-purple-400 bg-lala-50 text-gray-800 font-semibold'
-                      : 'border-gray-100 text-gray-600 bg-white'
-                  }`}
-                >
-                  <span className="text-2xl">{cat.emoji}</span>
-                  <span className="leading-tight text-center">{getBudgetCategoryLabel(cat.key, t)}</span>
-                </button>
-              ))}
+            <div className="flex-1 overflow-y-auto min-h-0 px-6">
+              <div className="grid grid-cols-3 gap-2 pb-4">
+                {BUDGET_CATEGORIES.map(cat => (
+                  <button
+                    key={cat.key}
+                    type="button"
+                    onClick={() => setCategory(cat.key)}
+                    className={`flex flex-col items-center gap-1 p-3 rounded-2xl border text-xs transition-all ${
+                      category === cat.key
+                        ? 'border-lala-600 ring-2 ring-purple-400 bg-lala-50 text-gray-800 font-semibold'
+                        : 'border-gray-100 text-gray-600 bg-white'
+                    }`}
+                  >
+                    <span className="text-2xl">{cat.emoji}</span>
+                    <span className="leading-tight text-center">{getBudgetCategoryLabel(cat.key, t)}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-            <button
-              type="button"
-              disabled={!category}
-              onClick={() => setStep(3)}
-              className="w-full py-4 rounded-2xl bg-lala-600 text-white font-semibold disabled:opacity-30"
-            >
-              {t('next')} →
-            </button>
+            {stepFooter(
+              <button
+                type="button"
+                disabled={!category}
+                onClick={() => setStep(3)}
+                className={PRIMARY_BTN_CLASS}
+                style={PRIMARY_BTN_STYLE}
+              >
+                {t('next')} →
+              </button>,
+            )}
           </div>
         )}
 
         {step === 3 && (
-          <div className="px-6 pb-8">
+          <div className="flex flex-col flex-1 min-h-0">
             {stepHeader(t('whichAccount'), 2)}
-            {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
+            <div className="flex-1 overflow-y-auto min-h-0 px-6">
+              {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
 
-            <div className="grid grid-cols-2 gap-2 mb-4">
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                <button
+                  type="button"
+                  onClick={() => { setAccountType('bank'); setAccountId('') }}
+                  className={`py-2.5 rounded-xl text-sm font-medium border ${
+                    accountType === 'bank' ? 'bg-lala-600 text-white border-lala-600' : 'border-gray-200 text-gray-500'
+                  }`}
+                >
+                  🏦 {t('bank')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAccountType('card'); setAccountId('') }}
+                  className={`py-2.5 rounded-xl text-sm font-medium border ${
+                    accountType === 'card' ? 'bg-lala-600 text-white border-lala-600' : 'border-gray-200 text-gray-500'
+                  }`}
+                >
+                  💳 {t('creditCard')}
+                </button>
+              </div>
+
+              <div className="space-y-2 mb-4">
+                {(accountType === 'bank' ? banks : cards).length === 0 ? (
+                  <p className="text-xs text-gray-400 text-center py-4">{t('noAccounts')}</p>
+                ) : (
+                  (accountType === 'bank' ? banks : cards).map(acct => (
+                    <button
+                      key={acct.id}
+                      type="button"
+                      onClick={() => setAccountId(acct.id)}
+                      className={`w-full flex justify-between items-center p-4 rounded-2xl border text-left transition-all ${
+                        accountId === acct.id
+                          ? 'border-lala-600 ring-2 ring-purple-400 bg-lala-50'
+                          : 'border-gray-100 bg-white'
+                      }`}
+                    >
+                      <p className="text-sm font-medium text-gray-800">
+                        {acct.nickname?.trim() || acct.name}
+                      </p>
+                      <p className={`text-sm font-bold ${accountType === 'card' ? 'text-red-500' : 'text-gray-700'}`}>
+                        {formatMoney(accountType === 'card' ? (acct.current_balance || 0) : (acct.balance || 0))}
+                      </p>
+                    </button>
+                  ))
+                )}
+              </div>
+
+              <div className="space-y-3 mb-4">
+                <input
+                  value={note}
+                  onChange={e => setNote(e.target.value)}
+                  placeholder={t('addNoteOptional')}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-lala-400"
+                />
+                <input
+                  type="date"
+                  value={date}
+                  onChange={e => setDate(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-lala-400 bg-white"
+                />
+              </div>
+
+              <div className="bg-lala-50 rounded-2xl p-4 mb-4 flex justify-between items-center">
+                <p className="text-sm text-gray-500">
+                  {note.trim() || getBudgetCategoryLabel(category, t)}
+                </p>
+                <p className="font-bold text-gray-900">{displayValue}</p>
+              </div>
+            </div>
+            {stepFooter(
               <button
                 type="button"
-                onClick={() => { setAccountType('bank'); setAccountId('') }}
-                className={`py-2.5 rounded-xl text-sm font-medium border ${
-                  accountType === 'bank' ? 'bg-lala-600 text-white border-lala-600' : 'border-gray-200 text-gray-500'
-                }`}
+                onClick={handleSave}
+                disabled={!accountId || saving}
+                className={PRIMARY_BTN_CLASS}
+                style={PRIMARY_BTN_STYLE}
               >
-                🏦 {t('bank')}
-              </button>
-              <button
-                type="button"
-                onClick={() => { setAccountType('card'); setAccountId('') }}
-                className={`py-2.5 rounded-xl text-sm font-medium border ${
-                  accountType === 'card' ? 'bg-lala-600 text-white border-lala-600' : 'border-gray-200 text-gray-500'
-                }`}
-              >
-                💳 {t('creditCard')}
-              </button>
-            </div>
-
-            <div className="space-y-2 mb-4">
-              {(accountType === 'bank' ? banks : cards).length === 0 ? (
-                <p className="text-xs text-gray-400 text-center py-4">{t('noAccounts')}</p>
-              ) : (
-                (accountType === 'bank' ? banks : cards).map(acct => (
-                  <button
-                    key={acct.id}
-                    type="button"
-                    onClick={() => setAccountId(acct.id)}
-                    className={`w-full flex justify-between items-center p-4 rounded-2xl border text-left transition-all ${
-                      accountId === acct.id
-                        ? 'border-lala-600 ring-2 ring-purple-400 bg-lala-50'
-                        : 'border-gray-100 bg-white'
-                    }`}
-                  >
-                    <p className="text-sm font-medium text-gray-800">
-                      {acct.nickname?.trim() || acct.name}
-                    </p>
-                    <p className={`text-sm font-bold ${accountType === 'card' ? 'text-red-500' : 'text-gray-700'}`}>
-                      {formatMoney(accountType === 'card' ? (acct.current_balance || 0) : (acct.balance || 0))}
-                    </p>
-                  </button>
-                ))
-              )}
-            </div>
-
-            <div className="space-y-3 mb-4">
-              <input
-                value={note}
-                onChange={e => setNote(e.target.value)}
-                placeholder={t('addNoteOptional')}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-lala-400"
-              />
-              <input
-                type="date"
-                value={date}
-                onChange={e => setDate(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-lala-400 bg-white"
-              />
-            </div>
-
-            <div className="bg-lala-50 rounded-2xl p-4 mb-4 flex justify-between items-center">
-              <p className="text-sm text-gray-500">
-                {note.trim() || getBudgetCategoryLabel(category, t)}
-              </p>
-              <p className="font-bold text-gray-900">{displayValue}</p>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={!accountId || saving}
-              className="w-full py-4 rounded-2xl bg-lala-600 text-white font-semibold disabled:opacity-30"
-            >
-              {saving ? t('loading') : t('saveExpense')}
-            </button>
+                {saving ? t('loading') : t('saveExpense')}
+              </button>,
+            )}
           </div>
         )}
       </div>
