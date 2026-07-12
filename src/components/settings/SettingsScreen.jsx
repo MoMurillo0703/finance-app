@@ -10,7 +10,7 @@ import { getUserDateFormat } from '../../utils/date'
 import { fetchBanks } from '../../utils/bank'
 
 export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, onViewAccount }) {
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
   const { t, i18n } = useTranslation()
   const [banks, setBanks] = useState([])
   const [loading, setLoading] = useState(true)
@@ -82,26 +82,28 @@ export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, o
   }
 
   const content = (
-    <div className="bg-lala-50 min-h-full">
-      <div className="flex justify-between items-center px-6 pt-6 pb-4">
-        <h1 className="text-xl font-bold text-gray-800">{t('settings')}</h1>
+    <>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">{t('settings')}</h1>
         {onClose && (
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="w-10 h-10 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: '#F5F3FF' }}
             aria-label={t('close')}
           >
-            <X size={22} />
+            <X size={20} className="text-gray-600" />
           </button>
         )}
       </div>
 
-      <div className="px-6 pb-6 space-y-8">
+      <div className="space-y-8">
         <section>
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-sm font-semibold text-gray-700">{t('myAccounts')}</h2>
             <button
+              type="button"
               onClick={() => setShowAddBank(true)}
               className="text-xs text-purple-600 font-medium"
             >
@@ -115,6 +117,7 @@ export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, o
             <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
               <p className="text-gray-400 text-sm">{t('noAccounts')}</p>
               <button
+                type="button"
                 onClick={() => setShowAddBank(true)}
                 className="mt-3 text-purple-600 text-sm font-medium"
               >
@@ -162,6 +165,7 @@ export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, o
             <div className="p-4 flex justify-between items-center">
               <p className="text-sm text-gray-700">{t('language')}</p>
               <button
+                type="button"
                 onClick={toggleLanguage}
                 className="text-xs text-gray-600 border border-gray-200 rounded-full px-3 py-1"
               >
@@ -174,10 +178,12 @@ export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, o
                 value={currency}
                 onChange={handleCurrencyChange}
                 aria-label={t('selectCurrency')}
-                className="text-xs text-gray-600 border border-gray-200 rounded-full px-3 py-1 bg-white"
+                className="text-xs text-gray-600 border border-gray-200 rounded-full px-3 py-1 bg-white max-w-[55%]"
               >
-                <option value="COP">COP 🇨🇴</option>
-                <option value="USD">USD 🇺🇸</option>
+                <option value="USD">🇺🇸 USD — US Dollar</option>
+                <option value="MXN">🇲🇽 MXN — Mexican Peso</option>
+                <option value="GTQ">🇬🇹 GTQ — Guatemalan Quetzal</option>
+                <option value="COP">🇨🇴 COP — Colombian Peso</option>
               </select>
             </div>
             <div className="p-4 flex justify-between items-center">
@@ -208,6 +214,17 @@ export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, o
             <p className="mt-2 text-xs text-gray-400 text-center">{t('installHint')}</p>
           )}
         </section>
+
+        <div className="mt-8 pt-6" style={{ borderTop: '1px solid #EDE9FE' }}>
+          <button
+            type="button"
+            onClick={signOut}
+            className="w-full py-4 rounded-2xl text-red-500 font-semibold text-sm"
+            style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}
+          >
+            {t('signOut')}
+          </button>
+        </div>
       </div>
 
       {showAddBank && (
@@ -224,16 +241,24 @@ export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, o
           onSaved={() => { setEditingBank(null); refreshBanks() }}
         />
       )}
-    </div>
+    </>
   )
 
   if (onClose) {
     return (
-      <div className="fixed inset-0 z-[110] bg-lala-50 overflow-y-auto pt-14 pb-6">
-        {content}
+      <div className="fixed inset-0 bg-white z-[200] overflow-y-auto">
+        <div className="px-6 pt-14 pb-24">
+          {content}
+        </div>
       </div>
     )
   }
 
-  return content
+  return (
+    <div className="bg-lala-50 min-h-full">
+      <div className="px-6 pt-6 pb-24">
+        {content}
+      </div>
+    </div>
+  )
 }

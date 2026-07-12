@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { adjustBankBalance, adjustCardBalance, adjustVaultBalance, bankDelta } from '../../lib/payments'
-import { formatMoney, getUserCurrency, isCOPUser } from '../../utils/currency'
+import { formatMoney, getUserCurrency, isLatAmUser } from '../../utils/currency'
 import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
 import { useCurrencyInput, currencyAmountPlaceholder } from '../../hooks/useCurrencyInput'
 
@@ -322,7 +322,7 @@ export default function AddTransactionModal({
               </>
               )}
 
-              {isCOPUser() && (
+              {isLatAmUser() && (
                 <div className={lockToCardExpense ? 'mt-3' : ''}>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input

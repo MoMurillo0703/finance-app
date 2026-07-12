@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { formatMoney, getUserCurrency, isCOPUser } from '../../utils/currency'
+import { formatMoney, getUserCurrency, isLatAmUser } from '../../utils/currency'
 import { fetchBanks, getBankDropdownLabel } from '../../utils/bank'
 import { getCardApr, calculateMinimumPayment, DEFAULT_CARD_APR } from '../../utils/cards'
 import { adjustBankBalance, adjustCardBalance } from '../../lib/payments'
@@ -139,7 +139,7 @@ export default function PurchaseSimulator({ onClose, onSaved, prefillCardId }) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const currency = getUserCurrency()
-  const copUser = isCOPUser()
+  const latAmUser = isLatAmUser()
 
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(true)
@@ -158,17 +158,17 @@ export default function PurchaseSimulator({ onClose, onSaved, prefillCardId }) {
       { id: 'bank', label: t('payNow') },
       { id: 'credit', label: t('payCredit') },
     ]
-    if (copUser) {
+    if (latAmUser) {
       options.push({ id: 'cuotas', label: t('payInstallments') })
     }
     return options
-  }, [copUser, t])
+  }, [latAmUser, t])
 
   useEffect(() => {
-    if (!copUser && paymentMethod === 'cuotas') {
+    if (!latAmUser && paymentMethod === 'cuotas') {
       setPaymentMethod(prefillCardId ? 'credit' : 'bank')
     }
-  }, [copUser, paymentMethod, prefillCardId])
+  }, [latAmUser, paymentMethod, prefillCardId])
 
   const [banks, setBanks] = useState([])
   const [cards, setCards] = useState([])

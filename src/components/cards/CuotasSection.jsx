@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 
-import { formatMoney, isCOPUser } from '../../utils/currency'
+import { formatMoney, isLatAmUser } from '../../utils/currency'
 import CardEstimatorPanel from './CardEstimatorPanel'
 
 const getRemaining = (cuota) =>
@@ -81,7 +81,7 @@ export default function CuotasSection({ card, refreshKey, onUpdated, hideEstimat
     onUpdated?.()
   }
 
-  if (!isCOPUser()) return null
+  if (!isLatAmUser()) return null
 
   if (loading) {
     return <p className="text-gray-400 text-xs py-2">{t('loading')}</p>

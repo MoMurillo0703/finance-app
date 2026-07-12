@@ -223,16 +223,15 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
         className="relative px-6 pt-14 pb-8 rounded-b-[2.5rem]"
         style={{ background: 'linear-gradient(135deg, #6D28D9 0%, #8B5CF6 40%, #C4B5FD 100%)' }}
       >
-        <div className="absolute top-12 right-6">
-          <button
-            type="button"
-            onClick={onSettings}
-            className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center"
-            aria-label={t('settings')}
-          >
-            <Settings size={16} className="text-white" />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onSettings}
+          className="absolute top-12 right-6 w-10 h-10 rounded-full flex items-center justify-center"
+          style={{ backgroundColor: 'rgba(255,255,255,0.3)', backdropFilter: 'blur(8px)' }}
+          aria-label={t('settings')}
+        >
+          <Settings size={18} className="text-white" />
+        </button>
 
         <p className="text-purple-200 text-sm font-medium mb-3">
           {t(getGreetingKey())}, {firstName} 👋
@@ -267,26 +266,27 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
         className="mx-4 -mt-6 bg-white rounded-3xl shadow-xl p-5 mb-4"
         style={{ border: '1px solid #EDE9FE' }}
       >
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 gap-3">
           {[
-            { icon: '💰', label: t('gotPaid'), action: () => setShowPaydayWizard(true) },
-            { icon: '🛍️', label: t('spent'), action: () => setShowSpent(true) },
-            { icon: '📋', label: t('payBill'), action: () => setShowPayBill(true) },
-            { icon: '🤔', label: t('afford'), action: () => setShowSimulator(true) },
+            { icon: '💰', label: 'I got paid', sub: 'Log income', action: () => setShowPaydayWizard(true) },
+            { icon: '🛍️', label: 'I spent money', sub: 'Log expense', action: () => setShowSpent(true) },
+            { icon: '✅', label: 'I paid a bill', sub: 'Mark as paid', action: () => setShowPayBill(true) },
+            { icon: '🤔', label: 'Can I afford this?', sub: 'Run simulation', action: () => setShowSimulator(true) },
           ].map(btn => (
             <button
               key={btn.label}
               type="button"
               onClick={btn.action}
-              className="flex flex-col items-center py-1"
+              className="flex items-center gap-3 p-4 rounded-2xl text-left transition-colors active:bg-lala-50"
+              style={{ backgroundColor: '#F5F3FF' }}
             >
-              <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl mb-1"
-                style={{ backgroundColor: '#F5F3FF' }}
-              >
+              <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-2xl flex-shrink-0 shadow-sm">
                 {btn.icon}
               </div>
-              <p className="text-xs text-gray-600 font-medium text-center">{btn.label}</p>
+              <div>
+                <p className="text-sm font-semibold text-gray-800 leading-tight">{btn.label}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{btn.sub}</p>
+              </div>
             </button>
           ))}
         </div>

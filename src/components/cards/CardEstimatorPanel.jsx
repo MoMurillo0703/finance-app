@@ -1,14 +1,14 @@
 import { useTranslation } from 'react-i18next'
-import { formatMoney, isCOPUser } from '../../utils/currency'
+import { formatMoney, isLatAmUser } from '../../utils/currency'
 import { calculateMinimumPayment } from '../../utils/cards'
 
 export default function CardEstimatorPanel({ card, cuotas = [] }) {
   const { t } = useTranslation()
-  const copUser = isCOPUser()
+  const latAmUser = isLatAmUser()
   const currency = card.currency || 'COP'
   const currentBalance = card.current_balance || 0
-  const estimate = calculateMinimumPayment(card, copUser ? cuotas : [])
-  const showCuotaWarning = copUser && currentBalance > 0 && estimate.cuotaCommitment > currentBalance * 0.40
+  const estimate = calculateMinimumPayment(card, latAmUser ? cuotas : [])
+  const showCuotaWarning = latAmUser && currentBalance > 0 && estimate.cuotaCommitment > currentBalance * 0.40
 
   return (
     <div className="space-y-3">
@@ -43,7 +43,7 @@ export default function CardEstimatorPanel({ card, cuotas = [] }) {
             <p className="text-gray-500">+ {t('monthlyInterest')}</p>
             <p className="font-medium text-gray-800">{formatMoney(estimate.monthlyInterest, currency)}</p>
           </div>
-          {copUser && (
+          {latAmUser && (
           <div className="flex justify-between items-center gap-2 text-[10px]">
             <p className="text-gray-500">+ {t('cuotaPayments')}</p>
             <p className="font-medium text-gray-800">{formatMoney(estimate.cuotaCommitment, currency)}</p>
@@ -81,7 +81,7 @@ export default function CardEstimatorPanel({ card, cuotas = [] }) {
         </div>
       </div>
 
-      {copUser && cuotas.length > 0 && (
+      {latAmUser && cuotas.length > 0 && (
         <div>
           <p className="text-[10px] font-medium text-gray-500 mb-2">{t('payoffTimeline')}</p>
           <div className="space-y-1.5">

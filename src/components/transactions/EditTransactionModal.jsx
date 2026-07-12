@@ -9,7 +9,7 @@ import {
   bankDelta,
   cardDelta,
 } from '../../lib/payments'
-import { getUserCurrency, isCOPUser } from '../../utils/currency'
+import { getUserCurrency, isLatAmUser } from '../../utils/currency'
 import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
 import { useCurrencyInput, currencyAmountPlaceholder } from '../../hooks/useCurrencyInput'
 import { BUDGET_CATEGORIES, getRecategorizeHighlight } from '../../utils/transactionCategories'
@@ -66,7 +66,7 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
         if (data) setVaults(data)
       })
 
-    if (isCOPUser() && transaction.credit_card_id) {
+    if (isLatAmUser() && transaction.credit_card_id) {
       supabase
         .from('cuotas')
         .select('id, total_cuotas, paid_cuotas, cuota_amount')
@@ -380,7 +380,7 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
                   <option key={card.id} value={card.id}>{card.name}</option>
                 ))}
               </select>
-              {isCOPUser() && linkedCuota && (
+              {isLatAmUser() && linkedCuota && (
                 <p className="text-xs text-gray-500 mt-2">
                   {t('cuotaProgress', {
                     paid: linkedCuota.paid_cuotas || 0,

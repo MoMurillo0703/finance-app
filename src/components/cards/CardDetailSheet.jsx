@@ -3,7 +3,7 @@ import { Pencil } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { formatMoney, isCOPUser } from '../../utils/currency'
+import { formatMoney, isLatAmUser } from '../../utils/currency'
 import { formatDate } from '../../utils/date'
 import { getCardApr } from '../../utils/cards'
 import {
@@ -92,14 +92,14 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated,
   const availableCredit = Math.max(0, limit - balance)
   const isOverLimit = balance > limit
   const utilization = limit > 0 ? Math.min((balance / limit) * 100, 100) : 0
-  const copUser = isCOPUser()
+  const latAmUser = isLatAmUser()
   const visibleTabs = useMemo(() => {
     const tabs = ['transactions']
-    if (copUser) tabs.push('cuotas')
-    if (!copUser) tabs.push('promotions')
+    if (latAmUser) tabs.push('cuotas')
+    if (!latAmUser) tabs.push('promotions')
     tabs.push('estimator')
     return tabs
-  }, [copUser])
+  }, [latAmUser])
   const minimumResult = useMemo(
     () => getCardMinimumPayment(liveCard, statements),
     [liveCard, statements],
@@ -424,11 +424,11 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated,
               <button
                 type="button"
                 onClick={() => setShowAddTransaction(true)}
-                className={`py-2 rounded-xl bg-purple-600 text-white text-xs font-medium ${copUser ? 'flex-1' : 'w-full'}`}
+                className={`py-2 rounded-xl bg-purple-600 text-white text-xs font-medium ${latAmUser ? 'flex-1' : 'w-full'}`}
               >
                 + {t('transaction')}
               </button>
-              {copUser && (
+              {latAmUser && (
                 <button
                   type="button"
                   onClick={() => setShowAddCuota(true)}
@@ -525,7 +525,7 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated,
                 </div>
               )}
 
-              {copUser && activeTab === 'cuotas' && (
+              {latAmUser && activeTab === 'cuotas' && (
                 <CuotasSection
                   card={liveCard}
                   refreshKey={refreshKey}
@@ -534,7 +534,7 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated,
                 />
               )}
 
-              {!copUser && activeTab === 'promotions' && (
+              {!latAmUser && activeTab === 'promotions' && (
                 <PromoSection
                   card={liveCard}
                   currency={currency}
@@ -616,7 +616,7 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated,
         />
       )}
 
-      {copUser && showAddCuota && (
+      {latAmUser && showAddCuota && (
         <AddCuotaModal
           card={liveCard}
           onClose={() => setShowAddCuota(false)}

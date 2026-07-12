@@ -1,8 +1,9 @@
-// Default currency for new users: US English devices (except en-CO) get USD,
-// everyone else gets COP.
 export function getDefaultCurrency() {
-  const lang = navigator.language || ''
-  return lang.startsWith('en') && lang !== 'en-CO' ? 'USD' : 'COP'
+  const lang = navigator.language || 'en-US'
+  if (lang.includes('MX')) return 'MXN'
+  if (lang.includes('GT')) return 'GTQ'
+  if (lang.includes('CO')) return 'COP'
+  return 'USD'
 }
 
 export function getUserCurrency() {
@@ -11,6 +12,10 @@ export function getUserCurrency() {
 
 export function isCOPUser() {
   return getUserCurrency() === 'COP'
+}
+
+export function isLatAmUser() {
+  return ['COP', 'MXN', 'GTQ'].includes(getUserCurrency())
 }
 
 export const PREFS_CHANGED = 'lala:prefs-changed'
@@ -25,11 +30,23 @@ export function formatMoney(amount, currency = getUserCurrency()) {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
     }).format(amount || 0)
   }
-
-  // COP: dot-separated thousands, no decimals ($1.234.567)
+  if (currency === 'MXN') {
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+      minimumFractionDigits: 2,
+    }).format(amount || 0)
+  }
+  if (currency === 'GTQ') {
+    return new Intl.NumberFormat('es-GT', {
+      style: 'currency',
+      currency: 'GTQ',
+      minimumFractionDigits: 2,
+    }).format(amount || 0)
+  }
+  // COP
   return '$' + new Intl.NumberFormat('es-CO', {
     maximumFractionDigits: 0,
   }).format(amount || 0)
