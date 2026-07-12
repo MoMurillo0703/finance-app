@@ -1,16 +1,29 @@
+export function isTransferTransaction(tx) {
+  if (!tx) return false
+  if (tx.is_transfer) return true
+  const category = (tx.category || '').toLowerCase()
+  return category === 'transfer'
+}
+
+export function isSpendingTransaction(tx) {
+  return tx?.type === 'expense' && !isTransferTransaction(tx)
+}
+
 export function txTypeLabel(type, t) {
   if (type === 'payment') return t('payment')
   if (type === 'income') return t('income')
   return t('expense')
 }
 
-export function txAmountClass(type) {
+export function txAmountClass(type, tx = null) {
+  if (tx && isTransferTransaction(tx)) return 'text-gray-400'
   if (type === 'income') return 'text-green-500'
   if (type === 'payment') return 'text-blue-600'
   return 'text-red-500'
 }
 
-export function txAmountPrefix(type) {
+export function txAmountPrefix(type, tx = null) {
+  if (tx && isTransferTransaction(tx)) return ''
   return type === 'income' ? '+' : '-'
 }
 

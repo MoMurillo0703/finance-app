@@ -1,4 +1,5 @@
 import { BUDGET_CATEGORIES, BUDGET_CATEGORY_KEYS, getRecategorizeHighlight } from './transactionCategories'
+import { isSpendingTransaction } from './transactionType'
 
 export function normalizeBudgetCategory(transaction) {
   const cat = getRecategorizeHighlight(transaction)
@@ -11,7 +12,7 @@ export function getSpendingByBudgetCategory(transactions) {
   const spent = Object.fromEntries(BUDGET_CATEGORY_KEYS.map(key => [key, 0]))
 
   for (const tx of transactions) {
-    if (tx.type !== 'expense') continue
+    if (!isSpendingTransaction(tx)) continue
     const category = normalizeBudgetCategory(tx)
     if (!category) continue
     spent[category] += Number(tx.amount) || 0

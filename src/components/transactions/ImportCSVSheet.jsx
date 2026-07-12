@@ -38,20 +38,48 @@ function parseCsvDate(value) {
 }
 
 function isTransfer(desc) {
-  return /ONLINE TRANSFER|ZELLE TO|ZELLE FROM|MOBILE TRANSFER|VENMO/i.test(desc || '')
+  if (!desc) return false
+  const d = desc.toUpperCase()
+  return (
+    d.includes('ONLINE TRANSFER')
+    || d.includes('ZELLE TO')
+    || d.includes('ZELLE FROM')
+    || d.includes('MOBILE TRANSFER')
+    || d.includes('TRANSFER TO')
+    || d.includes('TRANSFER FROM')
+    || d.includes('ACH TRANSFER')
+    || d.includes('WIRE TRANSFER')
+    || d.includes('WT SEQ')
+  )
+}
+
+function detectCategory(desc) {
+  if (!desc) return 'Other'
+  if (isTransfer(desc)) return 'Transfer'
+
+  if (/HUMANA|BLUE SHIELD|UNITED HEALTH|MOLINA|KAISER|ELEVANCE|PRINCIPAL|TRANSAMERICA|BEAM|ASPEN|CHOICE ADMIN|UNIFIED TPA|BARRETT|AMERITAS|KP FINANCIAL|MOBILE DEPOSIT/i.test(desc)) {
+    return 'Income'
+  }
+  if (/ATM WITHDRAWAL/i.test(desc)) return 'Cash'
+  if (/^CHECK$/i.test(desc.trim()) || /^CHECK\s*#/i.test(desc)) return 'Check'
+  if (/VENMO/i.test(desc)) return 'Transfer'
+  if (/PAYROLL|SALARY|DIRECT DEP/i.test(desc)) return 'Income'
+
+  return 'Other'
 }
 
 function detectCategoryMeta(desc) {
-  if (isTransfer(desc)) {
-    return { category: 'other', forceType: null, isTransfer: true }
+  const label = detectCategory(desc)
+  if (label === 'Transfer') {
+    return { category: 'transfer', forceType: null, isTransfer: true }
   }
-  if (/HUMANA|BLUE SHIELD|UNITED HEALTH|MOLINA|KAISER|ELEVANCE|PRINCIPAL|TRANSAMERICA|BEAM|ASPEN|CHOICE ADMIN|UNIFIED TPA|BARRETT|AMERITAS/i.test(desc || '')) {
+  if (label === 'Income') {
     return { category: 'income', forceType: 'income', isTransfer: false }
   }
-  if (/ATM WITHDRAWAL/i.test(desc || '')) {
+  if (label === 'Cash') {
     return { category: 'personal', forceType: 'expense', isTransfer: false }
   }
-  if (/CHECK/i.test(desc || '')) {
+  if (label === 'Check') {
     return { category: 'other', forceType: 'expense', isTransfer: false }
   }
   return { category: 'other', forceType: null, isTransfer: false }

@@ -43,7 +43,7 @@ export default function AccountHistoryModal({ bank, onClose }) {
     ;(async () => {
       const { data } = await supabase
         .from('transactions')
-        .select('id, type, amount, description, transaction_date, category')
+        .select('id, type, amount, description, transaction_date, category, is_transfer')
         .eq('user_id', user.id)
         .eq('bank_id', bank.id)
         .order('transaction_date', { ascending: false })
@@ -120,8 +120,8 @@ export default function AccountHistoryModal({ bank, onClose }) {
                                 {[formatDate(tx.transaction_date), t(tx.category, { defaultValue: tx.category })].join(' · ')}
                               </p>
                             </div>
-                            <p className={`text-sm font-bold shrink-0 ${txAmountClass(tx.type)}`}>
-                              {txAmountPrefix(tx.type)}{formatMoney(tx.amount)}
+                            <p className={`text-sm font-bold shrink-0 ${txAmountClass(tx.type, tx)}`}>
+                              {txAmountPrefix(tx.type, tx)}{formatMoney(tx.amount)}
                             </p>
                           </div>
                         ))}

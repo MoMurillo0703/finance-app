@@ -29,8 +29,8 @@ export default function TransactionDetailModal({ transaction, onClose, onEdit })
 
           <div>
             <p className="text-xs text-gray-400 mb-1">{t('amount')}</p>
-            <p className={`text-2xl font-bold ${txAmountClass(transaction.type)}`}>
-              {txAmountPrefix(transaction.type)}{formatMoney(transaction.amount)}
+            <p className={`text-2xl font-bold ${txAmountClass(transaction.type, transaction)}`}>
+              {txAmountPrefix(transaction.type, transaction)}{formatMoney(transaction.amount)}
             </p>
           </div>
 

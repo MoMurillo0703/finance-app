@@ -122,6 +122,7 @@ import {
   cleanMerchantName as cleanMerchantKey,
   detectRecurring,
 } from './recurringDetector'
+import { isSpendingTransaction } from './transactionType'
 
 export function cleanMerchantName(raw) {
   if (!raw) return 'Unknown'
@@ -160,7 +161,7 @@ export function detectRecurringCharges(transactions, monthKeys = []) {
 }
 
 export function summarizeByCategory(transactions, t) {
-  const expenses = transactions.filter(tx => tx.type === 'expense')
+  const expenses = transactions.filter(tx => isSpendingTransaction(tx))
   const totals = Object.fromEntries(SPENDING_CATEGORIES.map(cat => [cat, { amount: 0, count: 0 }]))
   let totalSpent = 0
 

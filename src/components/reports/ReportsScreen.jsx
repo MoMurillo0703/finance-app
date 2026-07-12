@@ -33,6 +33,7 @@ import {
   isChargeAlreadyABill,
   formatRecurringDate,
 } from '../../utils/recurringDetector'
+import { isSpendingTransaction } from '../../utils/transactionType'
 import {
   LOAN_EMOJI,
   calculateLoanStats,
@@ -117,21 +118,21 @@ export default function ReportsScreen({ setHideNav, onSettings, showToast }) {
       ] = await Promise.all([
         supabase
           .from('transactions')
-          .select('id, type, amount, description, transaction_date, category, credit_card_id')
+          .select('id, type, amount, description, transaction_date, category, credit_card_id, is_transfer')
           .eq('user_id', user.id)
           .gte('transaction_date', firstDay)
           .lte('transaction_date', lastDay)
           .order('transaction_date', { ascending: false }),
         supabase
           .from('transactions')
-          .select('id, type, amount, description, transaction_date, category')
+          .select('id, type, amount, description, transaction_date, category, is_transfer')
           .eq('user_id', user.id)
           .gte('transaction_date', `${recurringStart}-01`)
           .lte('transaction_date', recurringBounds.lastDay)
           .order('transaction_date', { ascending: false }),
         supabase
           .from('transactions')
-          .select('id, type, amount, description, transaction_date, category, credit_card_id')
+          .select('id, type, amount, description, transaction_date, category, credit_card_id, is_transfer')
           .eq('user_id', user.id)
           .gte('transaction_date', yearStart)
           .order('transaction_date', { ascending: false }),
@@ -261,7 +262,7 @@ export default function ReportsScreen({ setHideNav, onSettings, showToast }) {
   }
 
   const totalSpent = monthTransactions
-    .filter(tx => tx.type === 'expense')
+    .filter(tx => isSpendingTransaction(tx))
     .reduce((sum, tx) => sum + tx.amount, 0)
 
   const totalIncome = monthTransactions

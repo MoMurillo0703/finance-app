@@ -15,7 +15,7 @@ import { PageHeader } from '../layout/PageHeader'
 import { formatMoney } from '../../utils/currency'
 import { formatDate } from '../../utils/date'
 import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
-import { txTypeLabel, txAmountClass, txAmountPrefix } from '../../utils/transactionType'
+import { txTypeLabel, txAmountClass, txAmountPrefix, isSpendingTransaction } from '../../utils/transactionType'
 import {
   filterTransactions,
   DEFAULT_ADVANCED_FILTERS,
@@ -79,8 +79,8 @@ function monthSummary(items) {
   let charges = 0
   let payments = 0
   for (const tx of items) {
-    if (tx.type === 'expense') charges += tx.amount
-    else payments += tx.amount
+    if (isSpendingTransaction(tx)) charges += tx.amount
+    else if (tx.type === 'income') payments += tx.amount
   }
   return { charges, payments, count: items.length }
 }
@@ -188,8 +188,8 @@ export default function TransactionsScreen({
           ].filter(Boolean).join(' · ')}
         </p>
       </div>
-      <p className={`text-sm font-bold shrink-0 ${txAmountClass(tx.type)}`}>
-        {txAmountPrefix(tx.type)}{formatMoney(tx.amount)}
+      <p className={`text-sm font-bold shrink-0 ${txAmountClass(tx.type, tx)}`}>
+        {txAmountPrefix(tx.type, tx)}{formatMoney(tx.amount)}
       </p>
     </button>
   )
@@ -236,7 +236,7 @@ export default function TransactionsScreen({
     ;(async () => {
       let txQuery = supabase
         .from('transactions')
-        .select('id, type, amount, description, category, transaction_date, bank_id, credit_card_id, vault_id, banks(name, nickname)')
+        .select('id, type, amount, description, category, transaction_date, bank_id, credit_card_id, vault_id, is_transfer, banks(name, nickname)')
         .eq('user_id', user.id)
         .order('transaction_date', { ascending: false })
 
