@@ -6,7 +6,8 @@ import { useAuth } from '../../context/AuthContext'
 import AddTransactionModal from './AddTransactionModal'
 import EditTransactionModal from './EditTransactionModal'
 import RecategorizeTransactionSheet from './RecategorizeTransactionSheet'
-import ImportModal from './ImportModal'
+import ImportCSVSheet from './ImportCSVSheet'
+import { useDevice } from '../../hooks/useDevice'
 import PaydayWizard from '../payday/PaydayWizard'
 import FilterSheet from './FilterSheet'
 import { PageHeader } from '../layout/PageHeader'
@@ -94,8 +95,10 @@ export default function TransactionsScreen({
   onClearFilter,
   setHideNav,
   onSettings,
+  showToast,
 }) {
   const { t, i18n } = useTranslation()
+  const { isWeb } = useDevice()
   const isFiltered = Boolean(filterCreditCardId || filterBankId)
   const { user } = useAuth()
   const [transactions, setTransactions] = useState([])
@@ -310,13 +313,16 @@ export default function TransactionsScreen({
         )}
         {!isFiltered && (
           <div className="flex justify-end gap-3 items-center mb-1">
-            <button
-              type="button"
-              onClick={() => setShowImport(true)}
-              className="hidden md:inline-flex text-xs text-gray-500 font-medium border border-gray-200 rounded-full px-3 py-1 hover:border-purple-300 hover:text-purple-600"
-            >
-              {t('importCsv')}
-            </button>
+            {isWeb && (
+              <button
+                type="button"
+                onClick={() => setShowImport(true)}
+                className="inline-flex items-center min-h-[44px] text-sm px-4 py-2 rounded-xl font-medium"
+                style={{ backgroundColor: '#F5F3FF', color: '#7C3AED' }}
+              >
+                {t('importCsv')}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setShowAdd(true)}
@@ -451,13 +457,15 @@ export default function TransactionsScreen({
             )}
             {!isFiltered && (
               <div className="flex justify-center gap-3 mt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowImport(true)}
-                  className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600"
-                >
-                  {t('importCsv')}
-                </button>
+                {isWeb && (
+                  <button
+                    type="button"
+                    onClick={() => setShowImport(true)}
+                    className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 min-h-[44px]"
+                  >
+                    {t('importCsv')}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setShowAdd(true)}
@@ -514,11 +522,11 @@ export default function TransactionsScreen({
         />
       )}
 
-      {showImport && (
-        <ImportModal
+      {showImport && isWeb && (
+        <ImportCSVSheet
           onClose={() => setShowImport(false)}
-          onComplete={handleTransactionSaved}
-          setHideNav={setHideNav}
+          onImport={() => handleTransactionSaved()}
+          showToast={showToast}
         />
       )}
 
