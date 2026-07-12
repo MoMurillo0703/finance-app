@@ -415,7 +415,7 @@ export default function BillsScreen({ onBillPaid }) {
       <button
         type="button"
         onClick={() => setShowAdd(true)}
-        className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-purple-600 text-white text-3xl leading-none shadow-lg flex items-center justify-center"
+        className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-purple-600 text-white text-3xl leading-none shadow-lg flex items-center justify-center z-[100]"
         aria-label={t('addBill')}
       >
         +

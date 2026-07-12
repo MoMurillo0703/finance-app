@@ -97,6 +97,18 @@ export default function TransactionsScreen({
     setExpandedMonths(new Set([monthGroups[0].monthKey]))
   }, [listKey, monthGroups.length, monthGroups[0]?.monthKey])
 
+  const overlayOpen =
+    showAdd ||
+    showImport ||
+    !!editingTransaction ||
+    !!recategorizeTransaction ||
+    !!wizardPrefill
+
+  useEffect(() => {
+    setHideNav?.(overlayOpen)
+    return () => setHideNav?.(false)
+  }, [overlayOpen, setHideNav])
+
   const toggleMonth = (monthKey) => {
     setExpandedMonths(prev => {
       const next = new Set(prev)
@@ -347,7 +359,7 @@ export default function TransactionsScreen({
       {!isFiltered && (
         <button
           onClick={() => setShowAdd(true)}
-          className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-purple-600 text-white text-3xl leading-none shadow-lg flex items-center justify-center"
+          className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-purple-600 text-white text-3xl leading-none shadow-lg flex items-center justify-center z-[100]"
           aria-label={t('addTransaction')}
         >
           +

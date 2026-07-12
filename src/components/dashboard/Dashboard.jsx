@@ -9,7 +9,12 @@ import PurchaseSimulator from '../simulator/PurchaseSimulator'
 import DebtPayoffPlanner from '../debt/DebtPayoffPlanner'
 import QuickSpentSheet from './QuickSpentSheet'
 import QuickPayBillSheet from './QuickPayBillSheet'
+import VaultMiniCard from './VaultMiniCard'
+import AddVaultModal from './AddVaultModal'
+import EditVaultModal from '../vaults/EditVaultModal'
+import BillsThisWeek from './BillsThisWeek'
 import { formatMoney } from '../../utils/currency'
+import { calculateNetWorth } from '../../utils/netWorth'
 import { formatDate } from '../../utils/date'
 import { fetchBanks } from '../../utils/bank'
 import { getMonthBounds } from '../../utils/reports'
@@ -52,6 +57,8 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
   const [showPayBill, setShowPayBill] = useState(false)
   const [showSimulator, setShowSimulator] = useState(false)
   const [showDebtPlanner, setShowDebtPlanner] = useState(false)
+  const [showAddVault, setShowAddVault] = useState(false)
+  const [editingVault, setEditingVault] = useState(null)
 
   const now = new Date()
   const { firstDay, daysInMonth } = getMonthBounds(now.getFullYear(), now.getMonth() + 1)
@@ -131,6 +138,28 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
   const protectedAmount = vaults.reduce((sum, v) => sum + (v.current_amount || 0), 0)
   const safeToSpend = totalBalance - protectedAmount
   const firstName = getFirstName(user)
+  const {
+    netWorth,
+    totalAssets,
+    totalLiabilities,
+    totalCreditCardDebt,
+    totalLoanDebt,
+  } = calculateNetWorth({ banks, creditCards, loans })
+
+  const overlayOpen =
+    showSpent ||
+    showPayBill ||
+    showAddBank ||
+    showPaydayWizard ||
+    showSimulator ||
+    showDebtPlanner ||
+    showAddVault ||
+    !!editingVault
+
+  useEffect(() => {
+    setHideNav?.(overlayOpen)
+    return () => setHideNav?.(false)
+  }, [overlayOpen, setHideNav])
 
   const monthSpent = monthTransactions
     .filter(tx => tx.type === 'expense')
@@ -226,7 +255,7 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
         <button
           type="button"
           onClick={onSettings}
-          className="absolute top-12 right-6 w-10 h-10 rounded-full flex items-center justify-center"
+          className="absolute top-12 right-6 z-20 w-10 h-10 rounded-full flex items-center justify-center"
           style={{ backgroundColor: 'rgba(255,255,255,0.3)', backdropFilter: 'blur(8px)' }}
           aria-label={t('settings')}
         >
@@ -247,6 +276,18 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
           {safeToSpend >= 0 ? t('safeToSpendSubtitle') : t('belowVaultTargets')}
         </p>
 
+        <div className="flex gap-4 pt-4 mt-4 border-t border-white/20">
+          <div>
+            <p className="text-[10px] text-purple-200">{t('totalBalance')}</p>
+            <p className="text-sm font-semibold text-white">{formatMoney(totalBalance)}</p>
+          </div>
+          <div className="w-px bg-white/20" />
+          <div>
+            <p className="text-[10px] text-purple-200">{t('protected')}</p>
+            <p className="text-sm font-semibold text-white">{formatMoney(protectedAmount)}</p>
+          </div>
+        </div>
+
         {smartAlert && (
           <button
             type="button"
@@ -263,7 +304,7 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
 
       {/* QUICK ACTIONS */}
       <div
-        className="mx-4 -mt-6 bg-white rounded-3xl shadow-xl p-5 mb-4"
+        className="relative z-10 mx-4 -mt-6 bg-white rounded-3xl shadow-xl p-5 mb-4"
         style={{ border: '1px solid #EDE9FE' }}
       >
         <div className="grid grid-cols-2 gap-3">
@@ -290,6 +331,50 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
             </button>
           ))}
         </div>
+      </div>
+
+      {/* NET WORTH */}
+      <div
+        className="mx-4 mb-4 bg-white rounded-3xl p-4 shadow-sm"
+        style={{ border: '1px solid #EDE9FE' }}
+      >
+        <div className="flex justify-between items-start mb-3">
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#7C3AED' }}>
+            {t('netWorth')}
+          </p>
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+            netWorth >= 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'
+          }`}>
+            {netWorth >= 0 ? `↑ ${t('positive')}` : `↓ ${t('negative')}`}
+          </span>
+        </div>
+        <p className={`text-3xl font-bold mb-4 ${netWorth >= 0 ? 'text-gray-900' : 'text-red-500'}`}>
+          {formatMoney(netWorth)}
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-green-50 rounded-xl p-3">
+            <p className="text-xs text-gray-400 mb-1">{t('assets')}</p>
+            <p className="font-bold text-green-600">{formatMoney(totalAssets)}</p>
+          </div>
+          <div className="bg-red-50 rounded-xl p-3">
+            <p className="text-xs text-gray-400 mb-1">{t('liabilities')}</p>
+            <p className="font-bold text-red-500">{formatMoney(totalLiabilities)}</p>
+            {(totalCreditCardDebt > 0 || totalLoanDebt > 0) && (
+              <p className="text-[10px] text-gray-400 mt-1 leading-tight">
+                {formatMoney(totalCreditCardDebt)} {t('netWorthCards')} · {formatMoney(totalLoanDebt)} {t('netWorthLoans')}
+              </p>
+            )}
+          </div>
+        </div>
+        {(totalCreditCardDebt > 0 || totalLoanDebt > 0) && (
+          <button
+            type="button"
+            onClick={() => setShowDebtPlanner(true)}
+            className="w-full mt-3 py-2.5 rounded-xl text-sm font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 transition-colors"
+          >
+            {t('payoffPlan')} →
+          </button>
+        )}
       </div>
 
       {/* MONTH PULSE */}
@@ -398,6 +483,51 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
         </div>
       )}
 
+      <div className="mx-4 mb-4">
+        <BillsThisWeek refreshKey={modalRefreshKey} />
+      </div>
+
+      {/* VAULTS */}
+      <div
+        className="mx-4 mb-4 bg-white rounded-3xl p-4 shadow-sm"
+        style={{ border: '1px solid #EDE9FE' }}
+      >
+        <div className="flex justify-between items-center mb-3">
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#7C3AED' }}>
+            {t('vaults')}
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowAddVault(true)}
+            className="text-xs font-medium"
+            style={{ color: LALA.accent }}
+          >
+            + {t('addVault')}
+          </button>
+        </div>
+        {vaults.length === 0 ? (
+          <button
+            type="button"
+            onClick={() => setShowAddVault(true)}
+            className="w-full text-center py-6 text-gray-400"
+          >
+            <p className="text-3xl mb-2">🏦</p>
+            <p className="font-medium text-gray-600 text-sm">{t('noVaults')}</p>
+            <p className="text-xs mt-1">{t('noVaultsEmptyHint')}</p>
+          </button>
+        ) : (
+          <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
+            {vaults.map(vault => (
+              <VaultMiniCard
+                key={vault.id}
+                vault={vault}
+                onClick={() => setEditingVault(vault)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* RECENT TRANSACTIONS */}
       <div
         className="mx-4 mb-4 bg-white rounded-3xl p-4 shadow-sm"
@@ -423,9 +553,11 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
           <p className="text-xs text-gray-400 text-center py-3">{t('noTransactionsMonth')}</p>
         ) : (
           recentTransactions.map(tx => (
-            <div
+            <button
               key={tx.id}
-              className="flex justify-between items-center py-2 last:border-0"
+              type="button"
+              onClick={() => onNavigate?.('transactions')}
+              className="w-full flex justify-between items-center py-2 last:border-0 text-left"
               style={{ borderBottom: `1px solid ${LALA.bg}` }}
             >
               <div className="flex items-center gap-3 min-w-0">
@@ -445,7 +577,7 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
               <p className={`text-sm font-bold shrink-0 ${tx.type === 'income' ? 'text-green-500' : 'text-gray-800'}`}>
                 {tx.type === 'income' ? '+' : '-'}{formatMoney(tx.amount)}
               </p>
-            </div>
+            </button>
           ))
         )}
       </div>
@@ -466,7 +598,7 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
       )}
 
       {(showSpent || showPayBill) && (
-        <div className="fixed inset-0 z-[110] flex items-end justify-center">
+        <div className="fixed inset-0 z-[140] flex items-end justify-center">
           <div className="absolute inset-0 bg-black opacity-40" onClick={closeSheet} />
           <div className="relative bg-white w-full rounded-t-3xl max-h-[92vh] overflow-y-auto">
             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mt-3 mb-1" />
@@ -490,6 +622,21 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
         <AddBankModal
           onClose={() => setShowAddBank(false)}
           onSaved={() => { setShowAddBank(false); bumpRefresh() }}
+        />
+      )}
+
+      {showAddVault && (
+        <AddVaultModal
+          onClose={() => setShowAddVault(false)}
+          onSaved={() => { setShowAddVault(false); bumpRefresh() }}
+        />
+      )}
+
+      {editingVault && (
+        <EditVaultModal
+          vault={editingVault}
+          onClose={() => setEditingVault(null)}
+          onSaved={() => { setEditingVault(null); bumpRefresh() }}
         />
       )}
 

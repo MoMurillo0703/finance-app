@@ -73,6 +73,22 @@ export default function AccountsScreen({ onAccountSaved, refreshKey = 0, setHide
     return () => { active = false }
   }, [user.id, refreshKey, dataRefreshKey])
 
+  const modalOpen =
+    showAddChoice ||
+    showAddBank ||
+    showAddCard ||
+    showAddLoan ||
+    !!editingBank ||
+    !!editingCard ||
+    !!editingLoan ||
+    showSimulator ||
+    !!historyBank
+
+  useEffect(() => {
+    setHideNav?.(modalOpen)
+    return () => setHideNav?.(false)
+  }, [modalOpen, setHideNav])
+
   const handleSaved = () => {
     setShowAddBank(false)
     setShowAddCard(false)
@@ -252,7 +268,7 @@ export default function AccountsScreen({ onAccountSaved, refreshKey = 0, setHide
       <button
         type="button"
         onClick={() => setShowAddChoice(true)}
-        className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-purple-600 text-white text-3xl leading-none shadow-lg flex items-center justify-center z-30"
+        className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-purple-600 text-white text-3xl leading-none shadow-lg flex items-center justify-center z-[100]"
         aria-label={t('add')}
       >
         +
