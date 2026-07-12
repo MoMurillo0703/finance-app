@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 import { adjustBankBalance, adjustCardBalance, bankDelta } from '../../lib/payments'
 import { fetchBanks } from '../../utils/bank'
 import { useCurrencyInput, currencyAmountPlaceholder } from '../../hooks/useCurrencyInput'
-import { BUDGET_CATEGORIES } from '../../utils/transactionCategories'
+import { EDIT_EXPENSE_CATEGORIES, getCategoryPickerLabel } from '../../utils/transactionCategories'
 import { getBudgetCategoryLabel } from '../../utils/budgets'
 import { formatMoney } from '../../utils/currency'
 
@@ -60,6 +60,7 @@ export default function QuickSpentSheet({ onClose, onSaved }) {
       description: note.trim() || getBudgetCategoryLabel(category, t),
       category,
       transaction_date: date || todayISO(),
+      is_transfer: category === 'transfer',
     }
 
     if (accountType === 'card') {
@@ -68,7 +69,11 @@ export default function QuickSpentSheet({ onClose, onSaved }) {
       row.bank_id = accountId
     }
 
-    const { error: txError } = await supabase.from('transactions').insert(row)
+    let { error: txError } = await supabase.from('transactions').insert(row)
+    if (txError?.message?.includes('is_transfer')) {
+      const { is_transfer: _transfer, ...fallbackRow } = row
+      ;({ error: txError } = await supabase.from('transactions').insert(fallbackRow))
+    }
     if (txError) {
       setError(txError.message)
       setSaving(false)
@@ -161,7 +166,7 @@ export default function QuickSpentSheet({ onClose, onSaved }) {
             {stepHeader(t('whatWasItFor'), 1)}
             <div className="flex-1 overflow-y-auto min-h-0 px-6">
               <div className="grid grid-cols-3 gap-2 pb-4">
-                {BUDGET_CATEGORIES.map(cat => (
+                {EDIT_EXPENSE_CATEGORIES.filter(c => c.key !== 'income').map(cat => (
                   <button
                     key={cat.key}
                     type="button"
@@ -173,7 +178,7 @@ export default function QuickSpentSheet({ onClose, onSaved }) {
                     }`}
                   >
                     <span className="text-2xl">{cat.emoji}</span>
-                    <span className="leading-tight text-center">{getBudgetCategoryLabel(cat.key, t)}</span>
+                    <span className="leading-tight text-center">{getCategoryPickerLabel(cat.key, t)}</span>
                   </button>
                 ))}
               </div>

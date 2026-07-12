@@ -1,9 +1,9 @@
-import { BUDGET_CATEGORIES, BUDGET_CATEGORY_KEYS, getRecategorizeHighlight } from './transactionCategories'
+import { BUDGET_CATEGORIES, BUDGET_CATEGORY_KEYS, getRecategorizeHighlight, getCategoryPickerLabel } from './transactionCategories'
 import { isSpendingTransaction } from './transactionType'
 
 export function normalizeBudgetCategory(transaction) {
   const cat = getRecategorizeHighlight(transaction)
-  if (cat === 'income') return null
+  if (cat === 'income' || cat === 'transfer') return null
   if (BUDGET_CATEGORY_KEYS.includes(cat)) return cat
   return 'other'
 }
@@ -22,7 +22,7 @@ export function getSpendingByBudgetCategory(transactions) {
 }
 
 export function getBudgetCategoryLabel(key, t) {
-  return t(`category${key.charAt(0).toUpperCase()}${key.slice(1)}`)
+  return getCategoryPickerLabel(key, t)
 }
 
 export function buildBudgetRows({ spendingByCategory, budgets, t }) {

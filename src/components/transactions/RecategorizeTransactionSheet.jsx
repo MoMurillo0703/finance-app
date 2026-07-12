@@ -7,6 +7,7 @@ import {
   RECATEGORIZE_CATEGORIES,
   CATEGORY_EMOJIS,
   getRecategorizeHighlight,
+  getCategoryPickerLabel,
 } from '../../utils/transactionCategories'
 
 export default function RecategorizeTransactionSheet({ transaction, onClose, onSaved }) {
@@ -24,10 +25,23 @@ export default function RecategorizeTransactionSheet({ transaction, onClose, onS
     setSaving(true)
     setError('')
 
-    const { error: dbError } = await supabase
+    const isTransfer = newCategory === 'transfer'
+    let updatePayload = {
+      category: newCategory,
+      is_transfer: isTransfer,
+    }
+
+    let { error: dbError } = await supabase
       .from('transactions')
-      .update({ category: newCategory })
+      .update(updatePayload)
       .eq('id', transaction.id)
+
+    if (dbError?.message?.includes('is_transfer')) {
+      ;({ error: dbError } = await supabase
+        .from('transactions')
+        .update({ category: newCategory })
+        .eq('id', transaction.id))
+    }
 
     if (dbError) {
       setError(dbError.message)
@@ -81,7 +95,7 @@ export default function RecategorizeTransactionSheet({ transaction, onClose, onS
             >
               <span className="text-lg">{CATEGORY_EMOJIS[cat]}</span>
               <span className="text-center leading-tight">
-                {t(`category${cat.charAt(0).toUpperCase()}${cat.slice(1)}`)}
+                {getCategoryPickerLabel(cat, t)}
               </span>
             </button>
           ))}

@@ -12,10 +12,14 @@ import {
 import { getUserCurrency, isLatAmUser } from '../../utils/currency'
 import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
 import { useCurrencyInput, currencyAmountPlaceholder } from '../../hooks/useCurrencyInput'
-import { BUDGET_CATEGORIES, getRecategorizeHighlight } from '../../utils/transactionCategories'
+import { getRecategorizeHighlight, EDIT_EXPENSE_CATEGORIES, getCategoryPickerLabel } from '../../utils/transactionCategories'
 import DeleteConfirmBlock from '../shared/DeleteConfirmBlock'
 
-const INCOME_CATEGORIES = ['salary', 'commission', 'reimbursement']
+const INCOME_CATEGORIES = [
+  { key: 'salary', emoji: '💰' },
+  { key: 'commission', emoji: '📈' },
+  { key: 'reimbursement', emoji: '↩️' },
+]
 
 export default function EditTransactionModal({ transaction, onClose, onSaved }) {
   const { t } = useTranslation()
@@ -23,6 +27,9 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
   const [type, setType] = useState(transaction.type)
   const [category, setCategory] = useState(
     transaction.type === 'income' ? transaction.category : getRecategorizeHighlight(transaction),
+  )
+  const [isTransfer, setIsTransfer] = useState(
+    Boolean(transaction.is_transfer || getRecategorizeHighlight(transaction) === 'transfer'),
   )
   const amountInput = useCurrencyInput(transaction.amount)
   const currency = getUserCurrency()
@@ -102,19 +109,33 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
     const newVaultId = type === 'expense' && vaultId ? vaultId : null
     const oldVaultId = transaction.vault_id
 
-    const { error: txError } = await supabase
+    const saveCategory = category === 'income' ? 'salary' : category
+    const saveIsTransfer = category === 'transfer'
+
+    let updatePayload = {
+      bank_id: isCardExpense ? null : bankId,
+      credit_card_id: isCardExpense ? creditCardId : null,
+      type,
+      category: saveCategory,
+      amount: parsedAmount,
+      description: description.trim(),
+      transaction_date: date,
+      vault_id: newVaultId,
+      is_transfer: saveIsTransfer,
+    }
+
+    let { error: txError } = await supabase
       .from('transactions')
-      .update({
-        bank_id: isCardExpense ? null : bankId,
-        credit_card_id: isCardExpense ? creditCardId : null,
-        type,
-        category,
-        amount: parsedAmount,
-        description: description.trim(),
-        transaction_date: date,
-        vault_id: newVaultId,
-      })
+      .update(updatePayload)
       .eq('id', transaction.id)
+
+    if (txError && txError.message.includes('is_transfer')) {
+      const { is_transfer: _isTransfer, ...fallbackPayload } = updatePayload
+      ;({ error: txError } = await supabase
+        .from('transactions')
+        .update(fallbackPayload)
+        .eq('id', transaction.id))
+    }
 
     if (txError) { setError(txError.message); setSaving(false); return }
 
@@ -222,6 +243,7 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
 
   const handleTypeChange = (nextType) => {
     setType(nextType)
+    setIsTransfer(false)
     setCategory(nextType === 'income' ? 'salary' : 'other')
     if (nextType === 'income') {
       setVaultId('')
@@ -229,9 +251,25 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
     }
   }
 
+  const handleCategorySelect = (key) => {
+    if (key === 'income') {
+      setType('income')
+      setCategory('salary')
+      setIsTransfer(false)
+      return
+    }
+    setCategory(key)
+    if (key === 'transfer') {
+      setIsTransfer(true)
+      if (type === 'income') setType('expense')
+    } else {
+      setIsTransfer(false)
+    }
+  }
+
   const categoryOptions = type === 'income'
-    ? INCOME_CATEGORIES.map(key => ({ key, emoji: key === 'salary' ? '💰' : key === 'commission' ? '📈' : '↩️' }))
-    : BUDGET_CATEGORIES
+    ? INCOME_CATEGORIES
+    : EDIT_EXPENSE_CATEGORIES
 
   return (
     <div className="fixed inset-0 z-[110] flex items-end justify-center">
@@ -288,15 +326,15 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
                 <button
                   key={cat.key}
                   type="button"
-                  onClick={() => setCategory(cat.key)}
+                  onClick={() => handleCategorySelect(cat.key)}
                   className={`py-2 rounded-xl text-xs flex flex-col items-center gap-1 border ${
-                    category === cat.key
+                    (category === cat.key || (cat.key === 'transfer' && isTransfer && category === 'transfer'))
                       ? 'bg-purple-600 text-white border-purple-600'
                       : 'border-gray-200 text-gray-500'
                   }`}
                 >
                   <span>{cat.emoji}</span>
-                  <span className="truncate w-full text-center px-0.5">{t(cat.key, { defaultValue: cat.key })}</span>
+                  <span className="truncate w-full text-center px-0.5">{getCategoryPickerLabel(cat.key, t)}</span>
                 </button>
               ))}
             </div>
