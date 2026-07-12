@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
@@ -6,26 +6,43 @@ import { useAuth } from '../../context/AuthContext'
 import { formatMoney } from '../../utils/currency'
 import { formatDate } from '../../utils/date'
 import { getRecentMonthKeys } from '../../utils/reports'
-import { useCurrencyInput, currencyAmountPlaceholder } from '../../hooks/useCurrencyInput'
 import {
   PAYOFF_STRATEGIES,
   buildDebtList,
   hasUpcomingPromoDeadlines,
   averageMonthlyTotals,
   calculateInterestSaved,
-  buildPayoffInsight,
+  buildStrategyInsight,
+  monthsSoonerWithExtra,
+  formatPayoffMonth,
+  formatPayoffMonthLong,
 } from '../../utils/debtPayoff'
+
+const SLIDER_MAX = 500
+const SLIDER_STEP = 25
+
+function snapToStep(value) {
+  return Math.round(Math.max(0, value) / SLIDER_STEP) * SLIDER_STEP
+}
+
+function payOffBadge(index, t) {
+  if (index === 0) return t('payOffFirst')
+  if (index === 1) return t('payOffSecond')
+  if (index === 2) return t('payOffThird')
+  return t('payOffNth', { n: index + 1 })
+}
 
 export default function DebtPayoffPlanner({ onClose, setHideNav }) {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
+  const locale = i18n.language === 'es' ? 'es-CO' : 'en-US'
   const [loading, setLoading] = useState(true)
   const [debts, setDebts] = useState([])
   const [avgMonthlyIncome, setAvgMonthlyIncome] = useState(0)
   const [avgMonthlyExpenses, setAvgMonthlyExpenses] = useState(0)
   const [strategy, setStrategy] = useState('avalanche')
   const [strategyReady, setStrategyReady] = useState(false)
-  const extraInput = useCurrencyInput('')
+  const [extraPayment, setExtraPayment] = useState(0)
   const [suggestedExtra, setSuggestedExtra] = useState(0)
 
   useEffect(() => {
@@ -118,15 +135,13 @@ export default function DebtPayoffPlanner({ onClose, setHideNav }) {
       setStrategy(defaultStrategy)
       setStrategyReady(true)
 
-      if (available > 0) {
-        extraInput.reset(String(Math.round(available * 100) / 100))
-      }
+      const initialExtra = available > 0 ? snapToStep(Math.min(available, SLIDER_MAX)) : 0
+      setExtraPayment(initialExtra)
 
       setLoading(false)
     })()
 
     return () => { active = false }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user.id])
 
   const totalMinPayments = useMemo(
@@ -134,56 +149,59 @@ export default function DebtPayoffPlanner({ onClose, setHideNav }) {
     [debts],
   )
 
+  const totalMonthlyPayment = totalMinPayments + extraPayment
   const availableForDebt = suggestedExtra
-  const extraPayment = extraInput.raw === ''
-    ? availableForDebt
-    : extraInput.numericValue
 
   const { withExtra, interestSaved } = useMemo(() => {
     if (debts.length === 0) {
       return {
-        withExtra: { plan: [], maxPayoffMonths: 0, totalInterestPaid: 0 },
+        withExtra: {
+          plan: [],
+          maxPayoffMonths: 0,
+          totalInterestPaid: 0,
+          debtFreeDate: null,
+        },
         interestSaved: 0,
       }
     }
     return calculateInterestSaved(debts, strategy, extraPayment)
   }, [debts, strategy, extraPayment])
 
-  const interestSavedWith100 = useMemo(() => {
-    if (debts.length === 0) return 0
-    return calculateInterestSaved(debts, strategy, 100).interestSaved
-  }, [debts, strategy])
+  const monthsSooner = useMemo(
+    () => monthsSoonerWithExtra(debts, strategy, extraPayment),
+    [debts, strategy, extraPayment],
+  )
 
   const payoffPlan = withExtra.plan
   const maxMonths = withExtra.maxPayoffMonths
-  const totalInterestPaid = withExtra.totalInterestPaid
+  const debtFreeDate = withExtra.debtFreeDate
   const activeStrategy = PAYOFF_STRATEGIES.find(s => s.key === strategy)
+  const firstDebtPayoffDate = payoffPlan[0]?.payoffDate ?? null
 
-  const insight = useMemo(() => {
+  const strategyInsight = useMemo(() => {
     if (loading || debts.length === 0) return ''
-    return buildPayoffInsight({
-      availableForDebt,
-      extraPayment,
-      maxMonths,
+    return buildStrategyInsight({
+      strategy,
       interestSaved,
-      totalInterestPaid,
-      interestSavedWith100,
+      firstDebtPayoffDate,
       formatMoney,
+      formatPayoffMonthLong: date => formatPayoffMonthLong(date, locale),
       t,
-      locale: i18n.language === 'es' ? 'es-CO' : 'en-US',
+      locale,
     })
-  }, [
-    loading,
-    debts.length,
-    availableForDebt,
-    extraPayment,
-    maxMonths,
-    interestSaved,
-    totalInterestPaid,
-    interestSavedWith100,
-    t,
-    i18n.language,
-  ])
+  }, [loading, debts.length, strategy, interestSaved, firstDebtPayoffDate, t, locale])
+
+  const handleSliderChange = useCallback(e => {
+    setExtraPayment(Number(e.target.value))
+  }, [])
+
+  const handleExtraInputChange = useCallback(e => {
+    const raw = e.target.value.replace(/[^\d.]/g, '')
+    const parsed = parseFloat(raw)
+    setExtraPayment(Number.isNaN(parsed) ? 0 : Math.max(0, parsed))
+  }, [])
+
+  const sliderValue = Math.min(extraPayment, SLIDER_MAX)
 
   return (
     <div className="fixed inset-0 z-[130] bg-lala-50 flex flex-col">
@@ -213,7 +231,6 @@ export default function DebtPayoffPlanner({ onClose, setHideNav }) {
           </div>
         ) : (
           <>
-            {/* Section A — snapshot */}
             <div className="bg-purple-50 rounded-2xl p-4 mb-4">
               <p className="text-sm font-semibold text-gray-700 mb-3">{t('financialPicture')}</p>
               <div className="grid grid-cols-2 gap-3">
@@ -243,7 +260,6 @@ export default function DebtPayoffPlanner({ onClose, setHideNav }) {
               )}
             </div>
 
-            {/* Section B — strategy */}
             <div className="bg-white rounded-2xl border border-gray-100 p-4 mb-4">
               <p className="text-sm font-semibold text-gray-700 mb-3">{t('payoffStrategy')}</p>
               <div className="flex flex-wrap gap-2">
@@ -267,28 +283,75 @@ export default function DebtPayoffPlanner({ onClose, setHideNav }) {
               )}
 
               <div className="mt-4">
-                <p className="text-xs text-gray-400 mb-1">{t('extraPayment')}</p>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={extraInput.displayValue}
-                  onChange={extraInput.handleChange}
-                  placeholder={currencyAmountPlaceholder(extraInput.currency) || formatMoney(availableForDebt)}
-                  className="w-full border border-purple-200 rounded-xl px-4 py-3 text-lg font-bold text-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                />
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-gray-400 mb-2">{t('extraPayment')}</p>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min={0}
+                    max={SLIDER_MAX}
+                    step={SLIDER_STEP}
+                    value={sliderValue}
+                    onChange={handleSliderChange}
+                    className="flex-1 accent-purple-600"
+                    aria-label={t('extraPayment')}
+                  />
+                  <div className="relative w-24 shrink-0">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={extraPayment === 0 ? '' : String(extraPayment)}
+                      onChange={handleExtraInputChange}
+                      placeholder="0"
+                      className="w-full border border-purple-200 rounded-xl pl-6 pr-2 py-2 text-sm font-bold text-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-400 text-right"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 mt-2">
                   {t('suggestedExtra', { amount: formatMoney(availableForDebt) })}
                 </p>
+                {extraPayment > 0 && monthsSooner > 0 && (
+                  <p className="text-xs text-purple-600 font-medium mt-1">
+                    {t('extraPaymentSooner', {
+                      amount: formatMoney(extraPayment),
+                      months: monthsSooner,
+                    })}
+                  </p>
+                )}
               </div>
             </div>
 
-            {/* Section C — payoff order */}
+            <div
+              className="rounded-3xl p-5 mb-4"
+              style={{ backgroundColor: '#F5F3FF' }}
+            >
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">{t('debtFreeLabel')}</p>
+                  <p className="text-sm font-bold text-gray-900">
+                    {debtFreeDate ? formatPayoffMonth(debtFreeDate, locale) : '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">{t('interestSaved')}</p>
+                  <p className="text-sm font-bold text-green-600">+{formatMoney(interestSaved)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">{t('monthlyTotal')}</p>
+                  <p className="text-sm font-bold text-gray-900">{formatMoney(totalMonthlyPayment)}</p>
+                </div>
+              </div>
+            </div>
+
             <p className="text-sm font-semibold text-gray-700 mb-3">{t('payoffOrder')}</p>
             {payoffPlan.map((debt, index) => (
               <div key={`${debt.type}-${debt.id}`} className="bg-white rounded-2xl p-4 mb-3 border border-gray-100">
                 <div className="flex items-start gap-3">
-                  <div className="w-7 h-7 rounded-full bg-purple-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
-                    {index + 1}
+                  <div
+                    className="px-2 py-1 rounded-lg text-xs font-bold shrink-0"
+                    style={{ backgroundColor: '#F5F3FF', color: '#7C3AED' }}
+                  >
+                    {payOffBadge(index, t)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start gap-2">
@@ -296,8 +359,14 @@ export default function DebtPayoffPlanner({ onClose, setHideNav }) {
                       <p className="font-bold text-red-500 shrink-0">{formatMoney(debt.balance)}</p>
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {debt.apr}% APR · {t('payPerMonth', { amount: formatMoney(debt.monthlyPayment) })}
+                      {debt.apr.toFixed(2)}% APR · {t('payPerMonth', { amount: formatMoney(debt.monthlyPayment) })}
                     </p>
+
+                    {debt.payoffDate && (
+                      <p className="text-xs text-purple-600 font-medium mt-1">
+                        {t('paidOffBy', { date: formatPayoffMonth(debt.payoffDate, locale) })}
+                      </p>
+                    )}
 
                     {debt.soonestPromo && (
                       <div className="mt-2 bg-amber-50 border border-amber-100 rounded-lg px-3 py-1.5 text-xs text-amber-700">
@@ -318,44 +387,27 @@ export default function DebtPayoffPlanner({ onClose, setHideNav }) {
                         </span>
                         <span>{formatMoney(debt.totalInterest)} {t('inInterest')}</span>
                       </div>
-                      <div className="h-1.5 bg-gray-100 rounded-full">
+                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                         <div
-                          className="h-1.5 bg-purple-500 rounded-full"
-                          style={{
-                            width: debt.payoffMonths
-                              ? `${Math.min(100, (1 / debt.payoffMonths) * 100 * 3)}%`
-                              : '2%',
-                          }}
+                          className="h-1.5 bg-purple-500 rounded-full transition-all"
+                          style={{ width: `${debt.progressPct}%` }}
                         />
                       </div>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {t('balancePaidProgress', {
+                          paid: formatMoney(debt.paidSoFar || 0),
+                          total: formatMoney(debt.originalBalance || debt.balance),
+                        })}
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
             ))}
 
-            <div className="bg-lala-50 rounded-2xl p-4 mt-2 mb-4 border border-gray-100">
-              <div className="flex justify-between mb-2">
-                <p className="text-sm text-gray-500">{t('debtFreeIn')}</p>
-                <p className="font-bold text-purple-600 text-right">
-                  {maxMonths > 0
-                    ? `${maxMonths} ${t('months')} (${(maxMonths / 12).toFixed(1)} ${t('years')})`
-                    : '—'}
-                </p>
-              </div>
-              <div className="flex justify-between mb-2">
-                <p className="text-sm text-gray-500">{t('totalInterestPaid')}</p>
-                <p className="font-bold text-red-500">{formatMoney(totalInterestPaid)}</p>
-              </div>
-              <div className="flex justify-between">
-                <p className="text-sm text-gray-500">{t('interestSaved')}</p>
-                <p className="font-bold text-green-600">+{formatMoney(interestSaved)}</p>
-              </div>
-            </div>
-
-            {insight && (
-              <div className="bg-purple-50 rounded-2xl p-4 mb-6 text-sm text-purple-800 italic">
-                &ldquo;{insight}&rdquo;
+            {strategyInsight && (
+              <div className="p-4 rounded-2xl bg-green-50 border border-green-100 mb-6">
+                <p className="text-sm text-green-800">{strategyInsight}</p>
               </div>
             )}
           </>
