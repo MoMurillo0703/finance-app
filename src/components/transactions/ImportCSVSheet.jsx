@@ -221,22 +221,51 @@ export default function ImportCSVSheet({ onClose, onImport, showToast }) {
         }
       })
 
-      const { data: existing } = await supabase
+      const { data: allExisting } = await supabase
         .from('transactions')
-        .select('transaction_date, amount, description')
+        .select('id, transaction_date, amount, description')
         .eq('user_id', user.id)
         .eq('bank_id', bankId)
 
-      const newRows = tagged.filter(r =>
-        !existing?.some(e =>
-          e.transaction_date === r.date
-          && Math.abs(e.amount - r.amount) < 0.01
-          && (e.description || '').toLowerCase() === r.description.toLowerCase(),
-        ),
-      )
+      const toInsert = []
+      let updatedCount = 0
 
-      if (newRows.length > 0) {
-        const basePayload = newRows.map(r => ({
+      for (const row of tagged) {
+        const existing = allExisting?.find(e =>
+          e.transaction_date === row.date
+          && Math.abs(e.amount - row.amount) < 0.01,
+        )
+
+        if (existing) {
+          let updatePayload = {
+            category: categoryForDb(row.category),
+            is_transfer: row.is_transfer,
+          }
+          let { error: updateError } = await supabase
+            .from('transactions')
+            .update(updatePayload)
+            .eq('id', existing.id)
+
+          if (updateError && updateError.message.includes('is_transfer')) {
+            ;({ error: updateError } = await supabase
+              .from('transactions')
+              .update({ category: categoryForDb(row.category) })
+              .eq('id', existing.id))
+          }
+
+          if (updateError) {
+            setError(updateError.message)
+            setImporting(false)
+            return
+          }
+          updatedCount++
+        } else {
+          toInsert.push(row)
+        }
+      }
+
+      if (toInsert.length > 0) {
+        const basePayload = toInsert.map(r => ({
           user_id: user.id,
           bank_id: bankId,
           description: r.description,
@@ -261,7 +290,7 @@ export default function ImportCSVSheet({ onClose, onImport, showToast }) {
           return
         }
 
-        const delta = newRows.reduce((sum, row) => sum + bankDelta(row.type, row.amount), 0)
+        const delta = toInsert.reduce((sum, row) => sum + bankDelta(row.type, row.amount), 0)
         const balanceError = await adjustBankBalance(bankId, delta)
         if (balanceError) {
           setError(balanceError.message)
@@ -270,8 +299,14 @@ export default function ImportCSVSheet({ onClose, onImport, showToast }) {
         }
       }
 
-      showToast?.(t('importNewCount', { count: newRows.length }))
-      onImport?.(newRows.length)
+      if (toInsert.length > 0 && updatedCount > 0) {
+        showToast?.(t('importNewAndUpdated', { imported: toInsert.length, updated: updatedCount }))
+      } else if (updatedCount > 0) {
+        showToast?.(t('importUpdatedCount', { count: updatedCount }))
+      } else {
+        showToast?.(t('importNewCount', { count: toInsert.length }))
+      }
+      onImport?.(toInsert.length + updatedCount)
       onClose()
     } catch (err) {
       setError(err.message || String(err))

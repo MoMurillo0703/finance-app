@@ -343,6 +343,8 @@ export default {
       importPendingTotal: 'Pending transactions total (optional)',
       importButtonCount: 'Import {{count}} transactions',
       importNewCount: 'Imported {{count}} new transactions ✓',
+      importUpdatedCount: 'Updated {{count}} transactions ✓',
+      importNewAndUpdated: 'Imported {{imported}} · Updated {{updated}} ✓',
       importCsvOnly: 'Please upload a .csv file',
       importEmptyCsv: 'The CSV file is empty or has no headers',
       importMapColumns: 'We could not detect the format. Map your columns:',
