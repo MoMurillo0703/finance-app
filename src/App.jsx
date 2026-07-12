@@ -183,6 +183,7 @@ function AppContent() {
           onBankSaved={bumpDashboard}
           onPrefsChanged={bumpPrefs}
           onViewAccount={viewAccountTransactions}
+          showToast={showToast}
         />
       )}
 

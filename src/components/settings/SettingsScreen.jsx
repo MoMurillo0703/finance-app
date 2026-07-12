@@ -9,7 +9,58 @@ import { formatMoney, getUserCurrency, notifyPrefsChanged } from '../../utils/cu
 import { getUserDateFormat } from '../../utils/date'
 import { fetchBanks } from '../../utils/bank'
 
-export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, onViewAccount }) {
+const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true'
+
+function DevWipeButton({ label, description, onConfirm, danger = false }) {
+  const [confirming, setConfirming] = useState(false)
+
+  return (
+    <div className="p-4 border-b border-orange-100 last:border-0">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-gray-800">{label}</p>
+          <p className="text-xs text-gray-400 mt-0.5">{description}</p>
+        </div>
+        {confirming ? (
+          <div className="flex gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 font-medium min-h-[44px]"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                await onConfirm()
+                setConfirming(false)
+              }}
+              className="text-xs px-3 py-1.5 rounded-lg font-medium text-white min-h-[44px]"
+              style={{ backgroundColor: danger ? '#EF4444' : '#F97316' }}
+            >
+              Confirm
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirming(true)}
+            className="text-xs px-3 py-1.5 rounded-lg font-medium shrink-0 min-h-[44px]"
+            style={{
+              backgroundColor: danger ? '#FEE2E2' : '#FFEDD5',
+              color: danger ? '#EF4444' : '#EA580C',
+            }}
+          >
+            Wipe
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, onViewAccount, showToast }) {
   const { user } = useAuth()
   const { t, i18n } = useTranslation()
   const [banks, setBanks] = useState([])
@@ -79,6 +130,28 @@ export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, o
       window.__installPrompt = null
       setInstallAvailable(false)
     }
+  }
+
+  const wipeTable = async (tableName) => {
+    const { error } = await supabase.from(tableName).delete().eq('user_id', user.id)
+    if (error) {
+      showToast?.(error.message)
+      return
+    }
+    showToast?.(`${tableName} wiped ✓`)
+    window.location.reload()
+  }
+
+  const wipeTables = async (tableNames) => {
+    for (const tableName of tableNames) {
+      const { error } = await supabase.from(tableName).delete().eq('user_id', user.id)
+      if (error) {
+        showToast?.(`${tableName}: ${error.message}`)
+        return
+      }
+    }
+    showToast?.('Data wiped ✓')
+    window.location.reload()
   }
 
   const settingsBody = (
@@ -198,6 +271,60 @@ export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, o
             <p className="mt-2 text-xs text-gray-400 text-center">{t('installHint')}</p>
           )}
         </section>
+
+        {DEV_MODE && (
+          <div className="mt-8">
+            <p className="text-xs font-bold text-orange-500 uppercase tracking-widest px-1 mb-3">
+              🛠 Dev Tools
+            </p>
+            <div
+              className="rounded-2xl overflow-hidden border border-orange-200"
+              style={{ backgroundColor: '#FFF7ED' }}
+            >
+              <DevWipeButton
+                label="Wipe transactions"
+                description="Deletes all transactions, keeps accounts"
+                onConfirm={() => wipeTable('transactions')}
+              />
+              <DevWipeButton
+                label="Wipe bills & payments"
+                description="Deletes bills and bill_payments"
+                onConfirm={() => wipeTables(['bills', 'bill_payments'])}
+              />
+              <DevWipeButton
+                label="Wipe everything"
+                description="Transactions, bills, budgets, vaults — keeps banks & cards"
+                onConfirm={() => wipeTables([
+                  'transactions',
+                  'bills',
+                  'bill_payments',
+                  'budgets',
+                  'vaults',
+                  'promotional_purchases',
+                  'card_statements',
+                ])}
+                danger
+              />
+              <DevWipeButton
+                label="Full reset"
+                description="Deletes ALL data including banks, cards, loans"
+                onConfirm={() => wipeTables([
+                  'transactions',
+                  'bills',
+                  'bill_payments',
+                  'budgets',
+                  'vaults',
+                  'promotional_purchases',
+                  'card_statements',
+                  'banks',
+                  'credit_cards',
+                  'loans',
+                ])}
+                danger
+              />
+            </div>
+          </div>
+        )}
 
         <div className="mt-10 pt-6" style={{ borderTop: '1px solid #EDE9FE' }}>
           <button
