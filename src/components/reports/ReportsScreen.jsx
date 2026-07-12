@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   BarChart,
@@ -24,11 +24,15 @@ import {
   isCurrentMonth,
   formatMonthYear,
   getRecentMonthKeys,
-  detectRecurringCharges,
   summarizeByCategory,
   PURPLE_SHADES,
   CATEGORY_EMOJI,
 } from '../../utils/reports'
+import {
+  detectRecurring,
+  isChargeAlreadyABill,
+  formatRecurringDate,
+} from '../../utils/recurringDetector'
 import {
   LOAN_EMOJI,
   calculateLoanStats,
@@ -51,7 +55,7 @@ function SectionTitle({ children }) {
   return <p className="text-sm font-semibold text-gray-700 mb-3">{children}</p>
 }
 
-export default function ReportsScreen({ setHideNav, onSettings }) {
+export default function ReportsScreen({ setHideNav, onSettings, showToast }) {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const now = new Date()
@@ -65,6 +69,8 @@ export default function ReportsScreen({ setHideNav, onSettings }) {
   const [creditCards, setCreditCards] = useState([])
   const [loans, setLoans] = useState([])
   const [banks, setBanks] = useState([])
+  const [bills, setBills] = useState([])
+  const [convertingCharge, setConvertingCharge] = useState(null)
   const [trendTransactions, setTrendTransactions] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -107,6 +113,7 @@ export default function ReportsScreen({ setHideNav, onSettings }) {
         loansRes,
         trendRes,
         banksRes,
+        billsRes,
       ] = await Promise.all([
         supabase
           .from('transactions')
@@ -151,6 +158,11 @@ export default function ReportsScreen({ setHideNav, onSettings }) {
           .eq('user_id', user.id)
           .eq('is_active', true)
           .order('name'),
+        supabase
+          .from('bills')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true),
       ])
 
       if (!active) return
@@ -166,6 +178,7 @@ export default function ReportsScreen({ setHideNav, onSettings }) {
       setCreditCards(cardsRes.data ?? [])
       setLoans(loansRes.data ?? [])
       setBanks(banksRes.data ?? [])
+      setBills(billsRes.data ?? [])
       setTrendTransactions(trendRes.data ?? [])
       setLoading(false)
     })()
@@ -206,6 +219,41 @@ export default function ReportsScreen({ setHideNav, onSettings }) {
     [trendBuckets],
   )
 
+  const locale = i18n.language === 'es' ? 'es-CO' : 'en-US'
+
+  const convertToBill = useCallback(async (charge) => {
+    const dueDay = new Date(charge.lastCharged).getDate()
+    const displayName = charge.name.charAt(0).toUpperCase() + charge.name.slice(1)
+    const row = {
+      user_id: user.id,
+      name: displayName,
+      amount: Math.round(charge.amount * 100) / 100,
+      due_day: dueDay,
+      frequency: 'monthly',
+      category: charge.category || 'subscriptions',
+      is_active: true,
+      auto_detected: true,
+    }
+
+    setConvertingCharge(charge.name)
+    let { data, error } = await supabase.from('bills').insert(row).select().single()
+
+    if (error && (error.message.includes('frequency') || error.message.includes('auto_detected'))) {
+      const { frequency: _f, auto_detected: _a, ...fallbackRow } = row
+      ;({ data, error } = await supabase.from('bills').insert(fallbackRow).select().single())
+    }
+
+    setConvertingCharge(null)
+
+    if (error) {
+      showToast?.(error.message)
+      return
+    }
+
+    setBills(prev => [...prev, data ?? { name: displayName, amount: row.amount }])
+    showToast?.(t('billAdded'))
+  }, [user.id, showToast, t])
+
   const shiftMonth = (delta) => {
     const date = new Date(year, month - 1 + delta, 1)
     setYear(date.getFullYear())
@@ -233,9 +281,12 @@ export default function ReportsScreen({ setHideNav, onSettings }) {
     amountLabel: formatMoney(row.amount),
   }))
 
-  const recurringCharges = detectRecurringCharges(recurringTransactions, recentMonthKeys)
-  const confirmedRecurring = recurringCharges.filter(item => item.frequency === 'monthly')
-  const totalMonthlyRecurring = confirmedRecurring.reduce((sum, item) => sum + item.averageAmount, 0)
+  const recurringCharges = useMemo(
+    () => detectRecurring(recurringTransactions),
+    [recurringTransactions],
+  )
+  const confirmedRecurring = recurringCharges
+  const totalMonthlyRecurring = confirmedRecurring.reduce((sum, item) => sum + item.amount, 0)
 
   const monthlyIncomes = recentMonthKeys.map(key => {
     const [y, m] = key.split('-').map(Number)
@@ -585,23 +636,42 @@ export default function ReportsScreen({ setHideNav, onSettings }) {
             {recurringCharges.length === 0 ? (
               <p className="text-xs text-gray-400">{t('noTransactionsMonth')}</p>
             ) : (
-              <div className="space-y-3">
-                {recurringCharges.map(item => (
-                  <div key={item.merchant} className="flex items-center justify-between gap-3 text-sm">
-                    <p className="font-medium text-gray-700 truncate">{item.merchant}</p>
-                    <div className="flex items-center gap-2 shrink-0 text-right">
-                      <p className="font-semibold text-gray-800">
-                        {formatMoney(item.averageAmount)}
-                        {item.frequency === 'monthly' && (
-                          <span className="text-gray-400 font-normal">/mo</span>
-                        )}
-                      </p>
-                      <span className="text-xs text-gray-500 whitespace-nowrap">
-                        {item.frequency === 'monthly' ? `🔁 ${t('recurring')}` : `⚡ ${t('irregular')}`}
-                      </span>
+              <div className="space-y-2">
+                {recurringCharges.map(charge => {
+                  const alreadyABill = isChargeAlreadyABill(charge, bills)
+                  return (
+                    <div
+                      key={charge.name}
+                      className="flex items-center justify-between p-4 rounded-2xl mb-2"
+                      style={{ backgroundColor: '#F9FAFB', border: '1px solid #F3F4F6' }}
+                    >
+                      <div className="min-w-0 pr-3">
+                        <p className="font-semibold text-gray-900 capitalize">{charge.name}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {formatMoney(charge.amount)}/mo · {charge.occurrences}x {t('detected')} · {t('nextExpected', { date: formatRecurringDate(charge.nextExpected, locale) })}
+                        </p>
+                      </div>
+                      {alreadyABill ? (
+                        <span
+                          className="text-xs px-3 py-1.5 rounded-full font-medium shrink-0"
+                          style={{ backgroundColor: '#DCFCE7', color: '#16A34A' }}
+                        >
+                          ✓ {t('inBills')}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => convertToBill(charge)}
+                          disabled={convertingCharge === charge.name}
+                          className="text-xs px-3 py-1.5 rounded-full font-medium shrink-0 disabled:opacity-50"
+                          style={{ backgroundColor: '#EDE9FE', color: '#7C3AED' }}
+                        >
+                          {convertingCharge === charge.name ? '...' : t('addBillAction')}
+                        </button>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
                 {confirmedRecurring.length > 0 && (
                   <div className="pt-3 flex items-center justify-between">
                     <p className="text-sm font-semibold text-gray-700">{t('monthlyCommitments')}</p>

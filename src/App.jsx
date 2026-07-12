@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Login from './components/auth/Login'
 import Signup from './components/auth/Signup'
@@ -24,6 +24,14 @@ function AppContent() {
   const [txFilter, setTxFilter] = useState(null)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [cardDetailRequest, setCardDetailRequest] = useState(null)
+  const [toast, setToast] = useState(null)
+  const toastTimer = useRef(null)
+
+  const showToast = useCallback((msg) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    setToast(msg)
+    toastTimer.current = setTimeout(() => setToast(null), 3000)
+  }, [])
 
   const bumpDashboard = () => setDashboardRefreshKey(k => k + 1)
   const bumpPrefs = () => setPrefsVersion(v => v + 1)
@@ -125,6 +133,7 @@ function AppContent() {
             onTransactionSaved={bumpDashboard}
             setHideNav={setHideNav}
             onSettings={openSettings}
+            showToast={showToast}
           />
         )}
         {activeTab === 'bills' && (
@@ -132,6 +141,7 @@ function AppContent() {
             key={prefsVersion}
             onBillPaid={bumpDashboard}
             onSettings={openSettings}
+            showToast={showToast}
           />
         )}
         {activeTab === 'accounts' && (
@@ -150,11 +160,21 @@ function AppContent() {
             key={prefsVersion}
             setHideNav={setHideNav}
             onSettings={openSettings}
+            showToast={showToast}
           />
         )}
       </div>
 
       {!navHidden && <BottomNav active={activeTab} onChange={handleTabChange} />}
+
+      {toast && (
+        <div
+          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[300] px-5 py-3 rounded-2xl shadow-lg text-white text-sm font-medium"
+          style={{ backgroundColor: '#7C3AED' }}
+        >
+          {toast}
+        </div>
+      )}
 
       {showSettings && (
         <SettingsScreen

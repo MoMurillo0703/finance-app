@@ -40,7 +40,15 @@ function alertItem({ icon, message, onTap, color, textColor, borderColor }) {
   }
 }
 
-export function getSmartAlert({ bills, promos, safeToSpend, onNavigate, onOpenCardPromo, t }) {
+export function getSmartAlert({
+  bills,
+  promos,
+  safeToSpend,
+  untrackedRecurringCount = 0,
+  onNavigate,
+  onOpenCardPromo,
+  t,
+}) {
   const today = new Date().getDate()
   const unpaid = (bills ?? []).filter(b => b.is_active !== false && !isBillPaidThisMonth(b))
 
@@ -106,6 +114,17 @@ export function getSmartAlert({ bills, promos, safeToSpend, onNavigate, onOpenCa
       borderColor: '#FDE68A',
       message: t('safeToSpendLow'),
       onTap: null,
+    })
+  }
+
+  if (untrackedRecurringCount > 0) {
+    const message = untrackedRecurringCount === 1
+      ? t('recurringNotTracked', { count: untrackedRecurringCount })
+      : t('recurringNotTracked_plural', { count: untrackedRecurringCount })
+    return alertItem({
+      icon: '🔁',
+      message,
+      onTap: () => onNavigate?.('reports'),
     })
   }
 

@@ -118,17 +118,15 @@ export function getRecentMonthKeys(count, fromDate = new Date()) {
   return keys
 }
 
+import {
+  cleanMerchantName as cleanMerchantKey,
+  detectRecurring,
+} from './recurringDetector'
+
 export function cleanMerchantName(raw) {
   if (!raw) return 'Unknown'
-  return raw
-    .replace(/\s*\d{7,}/g, '')
-    .replace(/\b[A-Z]{2,}\s*\*/g, '')
-    .replace(/\s+(SAN FRANCISCO|CA|FL|OH|NY|TX|CO|WA|IL|GA)\s*$/i, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase()
-    .replace(/\b\w/g, c => c.toUpperCase())
-    || 'Unknown'
+  const key = cleanMerchantKey(raw)
+  return key.charAt(0).toUpperCase() + key.slice(1)
 }
 
 function amountsWithinTolerance(amounts, tolerance = 0.1) {
@@ -138,45 +136,27 @@ function amountsWithinTolerance(amounts, tolerance = 0.1) {
   return amounts.every(value => Math.abs(value - mean) / mean <= tolerance)
 }
 
-export function detectRecurringCharges(transactions, monthKeys) {
-  const expenses = transactions.filter(tx => tx.type === 'expense')
-  const byMerchant = {}
-
-  for (const tx of expenses) {
-    const monthKey = tx.transaction_date?.slice(0, 7)
-    if (!monthKey || !monthKeys.includes(monthKey)) continue
-
-    const merchant = cleanMerchantName(tx.description)
-    if (!byMerchant[merchant]) {
-      byMerchant[merchant] = Object.fromEntries(monthKeys.map(key => [key, []]))
-    }
-    byMerchant[merchant][monthKey].push(tx.amount)
-  }
-
-  const recurring = []
-
-  for (const [merchant, monthlyAmounts] of Object.entries(byMerchant)) {
-    const monthlyTotals = monthKeys
-      .map(key => ({
-        key,
-        total: (monthlyAmounts[key] || []).reduce((sum, value) => sum + value, 0),
-      }))
-      .filter(entry => entry.total > 0)
-
-    if (monthlyTotals.length < 2) continue
-
-    const totals = monthlyTotals.map(entry => entry.total)
-    if (!amountsWithinTolerance(totals)) continue
-
-    recurring.push({
-      merchant,
-      averageAmount: totals.reduce((sum, value) => sum + value, 0) / totals.length,
-      frequency: monthlyTotals.length >= 3 ? 'monthly' : 'irregular',
-      monthsActive: monthlyTotals.length,
+export function detectRecurringCharges(transactions, monthKeys = []) {
+  const expenses = monthKeys.length > 0
+    ? transactions.filter(tx => {
+      if (tx.type !== 'expense') return false
+      const monthKey = tx.transaction_date?.slice(0, 7)
+      return monthKey && monthKeys.includes(monthKey)
     })
-  }
+    : transactions.filter(tx => tx.type === 'expense')
 
-  return recurring.sort((a, b) => b.averageAmount - a.averageAmount)
+  return detectRecurring(expenses).map(item => ({
+    merchant: item.name.charAt(0).toUpperCase() + item.name.slice(1),
+    name: item.name,
+    averageAmount: item.amount,
+    amount: item.amount,
+    frequency: item.frequency,
+    monthsActive: item.occurrences,
+    occurrences: item.occurrences,
+    lastCharged: item.lastCharged,
+    nextExpected: item.nextExpected,
+    category: item.category,
+  }))
 }
 
 export function summarizeByCategory(transactions, t) {

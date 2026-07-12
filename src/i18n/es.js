@@ -609,6 +609,13 @@ export default {
       trendDeclining: 'Tus gastos están aumentando',
       payWithCard: 'Pagar con tarjeta',
       detectedRecurringCharges: 'Cargos recurrentes detectados',
+      billAdded: 'Factura agregada ✓',
+      inBills: 'En facturas',
+      addBillAction: '+ Agregar factura',
+      detected: 'detectado',
+      nextExpected: 'próximo ~{{date}}',
+      recurringNotTracked: '{{count}} cargo recurrente sin registrar como factura',
+      recurringNotTracked_plural: '{{count}} cargos recurrentes sin registrar como facturas',
       notEnoughTrendData: 'Datos insuficientes. Las tendencias aparecerán después de tu segundo mes de transacciones.',
 
       // Dashboard redesign

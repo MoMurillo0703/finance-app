@@ -17,7 +17,8 @@ import { formatMoney } from '../../utils/currency'
 import { calculateNetWorth } from '../../utils/netWorth'
 import { formatDate } from '../../utils/date'
 import { fetchBanks, isCheckingBank } from '../../utils/bank'
-import { getMonthBounds } from '../../utils/reports'
+import { getMonthBounds, getRecentMonthKeys } from '../../utils/reports'
+import { detectRecurring, getUntrackedRecurring } from '../../utils/recurringDetector'
 import { getSpendingByBudgetCategory, getBudgetCategoryLabel } from '../../utils/budgets'
 import { isBillPaidThisMonth, getBillDisplayAmount, getDueDaysThisWeek } from '../../utils/bills'
 import { BUDGET_CATEGORIES, CATEGORY_EMOJIS } from '../../utils/transactionCategories'
@@ -49,6 +50,7 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
   const [promos, setPromos] = useState([])
   const [monthTransactions, setMonthTransactions] = useState([])
   const [recentTransactions, setRecentTransactions] = useState([])
+  const [recurringTransactions, setRecurringTransactions] = useState([])
   const [totalBalance, setTotalBalance] = useState(0)
   const [loading, setLoading] = useState(true)
   const [showAddBank, setShowAddBank] = useState(false)
@@ -63,6 +65,16 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
 
   const now = new Date()
   const { firstDay, daysInMonth } = getMonthBounds(now.getFullYear(), now.getMonth() + 1)
+  const recentMonthKeys = useMemo(() => getRecentMonthKeys(3), [])
+  const recurringStart = recentMonthKeys[0]
+  const recurringEnd = recentMonthKeys[recentMonthKeys.length - 1]
+  const recurringLastDay = useMemo(
+    () => getMonthBounds(
+      Number(recurringEnd.slice(0, 4)),
+      Number(recurringEnd.slice(5, 7)),
+    ).lastDay,
+    [recurringEnd],
+  )
 
   useEffect(() => {
     let active = true
@@ -77,6 +89,7 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
         { data: promosData },
         { data: monthTx },
         { data: recentTx },
+        { data: recurringTx },
       ] = await Promise.all([
         supabase
           .from('vaults')
@@ -117,6 +130,12 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
           .eq('user_id', user.id)
           .order('transaction_date', { ascending: false })
           .limit(3),
+        supabase
+          .from('transactions')
+          .select('type, amount, description, transaction_date, category')
+          .eq('user_id', user.id)
+          .gte('transaction_date', `${recurringStart}-01`)
+          .lte('transaction_date', recurringLastDay),
       ])
 
       if (!active) return
@@ -129,12 +148,13 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
       setPromos(promosData ?? [])
       setMonthTransactions(monthTx ?? [])
       setRecentTransactions(recentTx ?? [])
+      setRecurringTransactions(recurringTx ?? [])
       setTotalBalance((banksData ?? []).reduce((sum, bank) => sum + (bank.balance || 0), 0))
       setLoading(false)
     })()
 
     return () => { active = false }
-  }, [user.id, refreshKey, modalRefreshKey, firstDay])
+  }, [user.id, refreshKey, modalRefreshKey, firstDay, recurringStart, recurringLastDay])
 
   const cardMap = useMemo(
     () => Object.fromEntries(creditCards.map(card => [card.id, card])),
@@ -227,9 +247,22 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
   const monthlyInterest = computeMonthlyInterest(creditCards, loans)
   const debtPaidOffPct = computeDebtPaidOffPct(loans, creditCards)
 
+  const untrackedRecurringCount = useMemo(() => {
+    const charges = detectRecurring(recurringTransactions)
+    return getUntrackedRecurring(charges, bills).length
+  }, [recurringTransactions, bills])
+
   const smartAlert = useMemo(
-    () => getSmartAlert({ bills, promos, safeToSpend, onNavigate, onOpenCardPromo, t }),
-    [bills, promos, safeToSpend, onNavigate, onOpenCardPromo, t],
+    () => getSmartAlert({
+      bills,
+      promos,
+      safeToSpend,
+      untrackedRecurringCount,
+      onNavigate,
+      onOpenCardPromo,
+      t,
+    }),
+    [bills, promos, safeToSpend, untrackedRecurringCount, onNavigate, onOpenCardPromo, t],
   )
 
   const currentMonthName = now.toLocaleDateString(

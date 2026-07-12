@@ -609,6 +609,13 @@ export default {
       trendDeclining: 'Your expenses are trending up',
       payWithCard: 'Pay with credit card',
       detectedRecurringCharges: 'Detected recurring charges',
+      billAdded: 'Bill added ✓',
+      inBills: 'In bills',
+      addBillAction: '+ Add bill',
+      detected: 'detected',
+      nextExpected: 'next ~{{date}}',
+      recurringNotTracked: '{{count}} recurring charge not tracked as bills yet',
+      recurringNotTracked_plural: '{{count}} recurring charges not tracked as bills yet',
       notEnoughTrendData: 'Not enough data yet. Trends will appear after your second month of transactions.',
 
       // Dashboard redesign
