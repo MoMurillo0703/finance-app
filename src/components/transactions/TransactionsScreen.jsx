@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Search, X } from 'lucide-react'
+import { Search, X, SlidersHorizontal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -8,14 +8,19 @@ import EditTransactionModal from './EditTransactionModal'
 import RecategorizeTransactionSheet from './RecategorizeTransactionSheet'
 import ImportModal from './ImportModal'
 import PaydayWizard from '../payday/PaydayWizard'
+import FilterSheet from './FilterSheet'
 import { PageHeader } from '../layout/PageHeader'
 
 import { formatMoney } from '../../utils/currency'
 import { formatDate } from '../../utils/date'
 import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
 import { txTypeLabel, txAmountClass, txAmountPrefix } from '../../utils/transactionType'
-import { filterTransactions } from '../../utils/transactionFilters'
-import { getBudgetCategoryLabel } from '../../utils/budgets'
+import {
+  filterTransactions,
+  DEFAULT_ADVANCED_FILTERS,
+  countActiveAdvancedFilters,
+  getTransactionCategoryLabel,
+} from '../../utils/transactionFilters'
 
 const CATEGORY_FILTER_CHIPS = [
   { labelKey: 'all', key: null },
@@ -107,14 +112,25 @@ export default function TransactionsScreen({
   const [search, setSearch] = useState('')
   const [filterCategory, setFilterCategory] = useState(null)
   const [filterAccount, setFilterAccount] = useState(null)
+  const [showFilters, setShowFilters] = useState(false)
+  const [advancedFilters, setAdvancedFilters] = useState(DEFAULT_ADVANCED_FILTERS)
+
+  const activeFilterCount = countActiveAdvancedFilters(advancedFilters)
 
   const filteredTransactions = useMemo(
-    () => filterTransactions(transactions, { search, filterCategory, filterAccount }),
-    [transactions, search, filterCategory, filterAccount],
+    () => filterTransactions(transactions, {
+      search,
+      filterCategory,
+      filterAccount,
+      ...advancedFilters,
+    }),
+    [transactions, search, filterCategory, filterAccount, advancedFilters],
   )
   const monthGroups = useMemo(() => groupByMonth(filteredTransactions), [filteredTransactions])
   const listKey = `${filterCreditCardId ?? ''}-${filterBankId ?? ''}-${refreshKey}`
-  const filtersActive = Boolean(search || filterCategory || filterAccount)
+  const filtersActive = Boolean(
+    search || filterCategory || filterAccount || activeFilterCount > 0,
+  )
 
   useEffect(() => {
     if (monthGroups.length === 0) {
@@ -127,6 +143,7 @@ export default function TransactionsScreen({
   const overlayOpen =
     showAdd ||
     showImport ||
+    showFilters ||
     !!editingTransaction ||
     !!recategorizeTransaction ||
     !!wizardPrefill
@@ -164,7 +181,7 @@ export default function TransactionsScreen({
           {[
             !isFiltered && (getBankDropdownLabel(tx.banks) || tx.credit_cards?.name),
             formatDate(tx.transaction_date),
-            getBudgetCategoryLabel(tx.category, t),
+            getTransactionCategoryLabel(tx.category, t),
           ].filter(Boolean).join(' · ')}
         </p>
       </div>
@@ -355,15 +372,15 @@ export default function TransactionsScreen({
         </div>
       )}
 
-      <div className="px-4 pt-4 pb-2">
-        <div className="relative">
+      <div className="flex gap-2 px-4 pt-4 pb-2">
+        <div className="relative flex-1">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             placeholder={t('searchTransactions')}
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-3 rounded-2xl text-sm bg-gray-50 border border-gray-100 outline-none focus:border-purple-300"
+            className="w-full pl-9 pr-10 py-3 rounded-2xl text-sm bg-gray-50 border border-gray-100 outline-none focus:border-purple-300"
           />
           {search && (
             <button
@@ -376,6 +393,20 @@ export default function TransactionsScreen({
             </button>
           )}
         </div>
+        <button
+          type="button"
+          onClick={() => setShowFilters(true)}
+          className="relative flex-shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center"
+          style={{ backgroundColor: activeFilterCount > 0 ? '#7C3AED' : '#F5F3FF' }}
+          aria-label={t('filters')}
+        >
+          <SlidersHorizontal size={18} color={activeFilterCount > 0 ? 'white' : '#7C3AED'} />
+          {activeFilterCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-bold">
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
       </div>
 
       <div className="flex gap-2 px-4 pb-3 overflow-x-auto">
@@ -501,6 +532,14 @@ export default function TransactionsScreen({
             setRefreshKey(k => k + 1)
             onTransactionSaved?.()
           }}
+        />
+      )}
+
+      {showFilters && (
+        <FilterSheet
+          appliedFilters={advancedFilters}
+          onClose={() => setShowFilters(false)}
+          onApply={setAdvancedFilters}
         />
       )}
     </div>
