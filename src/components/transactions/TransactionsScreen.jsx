@@ -333,7 +333,7 @@ export default function TransactionsScreen({
           <button
             type="button"
             onClick={() => setFilterAccount(null)}
-            className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium"
+            className="flex-shrink-0 inline-flex items-center min-h-[44px] px-3 py-2 rounded-full text-xs font-medium"
             style={{
               backgroundColor: !filterAccount ? '#EDE9FE' : '#F9FAFB',
               color: !filterAccount ? '#6D28D9' : '#6B7280',
@@ -346,7 +346,7 @@ export default function TransactionsScreen({
               key={b.id}
               type="button"
               onClick={() => setFilterAccount(b.id)}
-              className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium"
+              className="flex-shrink-0 inline-flex items-center min-h-[44px] px-3 py-2 rounded-full text-xs font-medium"
               style={{
                 backgroundColor: filterAccount === b.id ? '#EDE9FE' : '#F9FAFB',
                 color: filterAccount === b.id ? '#6D28D9' : '#6B7280',
@@ -360,7 +360,7 @@ export default function TransactionsScreen({
               key={c.id}
               type="button"
               onClick={() => setFilterAccount(c.id)}
-              className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium"
+              className="flex-shrink-0 inline-flex items-center min-h-[44px] px-3 py-2 rounded-full text-xs font-medium"
               style={{
                 backgroundColor: filterAccount === c.id ? '#EDE9FE' : '#F9FAFB',
                 color: filterAccount === c.id ? '#6D28D9' : '#6B7280',
@@ -386,7 +386,7 @@ export default function TransactionsScreen({
             <button
               type="button"
               onClick={() => setSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2"
+              className="absolute right-1 top-1/2 -translate-y-1/2 min-w-[44px] min-h-[44px] flex items-center justify-center"
               aria-label={t('clearSearch')}
             >
               <X size={14} className="text-gray-400" />
@@ -417,7 +417,7 @@ export default function TransactionsScreen({
               key={labelKey}
               type="button"
               onClick={() => setFilterCategory(key)}
-              className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+              className="flex-shrink-0 inline-flex items-center min-h-[44px] px-3 py-2 rounded-full text-xs font-medium transition-colors"
               style={{
                 backgroundColor: isActive ? '#7C3AED' : '#F5F3FF',
                 color: isActive ? 'white' : '#7C3AED',

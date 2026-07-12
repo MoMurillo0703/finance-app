@@ -193,7 +193,7 @@ export default function OnboardingFlow({ onComplete }) {
 
   return (
     <div className="fixed inset-0 z-[200] min-h-screen bg-white overflow-y-auto">
-      <div className="min-h-screen flex flex-col px-6 pt-12 pb-10 max-w-lg mx-auto">
+      <div className="min-h-screen flex flex-col px-6 pb-10 max-w-lg mx-auto" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 3rem)' }}>
         <Progress step={step} />
         {step === 2 && (
           <>

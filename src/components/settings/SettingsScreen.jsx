@@ -252,7 +252,7 @@ export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, o
             <button
               type="button"
               onClick={onClose}
-              className="w-9 h-9 rounded-full flex items-center justify-center"
+              className="min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center"
               style={{ backgroundColor: '#F5F3FF' }}
               aria-label={t('close')}
             >

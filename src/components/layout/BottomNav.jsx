@@ -13,7 +13,10 @@ export default function BottomNav({ active, onChange }) {
   const { t } = useTranslation()
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex z-[90]">
+    <nav
+      className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex z-[90]"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
       {TAB_CONFIG.map(tab => {
         const Icon = tab.icon
         const isActive = active === tab.key
@@ -22,7 +25,7 @@ export default function BottomNav({ active, onChange }) {
             key={tab.key}
             type="button"
             onClick={() => onChange(tab.key)}
-            className={`flex-1 flex flex-col items-center py-3 gap-1 ${
+            className={`flex-1 flex flex-col items-center justify-center gap-1 min-h-[44px] py-2 ${
               isActive ? 'text-purple-600' : 'text-gray-400'
             }`}
           >
@@ -31,6 +34,6 @@ export default function BottomNav({ active, onChange }) {
           </button>
         )
       })}
-    </div>
+    </nav>
   )
 }

@@ -5,7 +5,10 @@ export function PageHeader({ title, onSettings, light = false }) {
   const { t } = useTranslation()
 
   return (
-    <div className="flex items-center justify-between px-5 pt-14 pb-3">
+    <div
+      className="flex items-center justify-between px-5 pb-3"
+      style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1rem)' }}
+    >
       {title ? (
         <h1 className={`text-xl font-bold ${light ? 'text-white' : 'text-gray-900'}`}>
           {title}
@@ -17,7 +20,7 @@ export function PageHeader({ title, onSettings, light = false }) {
         type="button"
         onClick={onSettings}
         aria-label={t('settings')}
-        className="w-10 h-10 rounded-full flex items-center justify-center"
+        className="min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center"
         style={{
           backgroundColor: light ? 'rgba(255,255,255,0.25)' : '#F5F3FF',
           backdropFilter: light ? 'blur(8px)' : 'none',

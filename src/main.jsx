@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import './i18n/index.js'
 import App from './App.jsx'
@@ -15,7 +16,7 @@ function showUpdateBanner() {
   const banner = document.createElement('div')
   banner.id = 'sw-update-banner'
   banner.style.cssText =
-    'position:fixed;top:0;left:0;right:0;z-index:9999;background:#7c3aed;color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px;'
+    'position:fixed;top:0;left:0;right:0;z-index:9999;background:#6D28D9;color:#fff;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px;'
 
   const text = document.createElement('span')
   text.textContent = 'Nueva versión disponible / New version available'
@@ -24,7 +25,7 @@ function showUpdateBanner() {
   button.type = 'button'
   button.textContent = 'Actualizar / Refresh'
   button.style.cssText =
-    'background:#fff;color:#7c3aed;border:none;border-radius:8px;padding:6px 12px;font-weight:600;cursor:pointer;flex-shrink:0;'
+    'background:#fff;color:#6D28D9;border:none;border-radius:8px;padding:6px 12px;font-weight:600;cursor:pointer;flex-shrink:0;min-height:44px;'
   button.addEventListener('click', () => window.location.reload())
 
   banner.append(text, button)
@@ -38,13 +39,9 @@ createRoot(document.getElementById('root')).render(
 )
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.addEventListener('message', (event) => {
-    if (event.data?.type === 'UPDATE_AVAILABLE') {
+  registerSW({
+    onNeedRefresh() {
       showUpdateBanner()
-    }
-  })
-
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    },
   })
 }

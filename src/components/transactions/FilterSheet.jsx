@@ -73,7 +73,7 @@ export default function FilterSheet({ appliedFilters, onClose, onApply }) {
                     key={value}
                     type="button"
                     onClick={() => setField('datePreset', active ? null : value)}
-                    className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+                    className="inline-flex items-center min-h-[44px] px-3 py-2 rounded-full text-xs font-medium transition-colors"
                     style={{
                       backgroundColor: active ? '#7C3AED' : '#F5F3FF',
                       color: active ? 'white' : '#7C3AED',
@@ -114,7 +114,7 @@ export default function FilterSheet({ appliedFilters, onClose, onApply }) {
                   key={value}
                   type="button"
                   onClick={() => setField('filterType', value)}
-                  className={`py-2.5 rounded-xl text-xs font-medium transition-colors ${
+                  className={`inline-flex items-center justify-center min-h-[44px] py-2.5 rounded-xl text-xs font-medium transition-colors ${
                     draft.filterType === value
                       ? 'bg-white text-purple-700 shadow-sm'
                       : 'text-gray-500'
@@ -162,7 +162,7 @@ export default function FilterSheet({ appliedFilters, onClose, onApply }) {
                     key={value}
                     type="button"
                     onClick={() => setField('sortBy', value)}
-                    className="px-3 py-2.5 rounded-2xl text-xs font-medium transition-colors"
+                    className="inline-flex items-center justify-center min-h-[44px] px-3 py-2 rounded-2xl text-xs font-medium transition-colors"
                     style={{
                       backgroundColor: active ? '#7C3AED' : '#F5F3FF',
                       color: active ? 'white' : '#7C3AED',
