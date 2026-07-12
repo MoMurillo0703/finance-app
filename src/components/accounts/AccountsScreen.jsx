@@ -16,6 +16,7 @@ import LoansSection from '../loans/LoansSection'
 import AddLoanModal from '../loans/AddLoanModal'
 import EditLoanModal from '../loans/EditLoanModal'
 import PurchaseSimulator from '../simulator/PurchaseSimulator'
+import { PageHeader } from '../layout/PageHeader'
 
 function accountTypeLabel(type, t) {
   if (type === 'checking') return t('checking')
@@ -24,7 +25,7 @@ function accountTypeLabel(type, t) {
   return type
 }
 
-export default function AccountsScreen({ onAccountSaved, refreshKey = 0, setHideNav }) {
+export default function AccountsScreen({ onAccountSaved, refreshKey = 0, setHideNav, onSettings }) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [banks, setBanks] = useState([])
@@ -103,6 +104,7 @@ export default function AccountsScreen({ onAccountSaved, refreshKey = 0, setHide
 
   return (
     <div className="bg-lala-50 min-h-full">
+      <PageHeader title={t('accounts')} onSettings={onSettings} />
       <div className="px-4 py-4 pb-24 space-y-6">
         <button
           type="button"

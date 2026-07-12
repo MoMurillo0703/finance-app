@@ -9,7 +9,6 @@ import AccountsScreen from './components/accounts/AccountsScreen'
 import ReportsScreen from './components/reports/ReportsScreen'
 import SettingsScreen from './components/settings/SettingsScreen'
 import BottomNav from './components/layout/BottomNav'
-import AppHeader from './components/layout/AppHeader'
 import OnboardingFlow from './components/onboarding/OnboardingFlow'
 import { getBankDisplayName, fetchBanks } from './utils/bank'
 import { supabase } from './lib/supabase'
@@ -28,6 +27,7 @@ function AppContent() {
   const bumpDashboard = () => setDashboardRefreshKey(k => k + 1)
   const bumpPrefs = () => setPrefsVersion(v => v + 1)
   const navHidden = hideNav || showSettings || showOnboarding
+  const openSettings = () => setShowSettings(true)
 
   const completeOnboarding = () => {
     localStorage.setItem('onboarding_complete', 'true')
@@ -71,19 +71,13 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-lala-50 pb-20">
-      {activeTab !== 'home' && (
-        <AppHeader
-          activeTab={activeTab}
-          onSettings={() => setShowSettings(true)}
-        />
-      )}
-      <div className={activeTab === 'home' ? '' : 'pt-14'}>
+      <div>
         {activeTab === 'home' && (
           <Dashboard
             refreshKey={`${dashboardRefreshKey}-${prefsVersion}`}
             onNavigate={setActiveTab}
             setHideNav={setHideNav}
-            onSettings={() => setShowSettings(true)}
+            onSettings={openSettings}
           />
         )}
         {activeTab === 'transactions' && (
@@ -101,21 +95,30 @@ function AppContent() {
             }}
             onTransactionSaved={bumpDashboard}
             setHideNav={setHideNav}
+            onSettings={openSettings}
           />
         )}
-        {activeTab === 'bills' && <BillsScreen key={prefsVersion} onBillPaid={bumpDashboard} />}
+        {activeTab === 'bills' && (
+          <BillsScreen
+            key={prefsVersion}
+            onBillPaid={bumpDashboard}
+            onSettings={openSettings}
+          />
+        )}
         {activeTab === 'accounts' && (
           <AccountsScreen
             key={prefsVersion}
             refreshKey={dashboardRefreshKey}
             onAccountSaved={bumpDashboard}
             setHideNav={setHideNav}
+            onSettings={openSettings}
           />
         )}
         {activeTab === 'reports' && (
           <ReportsScreen
             key={prefsVersion}
             setHideNav={setHideNav}
+            onSettings={openSettings}
           />
         )}
       </div>

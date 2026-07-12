@@ -10,7 +10,7 @@ import { getUserDateFormat } from '../../utils/date'
 import { fetchBanks } from '../../utils/bank'
 
 export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, onViewAccount }) {
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
   const { t, i18n } = useTranslation()
   const [banks, setBanks] = useState([])
   const [loading, setLoading] = useState(true)
@@ -215,14 +215,14 @@ export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, o
           )}
         </section>
 
-        <div className="mt-8 pt-6" style={{ borderTop: '1px solid #EDE9FE' }}>
+        <div className="mt-10 pt-6" style={{ borderTop: '1px solid #EDE9FE' }}>
           <button
             type="button"
-            onClick={signOut}
-            className="w-full py-4 rounded-2xl text-red-500 font-semibold text-sm"
-            style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}
+            onClick={async () => { await supabase.auth.signOut() }}
+            className="w-full py-4 rounded-2xl font-semibold text-sm"
+            style={{ backgroundColor: '#FEF2F2', color: '#EF4444', border: '1px solid #FECACA' }}
           >
-            {t('signOut')}
+            Sign out
           </button>
         </div>
       </div>

@@ -7,6 +7,7 @@ import EditTransactionModal from './EditTransactionModal'
 import RecategorizeTransactionSheet from './RecategorizeTransactionSheet'
 import ImportModal from './ImportModal'
 import PaydayWizard from '../payday/PaydayWizard'
+import { PageHeader } from '../layout/PageHeader'
 
 import { formatMoney } from '../../utils/currency'
 import { formatDate } from '../../utils/date'
@@ -66,6 +67,7 @@ export default function TransactionsScreen({
   filterFrom,
   onClearFilter,
   setHideNav,
+  onSettings,
 }) {
   const { t, i18n } = useTranslation()
   const isFiltered = Boolean(filterCreditCardId || filterBankId)
@@ -240,6 +242,7 @@ export default function TransactionsScreen({
 
   return (
     <div className="bg-lala-50">
+      <PageHeader title={t('transactions')} onSettings={onSettings} />
       <div className="bg-white px-6 py-3 border-b border-gray-100">
         {isFiltered && (
           <button

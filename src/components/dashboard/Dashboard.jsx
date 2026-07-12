@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Settings, ChevronRight } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { PageHeader } from '../layout/PageHeader'
 import AddBankModal from './AddBankModal'
 import PaydayWizard from '../payday/PaydayWizard'
 import PurchaseSimulator from '../simulator/PurchaseSimulator'
@@ -216,31 +217,31 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
 
   if (loading) {
     return (
-      <div
-        className="flex items-center justify-center py-20 min-h-screen"
-        style={{ backgroundColor: LALA.bg }}
-      >
-        <p className="text-gray-400">{t('loading')}</p>
+      <div className="min-h-screen pb-24" style={{ backgroundColor: LALA.bg }}>
+        <PageHeader onSettings={onSettings} />
+        <div className="flex items-center justify-center py-20">
+          <p className="text-gray-400">{t('loading')}</p>
+        </div>
       </div>
     )
   }
 
   if (showAccountsEmpty) {
     return (
-      <div
-        className="min-h-screen pb-24 flex flex-col items-center justify-center px-6"
-        style={{ backgroundColor: LALA.bg }}
-      >
-        <p className="text-4xl mb-3">🏦</p>
-        <p className="font-medium text-gray-600">{t('noAccounts')}</p>
-        <p className="text-sm text-gray-400 mt-1 text-center">{t('noAccountsHint')}</p>
-        <button
-          type="button"
-          onClick={() => onNavigate?.('accounts')}
-          className="mt-4 px-4 py-2 bg-lala-600 text-white rounded-xl text-sm"
-        >
-          {t('addAccount')}
-        </button>
+      <div className="min-h-screen pb-24" style={{ backgroundColor: LALA.bg }}>
+        <PageHeader onSettings={onSettings} />
+        <div className="flex flex-col items-center justify-center px-6 py-12">
+          <p className="text-4xl mb-3">🏦</p>
+          <p className="font-medium text-gray-600">{t('noAccounts')}</p>
+          <p className="text-sm text-gray-400 mt-1 text-center">{t('noAccountsHint')}</p>
+          <button
+            type="button"
+            onClick={() => onNavigate?.('accounts')}
+            className="mt-4 px-4 py-2 bg-lala-600 text-white rounded-xl text-sm"
+          >
+            {t('addAccount')}
+          </button>
+        </div>
       </div>
     )
   }
@@ -249,19 +250,12 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
     <div className="min-h-screen pb-24" style={{ backgroundColor: LALA.bg }}>
       {/* HERO */}
       <div
-        className="relative px-6 pt-14 pb-8 rounded-b-[2.5rem]"
+        className="relative pb-8 rounded-b-[2.5rem]"
         style={{ background: 'linear-gradient(135deg, #6D28D9 0%, #8B5CF6 40%, #C4B5FD 100%)' }}
       >
-        <button
-          type="button"
-          onClick={onSettings}
-          className="absolute top-12 right-6 z-20 w-10 h-10 rounded-full flex items-center justify-center"
-          style={{ backgroundColor: 'rgba(255,255,255,0.3)', backdropFilter: 'blur(8px)' }}
-          aria-label={t('settings')}
-        >
-          <Settings size={18} className="text-white" />
-        </button>
+        <PageHeader onSettings={onSettings} light />
 
+        <div className="px-6">
         <p className="text-purple-200 text-sm font-medium mb-3">
           {t(getGreetingKey())}, {firstName} 👋
         </p>
@@ -300,6 +294,7 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
             {smartAlert.onTap && <ChevronRight size={14} className="text-white/60 shrink-0" />}
           </button>
         )}
+        </div>
       </div>
 
       {/* QUICK ACTIONS */}

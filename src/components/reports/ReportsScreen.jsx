@@ -43,6 +43,7 @@ import {
 } from '../../utils/financialTrends'
 import BudgetsScreen from '../budgets/BudgetsScreen'
 import DebtPayoffPlanner from '../debt/DebtPayoffPlanner'
+import { PageHeader } from '../layout/PageHeader'
 
 const SECTION_CLASS = 'bg-white rounded-2xl mx-4 mb-4 p-4 shadow-sm border border-gray-100'
 
@@ -50,7 +51,7 @@ function SectionTitle({ children }) {
   return <p className="text-sm font-semibold text-gray-700 mb-3">{children}</p>
 }
 
-export default function ReportsScreen({ setHideNav }) {
+export default function ReportsScreen({ setHideNav, onSettings }) {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const now = new Date()
@@ -284,8 +285,8 @@ export default function ReportsScreen({ setHideNav }) {
 
   return (
     <div className="bg-lala-50 pb-6 min-h-full">
-      <div className="flex justify-between items-center px-6 pt-6 pb-2">
-        <h1 className="text-2xl font-bold text-gray-800">{t('reports')}</h1>
+      <PageHeader title={t('reports')} onSettings={onSettings} />
+      <div className="flex justify-end px-5 pb-2">
         <button
           type="button"
           onClick={() => setShowBudgets(true)}

@@ -8,6 +8,7 @@ import AddBillModal from './AddBillModal'
 import EditBillModal from './EditBillModal'
 import PayBillModal from './PayBillModal'
 import BillsCalendar from './BillsCalendar'
+import { PageHeader } from '../layout/PageHeader'
 import { formatMoney } from '../../utils/currency'
 import {
   isBillPaidThisMonth,
@@ -95,7 +96,7 @@ function SectionHeader({ emoji, label, count }) {
   )
 }
 
-export default function BillsScreen({ onBillPaid }) {
+export default function BillsScreen({ onBillPaid, onSettings }) {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const [bills, setBills] = useState([])
@@ -327,6 +328,7 @@ export default function BillsScreen({ onBillPaid }) {
 
   return (
     <div className="bg-lala-50 min-h-full pb-24">
+      <PageHeader title={t('bills')} onSettings={onSettings} />
       {error && <p className="text-red-500 text-xs px-4 pt-3">{error}</p>}
 
       {loading ? (
