@@ -584,6 +584,8 @@ export default {
       howMuchSpent: 'How much did you spend?',
       whatWasItFor: 'What was it for?',
       paidWith: 'Paid with?',
+      whichAccount: 'Which account?',
+      addNoteOptional: 'Add a note (optional)',
       saveExpense: 'Save expense',
       dueToday: 'due today',
       payPromoBy: 'Pay {{amount}} by {{date}} — avoid deferred interest',

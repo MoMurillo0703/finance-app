@@ -592,23 +592,22 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
         </div>
       )}
 
-      {(showSpent || showPayBill) && (
+      {showSpent && (
+        <QuickSpentSheet
+          onClose={closeSheet}
+          onSaved={bumpRefresh}
+        />
+      )}
+
+      {showPayBill && (
         <div className="fixed inset-0 z-[140] flex items-end justify-center">
           <div className="absolute inset-0 bg-black opacity-40" onClick={closeSheet} />
           <div className="relative bg-white w-full rounded-t-3xl max-h-[92vh] overflow-y-auto">
             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mt-3 mb-1" />
-            {showSpent && (
-              <QuickSpentSheet
-                onClose={closeSheet}
-                onSaved={bumpRefresh}
-              />
-            )}
-            {showPayBill && (
-              <QuickPayBillSheet
-                onClose={closeSheet}
-                onPaid={bumpRefresh}
-              />
-            )}
+            <QuickPayBillSheet
+              onClose={closeSheet}
+              onPaid={bumpRefresh}
+            />
           </div>
         </div>
       )}
