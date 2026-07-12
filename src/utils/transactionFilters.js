@@ -12,20 +12,20 @@ export const TRANSACTION_FILTER_CHIPS = [
   })),
 ]
 
-export function filterTransactions(transactions, { search = '', categoryFilter = 'all' } = {}) {
-  let result = transactions
-
+export function filterTransactions(
+  transactions,
+  { search = '', filterCategory = null, filterAccount = null } = {},
+) {
   const query = search.trim().toLowerCase()
-  if (query) {
-    result = result.filter(tx => (tx.description || '').toLowerCase().includes(query))
-  }
 
-  if (categoryFilter !== 'all') {
-    const chip = TRANSACTION_FILTER_CHIPS.find(c => c.id === categoryFilter)
-    if (chip?.match) {
-      result = result.filter(chip.match)
-    }
-  }
-
-  return result
+  return transactions.filter(tx => {
+    const matchesSearch = !query
+      || (tx.description || '').toLowerCase().includes(query)
+      || (tx.category || '').toLowerCase().includes(query)
+    const matchesCategory = !filterCategory || getRecategorizeHighlight(tx) === filterCategory
+    const matchesAccount = !filterAccount
+      || tx.bank_id === filterAccount
+      || tx.credit_card_id === filterAccount
+    return matchesSearch && matchesCategory && matchesAccount
+  })
 }

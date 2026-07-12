@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react'
-import { ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'

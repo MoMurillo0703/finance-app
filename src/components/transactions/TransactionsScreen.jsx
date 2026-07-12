@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { Search, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -13,7 +14,27 @@ import { formatMoney } from '../../utils/currency'
 import { formatDate } from '../../utils/date'
 import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
 import { txTypeLabel, txAmountClass, txAmountPrefix } from '../../utils/transactionType'
-import { TRANSACTION_FILTER_CHIPS, filterTransactions } from '../../utils/transactionFilters'
+import { filterTransactions } from '../../utils/transactionFilters'
+import { getBudgetCategoryLabel } from '../../utils/budgets'
+
+const CATEGORY_FILTER_CHIPS = [
+  { labelKey: 'all', key: null },
+  { labelKey: 'categoryDining', key: 'dining' },
+  { labelKey: 'categoryGroceries', key: 'groceries' },
+  { labelKey: 'categoryTransport', key: 'transport' },
+  { labelKey: 'categoryUtilities', key: 'utilities' },
+  { labelKey: 'categorySubscriptions', key: 'subscriptions' },
+  { labelKey: 'categoryHealth', key: 'health' },
+  { labelKey: 'categoryShopping', key: 'shopping' },
+  { labelKey: 'categoryEntertainment', key: 'entertainment' },
+  { labelKey: 'categoryTravel', key: 'travel' },
+  { labelKey: 'categoryGas', key: 'gas' },
+  { labelKey: 'categoryInsurance', key: 'insurance' },
+  { labelKey: 'categoryAuto', key: 'auto' },
+  { labelKey: 'categoryBusiness', key: 'business' },
+  { labelKey: 'categoryPersonal', key: 'personal' },
+  { labelKey: 'categoryOther', key: 'other' },
+]
 
 function enrichTransactions(transactions, banks, cards) {
   const bankMap = Object.fromEntries(banks.map(b => [b.id, b]))
@@ -73,6 +94,8 @@ export default function TransactionsScreen({
   const isFiltered = Boolean(filterCreditCardId || filterBankId)
   const { user } = useAuth()
   const [transactions, setTransactions] = useState([])
+  const [banks, setBanks] = useState([])
+  const [creditCards, setCreditCards] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
   const [recategorizeTransaction, setRecategorizeTransaction] = useState(null)
@@ -81,15 +104,17 @@ export default function TransactionsScreen({
   const [wizardPrefill, setWizardPrefill] = useState(null)
   const [showImport, setShowImport] = useState(false)
   const [expandedMonths, setExpandedMonths] = useState(new Set())
-  const [searchQuery, setSearchQuery] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [search, setSearch] = useState('')
+  const [filterCategory, setFilterCategory] = useState(null)
+  const [filterAccount, setFilterAccount] = useState(null)
 
   const filteredTransactions = useMemo(
-    () => filterTransactions(transactions, { search: searchQuery, categoryFilter }),
-    [transactions, searchQuery, categoryFilter],
+    () => filterTransactions(transactions, { search, filterCategory, filterAccount }),
+    [transactions, search, filterCategory, filterAccount],
   )
   const monthGroups = useMemo(() => groupByMonth(filteredTransactions), [filteredTransactions])
   const listKey = `${filterCreditCardId ?? ''}-${filterBankId ?? ''}-${refreshKey}`
+  const filtersActive = Boolean(search || filterCategory || filterAccount)
 
   useEffect(() => {
     if (monthGroups.length === 0) {
@@ -139,7 +164,7 @@ export default function TransactionsScreen({
           {[
             !isFiltered && (getBankDropdownLabel(tx.banks) || tx.credit_cards?.name),
             formatDate(tx.transaction_date),
-            t(tx.category, { defaultValue: tx.category }),
+            getBudgetCategoryLabel(tx.category, t),
           ].filter(Boolean).join(' · ')}
         </p>
       </div>
@@ -185,7 +210,6 @@ export default function TransactionsScreen({
     </div>
   )
 
-
   useEffect(() => {
     let active = true
 
@@ -211,7 +235,8 @@ export default function TransactionsScreen({
           .from('credit_cards')
           .select('id, name')
           .eq('user_id', user.id)
-          .eq('is_active', true),
+          .eq('is_active', true)
+          .order('name'),
       ])
 
       if (!active) return
@@ -220,6 +245,8 @@ export default function TransactionsScreen({
         console.error('Failed to fetch transactions:', txRes.error)
       }
 
+      setBanks(banksRes.data ?? [])
+      setCreditCards(cardsRes.data ?? [])
       setTransactions(enrichTransactions(txRes.data ?? [], banksRes.data ?? [], cardsRes.data ?? []))
       setLoading(false)
     })()
@@ -240,10 +267,15 @@ export default function TransactionsScreen({
     setWizardPrefill({ amount, bankId })
   }
 
+  const resultCountLabel = filteredTransactions.length === 1
+    ? t('transactionResultCount', { count: filteredTransactions.length })
+    : t('transactionResultCount_plural', { count: filteredTransactions.length })
+
   return (
-    <div className="bg-lala-50">
+    <div className="bg-lala-50 pb-24">
       <PageHeader title={t('transactions')} onSettings={onSettings} />
-      <div className="bg-white px-6 py-3 border-b border-gray-100">
+
+      <div className="bg-white px-4 py-3 border-b border-gray-100">
         {isFiltered && (
           <button
             type="button"
@@ -254,13 +286,13 @@ export default function TransactionsScreen({
           </button>
         )}
         {filterCardName && (
-          <p className="text-xs text-gray-400">{filterCardName} · {t('cardTransactions')}</p>
+          <p className="text-xs text-gray-400 mb-2">{filterCardName} · {t('cardTransactions')}</p>
         )}
         {filterBankName && (
-          <p className="text-xs text-gray-400">{filterBankName} · {t('accountActivity')}</p>
+          <p className="text-xs text-gray-400 mb-2">{filterBankName} · {t('accountActivity')}</p>
         )}
         {!isFiltered && (
-          <div className="flex justify-end gap-3 items-center">
+          <div className="flex justify-end gap-3 items-center mb-1">
             <button
               type="button"
               onClick={() => setShowImport(true)}
@@ -269,6 +301,7 @@ export default function TransactionsScreen({
               {t('importCsv')}
             </button>
             <button
+              type="button"
               onClick={() => setShowAdd(true)}
               className="text-xs text-purple-600 font-medium"
             >
@@ -278,47 +311,98 @@ export default function TransactionsScreen({
         )}
       </div>
 
-      <div className="bg-white px-6 py-3 border-b border-gray-100 space-y-3">
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none">🔍</span>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder={t('searchTransactions')}
-            className="w-full border border-gray-200 rounded-xl pl-9 pr-9 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-          />
-          {searchQuery && (
+      {!isFiltered && (
+        <div className="flex gap-2 px-4 pb-2 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setFilterAccount(null)}
+            className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium"
+            style={{
+              backgroundColor: !filterAccount ? '#EDE9FE' : '#F9FAFB',
+              color: !filterAccount ? '#6D28D9' : '#6B7280',
+            }}
+          >
+            {t('allAccounts')}
+          </button>
+          {banks.map(b => (
             <button
+              key={b.id}
               type="button"
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
-              aria-label={t('clearSearch')}
+              onClick={() => setFilterAccount(b.id)}
+              className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium"
+              style={{
+                backgroundColor: filterAccount === b.id ? '#EDE9FE' : '#F9FAFB',
+                color: filterAccount === b.id ? '#6D28D9' : '#6B7280',
+              }}
             >
-              ✕
+              {b.nickname?.trim() || b.name}
             </button>
-          )}
-        </div>
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-          {TRANSACTION_FILTER_CHIPS.map(chip => (
+          ))}
+          {creditCards.map(c => (
             <button
-              key={chip.id}
+              key={c.id}
               type="button"
-              onClick={() => setCategoryFilter(chip.id)}
-              className={`shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                categoryFilter === chip.id
-                  ? 'bg-purple-600 text-white border-purple-600'
-                  : 'bg-white text-gray-600 border-gray-200'
-              }`}
+              onClick={() => setFilterAccount(c.id)}
+              className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium"
+              style={{
+                backgroundColor: filterAccount === c.id ? '#EDE9FE' : '#F9FAFB',
+                color: filterAccount === c.id ? '#6D28D9' : '#6B7280',
+              }}
             >
-              {chip.emoji && <span>{chip.emoji}</span>}
-              <span>{t(chip.labelKey)}</span>
+              {c.name}
             </button>
           ))}
         </div>
+      )}
+
+      <div className="px-4 pt-4 pb-2">
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder={t('searchTransactions')}
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full pl-9 pr-4 py-3 rounded-2xl text-sm bg-gray-50 border border-gray-100 outline-none focus:border-purple-300"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2"
+              aria-label={t('clearSearch')}
+            >
+              <X size={14} className="text-gray-400" />
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="px-6 py-6">
+      <div className="flex gap-2 px-4 pb-3 overflow-x-auto">
+        {CATEGORY_FILTER_CHIPS.map(({ labelKey, key }) => {
+          const isActive = filterCategory === key || (!filterCategory && key === null)
+          return (
+            <button
+              key={labelKey}
+              type="button"
+              onClick={() => setFilterCategory(key)}
+              className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+              style={{
+                backgroundColor: isActive ? '#7C3AED' : '#F5F3FF',
+                color: isActive ? 'white' : '#7C3AED',
+              }}
+            >
+              {t(labelKey)}
+            </button>
+          )
+        })}
+      </div>
+
+      {filtersActive && !loading && transactions.length > 0 && (
+        <p className="px-4 pb-2 text-xs text-gray-400">{resultCountLabel}</p>
+      )}
+
+      <div className="px-4 py-4">
         {loading ? (
           <p className="text-gray-400 text-sm text-center py-10">{t('loading')}</p>
         ) : transactions.length === 0 ? (
@@ -344,6 +428,7 @@ export default function TransactionsScreen({
                   {t('importCsv')}
                 </button>
                 <button
+                  type="button"
                   onClick={() => setShowAdd(true)}
                   className="px-4 py-2 bg-purple-600 text-white rounded-xl text-sm"
                 >
@@ -353,7 +438,11 @@ export default function TransactionsScreen({
             )}
           </div>
         ) : filteredTransactions.length === 0 ? (
-          <p className="text-gray-400 text-sm text-center py-10">{t('noTransactionsFound')}</p>
+          <div className="text-center py-16 text-gray-400">
+            <p className="text-4xl mb-3">🔍</p>
+            <p className="font-medium text-gray-500">{t('noTransactionsFoundTitle')}</p>
+            <p className="text-sm mt-1">{t('noTransactionsFoundHint')}</p>
+          </div>
         ) : (
           renderMonthGroups()
         )}
@@ -361,6 +450,7 @@ export default function TransactionsScreen({
 
       {!isFiltered && (
         <button
+          type="button"
           onClick={() => setShowAdd(true)}
           className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-purple-600 text-white text-3xl leading-none shadow-lg flex items-center justify-center z-[100]"
           aria-label={t('addTransaction')}
