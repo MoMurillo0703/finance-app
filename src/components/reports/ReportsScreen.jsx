@@ -64,7 +64,6 @@ export default function ReportsScreen({ setHideNav }) {
   const [creditCards, setCreditCards] = useState([])
   const [loans, setLoans] = useState([])
   const [banks, setBanks] = useState([])
-  const [vaults, setVaults] = useState([])
   const [trendTransactions, setTrendTransactions] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -107,7 +106,6 @@ export default function ReportsScreen({ setHideNav }) {
         loansRes,
         trendRes,
         banksRes,
-        vaultsRes,
       ] = await Promise.all([
         supabase
           .from('transactions')
@@ -152,12 +150,6 @@ export default function ReportsScreen({ setHideNav }) {
           .eq('user_id', user.id)
           .eq('is_active', true)
           .order('name'),
-        supabase
-          .from('vaults')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('is_active', true)
-          .order('name'),
       ])
 
       if (!active) return
@@ -173,7 +165,6 @@ export default function ReportsScreen({ setHideNav }) {
       setCreditCards(cardsRes.data ?? [])
       setLoans(loansRes.data ?? [])
       setBanks(banksRes.data ?? [])
-      setVaults(vaultsRes.data ?? [])
       setTrendTransactions(trendRes.data ?? [])
       setLoading(false)
     })()
@@ -267,7 +258,7 @@ export default function ReportsScreen({ setHideNav }) {
     totalCreditCardDebt,
     totalLoanDebt,
     netWorth,
-  } = calculateNetWorth({ banks, vaults, creditCards, loans })
+  } = calculateNetWorth({ banks, creditCards, loans })
 
   const activeCardsWithBalance = creditCards.filter(c => c.is_active && c.current_balance > 0)
   const activeLoansWithBalance = loans.filter(l => l.is_active && l.current_balance > 0)
@@ -564,7 +555,7 @@ export default function ReportsScreen({ setHideNav }) {
 
           <section className={SECTION_CLASS}>
             <SectionTitle>{t('assetBreakdown')}</SectionTitle>
-            {banks.filter(b => b.is_active).length === 0 && vaults.filter(v => v.is_active && v.current_amount > 0).length === 0 ? (
+            {banks.filter(b => b.is_active).length === 0 ? (
               <p className="text-xs text-gray-400">{t('noAccounts')}</p>
             ) : (
               <>
@@ -577,16 +568,6 @@ export default function ReportsScreen({ setHideNav }) {
                       <p className="text-xs text-gray-400 capitalize">{bank.type}</p>
                     </div>
                     <p className="font-bold text-green-600">{formatMoney(bank.balance)}</p>
-                  </div>
-                ))}
-
-                {vaults.filter(v => v.is_active && v.current_amount > 0).map(vault => (
-                  <div key={vault.id} className="flex justify-between items-center py-2.5 border-b border-gray-50 last:border-0">
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">🏦 {vault.name}</p>
-                      <p className="text-xs text-gray-400">{t('savingsGoal')}</p>
-                    </div>
-                    <p className="font-bold text-green-600">{formatMoney(vault.current_amount)}</p>
                   </div>
                 ))}
 

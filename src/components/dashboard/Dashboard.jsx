@@ -79,11 +79,9 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav }) {
     netWorth,
     totalAssets,
     totalLiabilities,
-    totalBankBalance,
-    totalVaultSavings,
     totalCreditCardDebt,
     totalLoanDebt,
-  } = calculateNetWorth({ banks, vaults, creditCards, loans })
+  } = calculateNetWorth({ banks, creditCards, loans })
   const dataRefreshKey = `${refreshKey}-${modalRefreshKey}`
   const onboardingComplete = localStorage.getItem('onboarding_complete') === 'true'
   const showAccountsEmpty = onboardingComplete && banks.length === 0
@@ -150,7 +148,7 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav }) {
               <p className="text-xs text-gray-400 mb-1">{t('assets')}</p>
               <p className="font-bold text-green-600">{formatMoney(totalAssets)}</p>
               <p className="text-xs text-gray-400 mt-1">
-                {formatMoney(totalBankBalance)} {t('netWorthCash')} · {formatMoney(totalVaultSavings)} {t('netWorthSaved')}
+                {banks.filter(b => b.is_active).length} account{banks.length > 1 ? 's' : ''}
               </p>
             </div>
             <div className="bg-red-50 rounded-xl p-3">
