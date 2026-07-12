@@ -372,12 +372,25 @@ export default function PurchaseSimulator({ onClose, onSaved, prefillCardId }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-end justify-center">
-      <div className="absolute inset-0 bg-black opacity-40" onClick={onClose} />
-      <div className="relative bg-white w-full rounded-t-3xl p-6 pb-10 max-h-[92vh] overflow-y-auto">
-        <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
-        <h2 className="text-lg font-bold text-gray-800 mb-1">{t('purchaseSimulator')}</h2>
-        <p className="text-xs text-gray-400 mb-4">{t('canIAfford')}</p>
+    <div className="fixed inset-0 z-[100]">
+      <div
+        className="absolute inset-0"
+        style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div
+        className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl overflow-hidden flex flex-col"
+        style={{ maxHeight: '92vh' }}
+      >
+        <div className="flex-shrink-0 pt-3 pb-2 flex justify-center">
+          <div className="w-10 h-1 rounded-full bg-gray-200" />
+        </div>
+        <div className="flex-shrink-0 px-6 pb-4">
+          <h2 className="text-lg font-bold text-gray-800 mb-1">{t('purchaseSimulator')}</h2>
+          <p className="text-xs text-gray-400">{t('canIAfford')}</p>
+        </div>
+        <div className="flex-1 overflow-y-auto px-6 pb-10">
 
         {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
@@ -643,6 +656,7 @@ export default function PurchaseSimulator({ onClose, onSaved, prefillCardId }) {
             )}
           </>
         )}
+        </div>
       </div>
     </div>
   )

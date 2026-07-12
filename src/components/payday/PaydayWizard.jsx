@@ -281,25 +281,33 @@ export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefi
   const totalSteps = 2
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-end justify-center">
-      <div className="absolute inset-0 bg-black opacity-40" onClick={onClose} style={{ zIndex: 1 }} />
+    <div className="fixed inset-0 z-[100]">
       <div
-        className="relative bg-white w-full rounded-t-3xl p-6 pb-10 max-h-[90vh] overflow-y-auto"
-        style={{ zIndex: 2 }}
+        className="absolute inset-0"
+        style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div
+        className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl overflow-hidden flex flex-col"
+        style={{ maxHeight: '92vh' }}
       >
-        <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
-        <h2 className="text-lg font-bold text-gray-800 mb-1">{t('paydayWizard')}</h2>
-        <p className="text-xs text-gray-400 mb-4">{step}/{totalSteps} · {stepTitle}</p>
-
-        <div className="flex gap-1 mb-6">
-          {[1, 2].map(s => (
-            <div
-              key={s}
-              className={`h-1 flex-1 rounded-full ${s <= step ? 'bg-amber-500' : 'bg-gray-200'}`}
-            />
-          ))}
+        <div className="flex-shrink-0 pt-3 pb-2 flex justify-center">
+          <div className="w-10 h-1 rounded-full bg-gray-200" />
         </div>
-
+        <div className="flex-shrink-0 px-6 pb-4">
+          <h2 className="text-lg font-bold text-gray-800 mb-1">{t('paydayWizard')}</h2>
+          <p className="text-xs text-gray-400">{step}/{totalSteps} · {stepTitle}</p>
+          <div className="flex gap-1 mt-4">
+            {[1, 2].map(s => (
+              <div
+                key={s}
+                className={`h-1 flex-1 rounded-full ${s <= step ? 'bg-amber-500' : 'bg-gray-200'}`}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto px-6 pb-10">
         {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
         {step === 1 && (
@@ -450,6 +458,7 @@ export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefi
               {saving ? '...' : saveLabel}
             </button>
           )}
+        </div>
         </div>
       </div>
     </div>

@@ -698,13 +698,22 @@ export default function ImportModal({ onClose, onComplete, setHideNav }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[110] bg-white flex flex-col">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+    <div className="fixed inset-0 z-[100]">
+      <div
+        className="absolute inset-0"
+        style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div
+        className="absolute inset-0 bg-white overflow-hidden flex flex-col"
+      >
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
         <h2 className="text-lg font-bold text-gray-800">{t('importCsv')}</h2>
         <button type="button" onClick={onClose} className="text-sm text-gray-400">{t('cancel')}</button>
       </div>
 
-      <div className="px-6 py-2 border-b border-gray-50">
+      <div className="px-6 py-2 border-b border-gray-50 shrink-0">
         <div className="flex gap-1">
           {[1, 2, 3, 4].map(s => (
             <div
@@ -1029,7 +1038,7 @@ export default function ImportModal({ onClose, onComplete, setHideNav }) {
         )}
       </div>
 
-      <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
+      <div className="px-6 py-4 border-t border-gray-100 flex gap-3 shrink-0">
         {step > 1 && step < 4 && !showInterestPrompt && (
           <button
             type="button"
@@ -1067,6 +1076,7 @@ export default function ImportModal({ onClose, onComplete, setHideNav }) {
             {t('allDone')}
           </button>
         )}
+      </div>
       </div>
     </div>
   )

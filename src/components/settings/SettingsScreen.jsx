@@ -81,24 +81,8 @@ export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, o
     }
   }
 
-  const content = (
-    <>
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">{t('settings')}</h1>
-        {onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-10 h-10 rounded-full flex items-center justify-center"
-            style={{ backgroundColor: '#F5F3FF' }}
-            aria-label={t('close')}
-          >
-            <X size={20} className="text-gray-600" />
-          </button>
-        )}
-      </div>
-
-      <div className="space-y-8">
+  const settingsBody = (
+    <div className="space-y-8">
         <section>
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-sm font-semibold text-gray-700">{t('myAccounts')}</h2>
@@ -226,7 +210,10 @@ export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, o
           </button>
         </div>
       </div>
+  )
 
+  const modals = (
+    <>
       {showAddBank && (
         <AddBankModal
           onClose={() => setShowAddBank(false)}
@@ -246,10 +233,37 @@ export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, o
 
   if (onClose) {
     return (
-      <div className="fixed inset-0 bg-white z-[200] overflow-y-auto">
-        <div className="px-6 pt-14 pb-24">
-          {content}
+      <div className="fixed inset-0 z-[100]">
+        <div
+          className="absolute inset-0"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
+          onClick={onClose}
+          aria-hidden="true"
+        />
+        <div
+          className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl overflow-hidden"
+          style={{ maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}
+        >
+          <div className="flex-shrink-0 pt-3 pb-2 flex justify-center">
+            <div className="w-10 h-1 rounded-full bg-gray-200" />
+          </div>
+          <div className="flex-shrink-0 flex items-center justify-between px-6 pb-4">
+            <h1 className="text-xl font-bold text-gray-900">{t('settings')}</h1>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-9 h-9 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: '#F5F3FF' }}
+              aria-label={t('close')}
+            >
+              <X size={18} className="text-gray-500" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-6 pb-8">
+            {settingsBody}
+          </div>
         </div>
+        {modals}
       </div>
     )
   }
@@ -257,8 +271,12 @@ export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, o
   return (
     <div className="bg-lala-50 min-h-full">
       <div className="px-6 pt-6 pb-24">
-        {content}
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">{t('settings')}</h1>
+        </div>
+        {settingsBody}
       </div>
+      {modals}
     </div>
   )
 }

@@ -452,8 +452,24 @@ export default function BudgetsScreen({ onClose }) {
 
   if (onClose) {
     return (
-      <div className="fixed inset-0 z-[120] bg-lala-50 overflow-y-auto">
-        {content}
+      <div className="fixed inset-0 z-[100]">
+        <div
+          className="absolute inset-0"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
+          onClick={onClose}
+          aria-hidden="true"
+        />
+        <div
+          className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl overflow-hidden flex flex-col"
+          style={{ maxHeight: '92vh' }}
+        >
+          <div className="flex-shrink-0 pt-3 pb-2 flex justify-center">
+            <div className="w-10 h-1 rounded-full bg-gray-200" />
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {content}
+          </div>
+        </div>
       </div>
     )
   }

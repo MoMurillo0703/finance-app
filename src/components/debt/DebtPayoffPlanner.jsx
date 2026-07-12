@@ -204,23 +204,39 @@ export default function DebtPayoffPlanner({ onClose, setHideNav }) {
   const sliderValue = Math.min(extraPayment, SLIDER_MAX)
 
   return (
-    <div className="fixed inset-0 z-[130] bg-lala-50 flex flex-col">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-white shrink-0">
-        <div>
-          <p className="text-lg font-bold text-gray-800">{t('debtPayoffPlanner')}</p>
-          <p className="text-xs text-gray-400">{t('payoffPlan')}</p>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="p-2 text-gray-400 hover:text-gray-600"
-          aria-label={t('close')}
-        >
-          <X size={20} />
-        </button>
-      </div>
+    <div className="fixed inset-0 z-[100]">
+      <div
+        className="absolute inset-0"
+        style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
+        onClick={onClose}
+        aria-hidden="true"
+      />
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 pb-10">
+      <div
+        className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl overflow-hidden"
+        style={{ maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}
+      >
+        <div className="flex-shrink-0 pt-3 pb-2 flex justify-center">
+          <div className="w-10 h-1 rounded-full bg-gray-200" />
+        </div>
+
+        <div className="flex-shrink-0 flex items-center justify-between px-6 pb-4">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">{t('debtPayoffPlanner')}</h2>
+            <p className="text-xs text-gray-400">{t('payoffPlan')}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-9 h-9 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: '#F5F3FF' }}
+            aria-label={t('close')}
+          >
+            <X size={18} className="text-gray-500" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 pb-8">
         {loading || !strategyReady ? (
           <p className="text-gray-400 text-sm text-center py-16">{t('loading')}</p>
         ) : debts.length === 0 ? (
@@ -412,6 +428,7 @@ export default function DebtPayoffPlanner({ onClose, setHideNav }) {
             )}
           </>
         )}
+        </div>
       </div>
     </div>
   )

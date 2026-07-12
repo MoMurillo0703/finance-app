@@ -270,9 +270,16 @@ export default function CardDetailSheet({
 
   return (
     <>
-      <div className="fixed inset-0 z-[110] flex flex-col justify-end">
-        <div className="absolute inset-0 bg-black opacity-40" onClick={onClose} />
-        <div className="relative bg-white w-full max-h-[95vh] rounded-t-3xl overflow-hidden flex flex-col">
+      <div className="fixed inset-0 z-[100] flex flex-col justify-end">
+        <div
+          className="absolute inset-0"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
+          onClick={onClose}
+          aria-hidden="true"
+        />
+        <div
+          className="relative bg-white w-full max-h-[92vh] rounded-t-3xl overflow-hidden flex flex-col"
+        >
           <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1 shrink-0" />
 
           <div className="overflow-y-auto flex-1">

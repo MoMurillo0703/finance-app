@@ -44,8 +44,13 @@ export default function FilterSheet({ appliedFilters, onClose, onApply }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[140]">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+    <div className="fixed inset-0 z-[100]">
+      <div
+        className="absolute inset-0"
+        style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
+        onClick={onClose}
+        aria-hidden="true"
+      />
       <div
         className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl flex flex-col overflow-hidden"
         style={{ maxHeight: '90vh' }}
