@@ -23,6 +23,15 @@ import {
   computeDebtPaidOffPct,
 } from '../../utils/dashboardHelpers'
 
+const LALA = {
+  bg: '#F5F3FF',
+  border: '#EDE9FE',
+  accent: '#7C3AED',
+  greeting: '#6D28D9',
+  progressTrack: '#EDE9FE',
+  progressFill: '#A78BFA',
+}
+
 export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettings }) {
   const { user } = useAuth()
   const { t, i18n } = useTranslation()
@@ -178,7 +187,10 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
 
   if (loading) {
     return (
-      <div className="bg-lala-50 flex items-center justify-center py-20 min-h-screen">
+      <div
+        className="flex items-center justify-center py-20 min-h-screen"
+        style={{ backgroundColor: LALA.bg }}
+      >
         <p className="text-gray-400">{t('loading')}</p>
       </div>
     )
@@ -186,7 +198,10 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
 
   if (showAccountsEmpty) {
     return (
-      <div className="min-h-screen bg-lala-50 pb-24 flex flex-col items-center justify-center px-6">
+      <div
+        className="min-h-screen pb-24 flex flex-col items-center justify-center px-6"
+        style={{ backgroundColor: LALA.bg }}
+      >
         <p className="text-4xl mb-3">🏦</p>
         <p className="font-medium text-gray-600">{t('noAccounts')}</p>
         <p className="text-sm text-gray-400 mt-1 text-center">{t('noAccountsHint')}</p>
@@ -202,9 +217,12 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
   }
 
   return (
-    <div className="min-h-screen bg-lala-50 pb-24">
+    <div className="min-h-screen pb-24" style={{ backgroundColor: LALA.bg }}>
       {/* HERO */}
-      <div className="relative bg-gradient-to-br from-lala-400 via-lala-300 to-lala-200 px-6 pt-14 pb-8 rounded-b-[2.5rem]">
+      <div
+        className="relative px-6 pt-14 pb-8 rounded-b-[2.5rem]"
+        style={{ background: 'linear-gradient(135deg, #6D28D9 0%, #8B5CF6 40%, #C4B5FD 100%)' }}
+      >
         <div className="absolute top-12 right-6">
           <button
             type="button"
@@ -216,17 +234,17 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
           </button>
         </div>
 
-        <p className="text-lala-700 text-sm font-medium mb-1">
+        <p className="text-purple-200 text-sm font-medium mb-3">
           {t(getGreetingKey())}, {firstName} 👋
         </p>
 
-        <p className="text-white/70 text-xs uppercase tracking-widest mb-1">
+        <p className="text-purple-200 text-xs uppercase tracking-widest mb-1">
           {t('safeToSpend')}
         </p>
         <p className="text-white text-5xl font-bold tracking-tight mb-1">
           {formatMoney(safeToSpend)}
         </p>
-        <p className="text-white/60 text-xs">
+        <p className="text-purple-200 text-xs">
           {safeToSpend >= 0 ? t('safeToSpendSubtitle') : t('belowVaultTargets')}
         </p>
 
@@ -235,16 +253,20 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
             type="button"
             onClick={smartAlert.onTap ?? undefined}
             disabled={!smartAlert.onTap}
-            className="mt-4 w-full bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-2.5 flex items-center justify-between disabled:cursor-default"
+            className="mt-4 w-full rounded-2xl px-4 py-2.5 flex items-center justify-between disabled:cursor-default text-white"
+            style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
           >
-            <p className="text-white text-xs font-medium text-left">{smartAlert.message}</p>
+            <p className="text-xs font-medium text-left">{smartAlert.message}</p>
             {smartAlert.onTap && <ChevronRight size={14} className="text-white/60 shrink-0" />}
           </button>
         )}
       </div>
 
       {/* QUICK ACTIONS */}
-      <div className="mx-4 -mt-5 bg-white rounded-3xl shadow-lg border border-lala-100 p-4 mb-4">
+      <div
+        className="mx-4 -mt-6 bg-white rounded-3xl shadow-xl p-5 mb-4"
+        style={{ border: '1px solid #EDE9FE' }}
+      >
         <div className="grid grid-cols-4 gap-2">
           {[
             { icon: '💰', label: t('gotPaid'), action: () => setShowPaydayWizard(true) },
@@ -256,29 +278,37 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
               key={btn.label}
               type="button"
               onClick={btn.action}
-              className="flex flex-col items-center gap-1.5 py-2"
+              className="flex flex-col items-center py-1"
             >
-              <div className="w-12 h-12 rounded-2xl bg-lala-50 flex items-center justify-center text-xl">
+              <div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl mb-1"
+                style={{ backgroundColor: '#F5F3FF' }}
+              >
                 {btn.icon}
               </div>
-              <p className="text-xs text-gray-500 font-medium leading-tight text-center">
-                {btn.label}
-              </p>
+              <p className="text-xs text-gray-600 font-medium text-center">{btn.label}</p>
             </button>
           ))}
         </div>
       </div>
 
       {/* MONTH PULSE */}
-      <div className="mx-4 mb-4 bg-white rounded-3xl border border-lala-100 p-4">
+      <div
+        className="mx-4 mb-4 bg-white rounded-3xl p-4 shadow-sm"
+        style={{ border: '1px solid #EDE9FE' }}
+      >
         <div className="flex justify-between items-center mb-2">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide capitalize">
+          <p
+            className="text-xs font-semibold uppercase tracking-wide capitalize"
+            style={{ color: '#7C3AED' }}
+          >
             {currentMonthName}
           </p>
           <button
             type="button"
             onClick={() => onNavigate?.('reports')}
-            className="text-xs text-lala-600 font-medium"
+            className="text-xs font-medium"
+            style={{ color: LALA.accent }}
           >
             {t('seeAll')} →
           </button>
@@ -297,14 +327,13 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
             {monthlyNet >= 0 ? '+' : ''}{formatMoney(monthlyNet)} {t('netShort')}
           </p>
         </div>
-        <div className="h-2 bg-lala-100 rounded-full overflow-hidden">
+        <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: LALA.progressTrack }}>
           <div
-            className={`h-2 rounded-full transition-all ${
-              spendingPct > 90 ? 'bg-red-400' :
-              spendingPct > 70 ? 'bg-amber-400' :
-              'bg-lala-400'
-            }`}
-            style={{ width: `${Math.min(100, spendingPct)}%` }}
+            className="h-2 rounded-full transition-all"
+            style={{
+              width: `${Math.min(100, spendingPct)}%`,
+              backgroundColor: spendingPct > 90 ? '#f87171' : spendingPct > 70 ? '#fbbf24' : LALA.progressFill,
+            }}
           />
         </div>
         {topCategories.length > 0 && (
@@ -324,15 +353,22 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
 
       {/* DEBT PULSE */}
       {totalDebt > 0 && (
-        <div className="mx-4 mb-4 bg-white rounded-3xl border border-lala-100 p-4">
+        <div
+          className="mx-4 mb-4 bg-white rounded-3xl p-4 shadow-sm"
+          style={{ border: '1px solid #EDE9FE' }}
+        >
           <div className="flex justify-between items-center mb-3">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+            <p
+              className="text-xs font-semibold uppercase tracking-wide"
+              style={{ color: '#7C3AED' }}
+            >
               {t('debtProgress')}
             </p>
             <button
               type="button"
               onClick={() => setShowDebtPlanner(true)}
-              className="text-xs text-lala-600 font-medium"
+              className="text-xs font-medium"
+              style={{ color: LALA.accent }}
             >
               {t('viewPlan')} →
             </button>
@@ -349,8 +385,11 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
           </div>
           <div className="h-2 bg-red-100 rounded-full overflow-hidden">
             <div
-              className="h-2 bg-gradient-to-r from-red-400 to-lala-400 rounded-full transition-all"
-              style={{ width: `${debtPaidOffPct}%` }}
+              className="h-2 rounded-full transition-all"
+              style={{
+                width: `${debtPaidOffPct}%`,
+                background: `linear-gradient(to right, #f87171, ${LALA.progressFill})`,
+              }}
             />
           </div>
           <p className="text-xs text-gray-400 mt-1">
@@ -360,13 +399,22 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
       )}
 
       {/* RECENT TRANSACTIONS */}
-      <div className="mx-4 mb-4 bg-white rounded-3xl border border-lala-100 p-4">
+      <div
+        className="mx-4 mb-4 bg-white rounded-3xl p-4 shadow-sm"
+        style={{ border: '1px solid #EDE9FE' }}
+      >
         <div className="flex justify-between items-center mb-3">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{t('recent')}</p>
+          <p
+            className="text-xs font-semibold uppercase tracking-wide"
+            style={{ color: '#7C3AED' }}
+          >
+            {t('recent')}
+          </p>
           <button
             type="button"
             onClick={() => onNavigate?.('transactions')}
-            className="text-xs text-lala-600 font-medium"
+            className="text-xs font-medium"
+            style={{ color: LALA.accent }}
           >
             {t('seeAll')} →
           </button>
@@ -377,10 +425,14 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
           recentTransactions.map(tx => (
             <div
               key={tx.id}
-              className="flex justify-between items-center py-2 border-b border-lala-50 last:border-0"
+              className="flex justify-between items-center py-2 last:border-0"
+              style={{ borderBottom: `1px solid ${LALA.bg}` }}
             >
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-lala-50 flex items-center justify-center text-sm shrink-0">
+                <div
+                  className="w-8 h-8 rounded-xl flex items-center justify-center text-sm shrink-0"
+                  style={{ backgroundColor: LALA.bg }}
+                >
                   {CATEGORY_EMOJIS[tx.category] || '📦'}
                 </div>
                 <div className="min-w-0">
