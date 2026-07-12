@@ -204,7 +204,7 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
     { month: 'long' },
   )
 
-  const onboardingComplete = localStorage.getItem('onboarding_complete') === 'true'
+  const onboardingComplete = localStorage.getItem('lala_onboarded') === 'true'
   const showAccountsEmpty = onboardingComplete && banks.length === 0
 
   const bumpRefresh = () => setModalRefreshKey(k => k + 1)

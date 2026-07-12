@@ -10,7 +10,7 @@ import ReportsScreen from './components/reports/ReportsScreen'
 import SettingsScreen from './components/settings/SettingsScreen'
 import BottomNav from './components/layout/BottomNav'
 import OnboardingFlow from './components/onboarding/OnboardingFlow'
-import { getBankDisplayName, fetchBanks } from './utils/bank'
+import { getBankDisplayName } from './utils/bank'
 import { supabase } from './lib/supabase'
 
 function AppContent() {
@@ -35,21 +35,39 @@ function AppContent() {
     setActiveTab('accounts')
   }
 
-  const completeOnboarding = () => {
-    localStorage.setItem('onboarding_complete', 'true')
+  const completeOnboarding = async () => {
+    localStorage.setItem('lala_onboarded', 'true')
     setShowOnboarding(false)
     bumpDashboard()
+
+    const { error } = await supabase.from('profiles').upsert({
+      user_id: user.id,
+      full_name: user.user_metadata?.full_name || null,
+      currency: localStorage.getItem('currency') || 'USD',
+      onboarding_completed: true,
+      onboarding_completed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' })
+
+    if (error) console.error('Unable to save onboarding profile:', error.message)
   }
 
   useEffect(() => {
-    if (!user) return
-    if (localStorage.getItem('onboarding_complete') === 'true') return
+    if (!user) {
+      setShowOnboarding(false)
+      return
+    }
+    if (localStorage.getItem('lala_onboarded')) return
 
     let active = true
     ;(async () => {
-      const { data } = await fetchBanks(supabase, user.id)
+      const { data, error } = await supabase
+        .from('banks')
+        .select('id')
+        .eq('user_id', user.id)
+        .limit(1)
       if (!active) return
-      if ((data ?? []).length === 0) setShowOnboarding(true)
+      if (!error && (!data || data.length === 0)) setShowOnboarding(true)
     })()
 
     return () => { active = false }
@@ -73,6 +91,10 @@ function AppContent() {
     return showSignup
       ? <Signup onToggle={() => setShowSignup(false)} />
       : <Login onToggle={() => setShowSignup(true)} />
+  }
+
+  if (showOnboarding) {
+    return <OnboardingFlow onComplete={completeOnboarding} />
   }
 
   return (
@@ -144,15 +166,6 @@ function AppContent() {
         />
       )}
 
-      {showOnboarding && (
-        <OnboardingFlow
-          onComplete={completeOnboarding}
-          onGoToDashboard={() => {
-            completeOnboarding()
-            setActiveTab('home')
-          }}
-        />
-      )}
     </div>
   )
 }
