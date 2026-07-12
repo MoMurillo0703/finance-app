@@ -19,24 +19,30 @@ export default function AddBankModal({ onClose, onSaved }) {
 
   const handleSave = async () => {
     if (!name.trim()) { setError('Bank name is required'); return }
-    if (!balanceInput.raw || balanceInput.numericValue < 0) { setError('Enter a valid balance'); return }
+    if (balanceInput.raw === '' || balanceInput.numericValue < 0) {
+      setError('Enter a valid balance')
+      return
+    }
 
     setSaving(true)
-    const { error: dbError } = await insertBank(supabase, buildBankInsertRow({
+    setError('')
+    const { data, error: dbError } = await insertBank(supabase, buildBankInsertRow({
       user_id: user.id,
       name: name.trim(),
       nickname: nickname.trim(),
-      accountType,
+      accountType: accountType || 'checking',
       balance: balanceInput.numericValue,
       is_active: true,
     }))
 
+    setSaving(false)
+
     if (dbError) {
       setError(dbError.message)
-      setSaving(false)
-    } else {
-      onSaved()
+      return
     }
+
+    onSaved?.(data)
   }
 
   return (

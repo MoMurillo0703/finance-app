@@ -157,7 +157,7 @@ export default function ReportsScreen({ setHideNav, onSettings, showToast }) {
           .select('*')
           .eq('user_id', user.id)
           .eq('is_active', true)
-          .order('name'),
+          .order('created_at', { ascending: false }),
         supabase
           .from('bills')
           .select('*')

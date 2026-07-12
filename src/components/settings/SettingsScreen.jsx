@@ -132,17 +132,42 @@ export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, o
     }
   }
 
-  const wipeTable = async (tableName) => {
+  const resetBalances = async ({ includeLoans = false } = {}) => {
+    const updates = [
+      supabase.from('banks').update({ balance: 0 }).eq('user_id', user.id),
+      supabase.from('credit_cards').update({ current_balance: 0 }).eq('user_id', user.id),
+    ]
+    if (includeLoans) {
+      updates.push(supabase.from('loans').update({ current_balance: 0 }).eq('user_id', user.id))
+    }
+
+    for (const update of updates) {
+      const { error } = await update
+      if (error) return error
+    }
+    return null
+  }
+
+  const wipeTable = async (tableName, { resetBalances: shouldReset = false, includeLoans = false } = {}) => {
     const { error } = await supabase.from(tableName).delete().eq('user_id', user.id)
     if (error) {
       showToast?.(error.message)
       return
     }
+
+    if (shouldReset) {
+      const balanceError = await resetBalances({ includeLoans })
+      if (balanceError) {
+        showToast?.(balanceError.message)
+        return
+      }
+    }
+
     showToast?.(`${tableName} wiped ✓`)
     window.location.reload()
   }
 
-  const wipeTables = async (tableNames) => {
+  const wipeTables = async (tableNames, { resetBalances: shouldReset = false, includeLoans = false } = {}) => {
     for (const tableName of tableNames) {
       const { error } = await supabase.from(tableName).delete().eq('user_id', user.id)
       if (error) {
@@ -150,6 +175,15 @@ export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, o
         return
       }
     }
+
+    if (shouldReset) {
+      const balanceError = await resetBalances({ includeLoans })
+      if (balanceError) {
+        showToast?.(balanceError.message)
+        return
+      }
+    }
+
     showToast?.('Data wiped ✓')
     window.location.reload()
   }
@@ -283,8 +317,8 @@ export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, o
             >
               <DevWipeButton
                 label="Wipe transactions"
-                description="Deletes all transactions, keeps accounts"
-                onConfirm={() => wipeTable('transactions')}
+                description="Deletes all transactions and zeros bank & card balances"
+                onConfirm={() => wipeTable('transactions', { resetBalances: true })}
               />
               <DevWipeButton
                 label="Wipe bills & payments"
@@ -293,7 +327,7 @@ export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, o
               />
               <DevWipeButton
                 label="Wipe everything"
-                description="Transactions, bills, budgets, vaults — keeps banks & cards"
+                description="Transactions, bills, budgets, vaults — zeros bank, card & loan balances"
                 onConfirm={() => wipeTables([
                   'transactions',
                   'bills',
@@ -302,7 +336,7 @@ export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, o
                   'vaults',
                   'promotional_purchases',
                   'card_statements',
-                ])}
+                ], { resetBalances: true, includeLoans: true })}
                 danger
               />
               <DevWipeButton

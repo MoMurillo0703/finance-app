@@ -11,7 +11,30 @@ import SettingsScreen from './components/settings/SettingsScreen'
 import BottomNav from './components/layout/BottomNav'
 import OnboardingFlow from './components/onboarding/OnboardingFlow'
 import { getBankDisplayName } from './utils/bank'
-import { supabase } from './lib/supabase'
+import { supabase, supabaseConfigMissing } from './lib/supabase'
+
+function MissingConfig() {
+  return (
+    <div className="min-h-screen flex items-center justify-center p-6 bg-[#F5F3FF]">
+      <div className="max-w-md text-center space-y-3">
+        <p className="text-4xl">⚙️</p>
+        <h1 className="text-xl font-bold text-gray-900">Missing local configuration</h1>
+        <p className="text-sm text-gray-600">
+          Add your Supabase credentials to <code className="text-purple-700">.env.local</code>,
+          then restart the dev server.
+        </p>
+        <pre className="text-left text-xs bg-white border border-purple-100 rounded-xl p-4 text-gray-700 overflow-x-auto">
+{`VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_DEV_MODE=true`}
+        </pre>
+        <p className="text-xs text-gray-400">
+          Copy values from Vercel → Project Settings → Environment Variables, or Supabase → API.
+        </p>
+      </div>
+    </div>
+  )
+}
 
 function AppContent() {
   const { user } = useAuth()
@@ -192,5 +215,6 @@ function AppContent() {
 }
 
 export default function App() {
+  if (supabaseConfigMissing) return <MissingConfig />
   return <AuthProvider><AppContent /></AuthProvider>
 }

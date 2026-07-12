@@ -1,5 +1,5 @@
-export const BANK_SELECT = 'id, name, nickname, balance, type, account_type, is_active'
-export const BANK_SELECT_FALLBACK = 'id, name, balance, type, is_active'
+export const BANK_SELECT = 'id, name, nickname, balance, type, account_type, is_active, created_at'
+export const BANK_SELECT_FALLBACK = 'id, name, balance, type, is_active, created_at'
 
 export const BANK_ACCOUNT_TYPES = [
   { label: '🏦 Checking', value: 'checking' },
@@ -69,6 +69,10 @@ export function isMissingAccountTypeColumn(error) {
   return isMissingColumn(error, 'account_type')
 }
 
+export function isMissingIsActiveColumn(error) {
+  return isMissingColumn(error, 'is_active')
+}
+
 export function buildBankInsertRow({
   user_id,
   name,
@@ -82,26 +86,52 @@ export function buildBankInsertRow({
     name,
     nickname: nickname?.trim() || null,
     type: legacyTypeFromAccountType(accountType),
-    account_type: accountType,
-    balance,
+    account_type: accountType || 'checking',
+    balance: parseFloat(balance) || 0,
     is_active,
   }
 }
 
+async function insertBankWithPayload(supabase, payload) {
+  return supabase.from('banks').insert(payload).select('*').maybeSingle()
+}
+
 export async function insertBank(supabase, row) {
   let payload = { ...row }
-  let { data, error } = await supabase.from('banks').insert(payload).select().single()
+  let { data, error } = await insertBankWithPayload(supabase, payload)
 
   if (error && isMissingNicknameColumn(error)) {
     const { nickname: _nickname, ...withoutNickname } = payload
     payload = withoutNickname
-    ;({ data, error } = await supabase.from('banks').insert(payload).select().single())
+    ;({ data, error } = await insertBankWithPayload(supabase, payload))
   }
 
   if (error && isMissingAccountTypeColumn(error)) {
     const { account_type: _accountType, ...withoutAccountType } = payload
     payload = withoutAccountType
-    ;({ data, error } = await supabase.from('banks').insert(payload).select().single())
+    ;({ data, error } = await insertBankWithPayload(supabase, payload))
+  }
+
+  if (error && isMissingIsActiveColumn(error)) {
+    const { is_active: _isActive, ...withoutIsActive } = payload
+    payload = withoutIsActive
+    ;({ data, error } = await insertBankWithPayload(supabase, payload))
+  }
+
+  if (!error && !data) {
+    const { error: insertError } = await supabase.from('banks').insert(payload)
+    if (insertError) return { data: null, error: insertError }
+
+    const { data: fetched, error: fetchError } = await supabase
+      .from('banks')
+      .select('*')
+      .eq('user_id', payload.user_id)
+      .eq('name', payload.name)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    return { data: fetched, error: fetchError }
   }
 
   return { data, error }
@@ -126,20 +156,46 @@ export async function updateBank(supabase, id, updates) {
   return { data, error }
 }
 
-export async function fetchBanks(supabase, userId, { orderByName = false } = {}) {
-  const buildQuery = (select) => {
+export async function fetchBanks(supabase, userId, { orderByName = false, orderByCreatedAt = true } = {}) {
+  const applyOrdering = (query) => {
+    if (orderByName) return query.order('name')
+    if (orderByCreatedAt) return query.order('created_at', { ascending: false })
+    return query
+  }
+
+  const buildQuery = (select, { filterActive = true } = {}) => {
     let query = supabase
       .from('banks')
       .select(select)
       .eq('user_id', userId)
-      .eq('is_active', true)
-    if (orderByName) query = query.order('name')
-    return query
+    if (filterActive) query = query.eq('is_active', true)
+    return applyOrdering(query)
   }
 
   let result = await buildQuery(BANK_SELECT)
+  if (result.error && isMissingIsActiveColumn(result.error)) {
+    result = await buildQuery(BANK_SELECT, { filterActive: false })
+  }
   if (result.error && (isMissingNicknameColumn(result.error) || isMissingAccountTypeColumn(result.error))) {
     result = await buildQuery(BANK_SELECT_FALLBACK)
+    if (result.error && isMissingIsActiveColumn(result.error)) {
+      result = await buildQuery(BANK_SELECT_FALLBACK, { filterActive: false })
+    }
+  }
+  if (result.error && isMissingColumn(result.error, 'created_at')) {
+    const buildWithoutCreatedAt = (select, { filterActive = true } = {}) => {
+      let query = supabase
+        .from('banks')
+        .select(select.replace(', created_at', '').replace('created_at, ', ''))
+        .eq('user_id', userId)
+      if (filterActive) query = query.eq('is_active', true)
+      if (orderByName) query = query.order('name')
+      return query
+    }
+    result = await buildWithoutCreatedAt(BANK_SELECT)
+    if (result.error && isMissingIsActiveColumn(result.error)) {
+      result = await buildWithoutCreatedAt(BANK_SELECT, { filterActive: false })
+    }
   }
   return result
 }
