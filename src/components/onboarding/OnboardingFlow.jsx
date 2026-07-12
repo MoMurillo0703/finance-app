@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Check } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { insertBank } from '../../utils/bank'
+import { insertBank, buildBankInsertRow } from '../../utils/bank'
 
 const CURRENCIES = [
   { flag: '🇺🇸', label: 'United States', sub: 'US Dollar · USD', value: 'USD' },
@@ -71,14 +71,14 @@ export default function OnboardingFlow({ onComplete }) {
     }
     setSaving(true)
     setError('')
-    const { error: dbError } = await insertBank(supabase, {
+    const { error: dbError } = await insertBank(supabase, buildBankInsertRow({
       user_id: user.id,
       name: bankName.trim(),
-      nickname: bankNickname.trim() || null,
-      type: 'checking',
+      nickname: bankNickname.trim(),
+      accountType: 'checking',
       balance: Number(bankBalance),
       is_active: true,
-    })
+    }))
     if (dbError) {
       setError(dbError.message)
       setSaving(false)

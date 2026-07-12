@@ -323,6 +323,9 @@ export default {
       assignVault: 'Assign to vault',
       noVault: 'No vault',
       noVaultsHint: 'No vaults — create one first',
+      noCheckingAccountsYet: 'No checking accounts yet',
+      addCheckingForVault: 'Add a checking account first to create a vault.',
+      linkedCheckingAccount: 'Linked checking account',
       unknownAccount: 'Unknown account',
 
       // Import CSV

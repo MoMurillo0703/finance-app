@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { getUserCurrency } from '../../utils/currency'
-import { updateBank } from '../../utils/bank'
+import { updateBank, getBankAccountType, BANK_ACCOUNT_TYPES, legacyTypeFromAccountType } from '../../utils/bank'
 import { useCurrencyInput, currencyAmountPlaceholder } from '../../hooks/useCurrencyInput'
 import DeleteConfirmBlock from '../shared/DeleteConfirmBlock'
 
@@ -14,7 +14,7 @@ export default function EditBankModal({ bank, onClose, onSaved }) {
   const currency = getUserCurrency()
   const [name, setName] = useState(bank.name ?? '')
   const [nickname, setNickname] = useState(bank.nickname ?? '')
-  const [accountType, setAccountType] = useState(bank.type ?? 'checking')
+  const [accountType, setAccountType] = useState(getBankAccountType(bank))
   const balanceInput = useCurrencyInput(bank.balance ?? '')
   const [isActive, setIsActive] = useState(bank.is_active !== false)
   const [saving, setSaving] = useState(false)
@@ -37,7 +37,8 @@ export default function EditBankModal({ bank, onClose, onSaved }) {
     const { error: dbError } = await updateBank(supabase, bank.id, {
       name: name.trim(),
       nickname: nickname.trim() || null,
-      type: accountType,
+      type: legacyTypeFromAccountType(accountType),
+      account_type: accountType,
       balance: balanceInput.numericValue,
       is_active: isActive,
     })
@@ -88,20 +89,23 @@ export default function EditBankModal({ bank, onClose, onSaved }) {
             <input className={inputClass} value={nickname} onChange={e => setNickname(e.target.value)} />
           </div>
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">{t('accountType')}</label>
-            <div className="grid grid-cols-2 gap-2">
-              {['checking', 'savings'].map(type => (
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              {t('accountType')}
+            </label>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {BANK_ACCOUNT_TYPES.map(opt => (
                 <button
-                  key={type}
+                  key={opt.value}
                   type="button"
-                  onClick={() => setAccountType(type)}
-                  className={`py-2.5 rounded-xl text-xs border ${
-                    accountType === type
-                      ? 'bg-purple-600 text-white border-purple-600'
-                      : 'border-gray-200 text-gray-500'
-                  }`}
+                  onClick={() => setAccountType(opt.value)}
+                  className="py-3 px-4 rounded-2xl text-sm font-medium border-2 transition-all"
+                  style={{
+                    borderColor: accountType === opt.value ? '#7C3AED' : '#E5E7EB',
+                    backgroundColor: accountType === opt.value ? '#F5F3FF' : 'white',
+                    color: accountType === opt.value ? '#7C3AED' : '#6B7280',
+                  }}
                 >
-                  {type === 'checking' ? t('checking') : t('savings')}
+                  {opt.label}
                 </button>
               ))}
             </div>

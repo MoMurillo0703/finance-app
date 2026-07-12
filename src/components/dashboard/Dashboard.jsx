@@ -16,9 +16,10 @@ import BillsThisWeek from './BillsThisWeek'
 import { formatMoney } from '../../utils/currency'
 import { calculateNetWorth } from '../../utils/netWorth'
 import { formatDate } from '../../utils/date'
-import { fetchBanks } from '../../utils/bank'
+import { fetchBanks, isCheckingBank } from '../../utils/bank'
 import { getMonthBounds } from '../../utils/reports'
 import { getSpendingByBudgetCategory, getBudgetCategoryLabel } from '../../utils/budgets'
+import { isBillPaidThisMonth, getBillDisplayAmount, getDueDaysThisWeek } from '../../utils/bills'
 import { BUDGET_CATEGORIES, CATEGORY_EMOJIS } from '../../utils/transactionCategories'
 import {
   getGreetingKey,
@@ -135,8 +136,40 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
     return () => { active = false }
   }, [user.id, refreshKey, modalRefreshKey, firstDay])
 
-  const protectedAmount = vaults.reduce((sum, v) => sum + (v.current_amount || 0), 0)
-  const safeToSpend = totalBalance - protectedAmount
+  const cardMap = useMemo(
+    () => Object.fromEntries(creditCards.map(card => [card.id, card])),
+    [creditCards],
+  )
+
+  const checkingBalance = useMemo(
+    () => banks
+      .filter(isCheckingBank)
+      .reduce((sum, b) => sum + (b.balance || 0), 0),
+    [banks],
+  )
+
+  const protectedAmount = useMemo(
+    () => vaults
+      .filter(v => {
+        if (!v.bank_id) return true
+        const bank = banks.find(b => b.id === v.bank_id)
+        return isCheckingBank(bank)
+      })
+      .reduce((sum, v) => sum + (v.current_amount || 0), 0),
+    [vaults, banks],
+  )
+
+  const upcomingBillsThisWeek = useMemo(
+    () => {
+      const dueDays = getDueDaysThisWeek()
+      return bills
+        .filter(b => dueDays.includes(Number(b.due_day)) && !isBillPaidThisMonth(b))
+        .reduce((sum, b) => sum + getBillDisplayAmount(b, cardMap), 0)
+    },
+    [bills, cardMap],
+  )
+
+  const safeToSpend = checkingBalance - protectedAmount - upcomingBillsThisWeek
   const firstName = getFirstName(user)
   const {
     netWorth,

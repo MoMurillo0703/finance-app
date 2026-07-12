@@ -323,6 +323,9 @@ export default {
       assignVault: 'Asignar a bóveda',
       noVault: 'Sin bóveda',
       noVaultsHint: 'No hay bóvedas — crea una primero',
+      noCheckingAccountsYet: 'Aún no hay cuentas corrientes',
+      addCheckingForVault: 'Agrega una cuenta corriente primero para crear una bóveda.',
+      linkedCheckingAccount: 'Cuenta corriente vinculada',
       unknownAccount: 'Cuenta desconocida',
 
       // Import CSV

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { formatMoney } from '../../utils/currency'
-import { fetchBanks } from '../../utils/bank'
+import { fetchBanks, accountTypeBadgeStyle, accountTypeLabel, getBankAccountType } from '../../utils/bank'
 import { getCardApr } from '../../utils/cards'
 import AddBankModal from '../dashboard/AddBankModal'
 import AddCardModal from '../cards/AddCardModal'
@@ -17,13 +17,6 @@ import AddLoanModal from '../loans/AddLoanModal'
 import EditLoanModal from '../loans/EditLoanModal'
 import PurchaseSimulator from '../simulator/PurchaseSimulator'
 import { PageHeader } from '../layout/PageHeader'
-
-function accountTypeLabel(type, t) {
-  if (type === 'checking') return t('checking')
-  if (type === 'money_market') return t('moneyMarket')
-  if (type === 'savings') return t('savings')
-  return type
-}
 
 export default function AccountsScreen({
   onAccountSaved,
@@ -175,8 +168,11 @@ export default function AccountsScreen({
                     {bank.nickname?.trim() && (
                       <p className="text-xs text-gray-400">{bank.name}</p>
                     )}
-                    <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full mt-1 inline-block">
-                      {accountTypeLabel(bank.type, t)}
+                    <span
+                      className="text-xs px-2 py-0.5 rounded-full font-medium mt-1 inline-block"
+                      style={accountTypeBadgeStyle(getBankAccountType(bank))}
+                    >
+                      {accountTypeLabel(getBankAccountType(bank))}
                     </span>
                   </button>
                   <div className="text-right shrink-0 pl-3 flex flex-col items-end">
