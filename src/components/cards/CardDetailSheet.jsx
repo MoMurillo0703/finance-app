@@ -57,14 +57,20 @@ function formatMonthLabel(monthKey, language) {
   })
 }
 
-export default function CardDetailSheet({ card: initialCard, onClose, onUpdated, setHideNav }) {
+export default function CardDetailSheet({
+  card: initialCard,
+  onClose,
+  onUpdated,
+  setHideNav,
+  initialTab = 'transactions',
+}) {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const [liveCard, setLiveCard] = useState(initialCard)
   const [cuotas, setCuotas] = useState([])
   const [transactions, setTransactions] = useState([])
   const [banks, setBanks] = useState([])
-  const [activeTab, setActiveTab] = useState('transactions')
+  const [activeTab, setActiveTab] = useState(initialTab)
   const [refreshKey, setRefreshKey] = useState(0)
   const [loadingTx, setLoadingTx] = useState(true)
   const [showAddTransaction, setShowAddTransaction] = useState(false)
@@ -100,6 +106,10 @@ export default function CardDetailSheet({ card: initialCard, onClose, onUpdated,
     tabs.push('estimator')
     return tabs
   }, [latAmUser])
+
+  useEffect(() => {
+    setActiveTab(visibleTabs.includes(initialTab) ? initialTab : visibleTabs[0])
+  }, [initialCard.id, initialTab, visibleTabs])
   const minimumResult = useMemo(
     () => getCardMinimumPayment(liveCard, statements),
     [liveCard, statements],

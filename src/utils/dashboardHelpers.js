@@ -1,5 +1,4 @@
 import { formatMoney } from './currency'
-import { formatDate } from './date'
 import { isBillPaidThisMonth } from './bills'
 import { getEffectiveRate } from './creditCard'
 
@@ -16,31 +15,71 @@ export function getFirstName(user) {
     || 'there'
 }
 
-export function getSmartAlert({ bills, promos, safeToSpend, onNavigate, t }) {
+function getPromoDaysLeft(expirationDate) {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const expires = new Date(expirationDate)
+  expires.setHours(0, 0, 0, 0)
+  return Math.ceil((expires - today) / (1000 * 60 * 60 * 24))
+}
+
+const DEFAULT_ALERT_STYLE = {
+  color: '#F5F3FF',
+  textColor: '#7C3AED',
+  borderColor: '#EDE9FE',
+}
+
+function alertItem({ icon, message, onTap, color, textColor, borderColor }) {
+  return {
+    icon,
+    message,
+    onTap,
+    color: color ?? DEFAULT_ALERT_STYLE.color,
+    textColor: textColor ?? DEFAULT_ALERT_STYLE.textColor,
+    borderColor: borderColor ?? DEFAULT_ALERT_STYLE.borderColor,
+  }
+}
+
+export function getSmartAlert({ bills, promos, safeToSpend, onNavigate, onOpenCardPromo, t }) {
   const today = new Date().getDate()
   const unpaid = (bills ?? []).filter(b => b.is_active !== false && !isBillPaidThisMonth(b))
+
+  const urgentPromo = (promos ?? [])
+    .filter(p => {
+      if (!p.expiration_date) return false
+      const daysLeft = getPromoDaysLeft(p.expiration_date)
+      return daysLeft <= 60 && daysLeft > 0
+    })
+    .sort((a, b) => new Date(a.expiration_date) - new Date(b.expiration_date))[0]
+
+  if (urgentPromo) {
+    const daysLeft = getPromoDaysLeft(urgentPromo.expiration_date)
+    const monthsLeft = Math.max(1, Math.ceil(daysLeft / 30))
+    const monthlyPayment = Math.ceil((urgentPromo.remaining_balance || 0) / monthsLeft)
+    const isRed = daysLeft <= 30
+
+    return alertItem({
+      icon: isRed ? '🚨' : '⚠️',
+      color: isRed ? '#FEF2F2' : '#FFFBEB',
+      textColor: isRed ? '#DC2626' : '#D97706',
+      borderColor: isRed ? '#FECACA' : '#FDE68A',
+      message: t('promoMonthlyAvoidInterest', {
+        monthly: formatMoney(monthlyPayment),
+        interest: formatMoney(urgentPromo.deferred_interest || 0),
+        days: daysLeft,
+      }),
+      onTap: () => onOpenCardPromo?.(urgentPromo.credit_card_id),
+    })
+  }
 
   const dueToday = unpaid.filter(b => Number(b.due_day) === today)
   if (dueToday.length > 0) {
     const bill = dueToday[0]
-    return {
-      message: `📋 ${bill.name} ${t('dueToday')} — ${formatMoney(bill.amount)}`,
+    return alertItem({
+      icon: '📋',
+      message: `${bill.name} ${t('dueToday')} — ${formatMoney(bill.amount)}`,
       onTap: () => onNavigate?.('bills'),
-    }
-  }
-
-  const urgentPromo = (promos ?? []).find(p => {
-    const days = Math.ceil((new Date(p.expiration_date) - new Date()) / (1000 * 60 * 60 * 24))
-    return days <= 30 && days > 0
-  })
-  if (urgentPromo) {
-    return {
-      message: `⚠️ ${t('payPromoBy', {
-        amount: formatMoney(urgentPromo.remaining_balance),
-        date: formatDate(urgentPromo.expiration_date),
-      })}`,
-      onTap: () => onNavigate?.('accounts'),
-    }
+    })
   }
 
   const dueThisWeek = unpaid.filter(b => {
@@ -49,20 +88,25 @@ export function getSmartAlert({ bills, promos, safeToSpend, onNavigate, t }) {
   })
   if (dueThisWeek.length > 0) {
     const total = dueThisWeek.reduce((s, b) => s + (Number(b.amount) || 0), 0)
-    return {
-      message: `📋 ${t('billsDueThisWeekCount', {
+    return alertItem({
+      icon: '📋',
+      message: t('billsDueThisWeekCount', {
         count: dueThisWeek.length,
         amount: formatMoney(total),
-      })}`,
+      }),
       onTap: () => onNavigate?.('bills'),
-    }
+    })
   }
 
   if (safeToSpend < 500 && safeToSpend >= 0) {
-    return {
-      message: `💛 ${t('safeToSpendLow')}`,
+    return alertItem({
+      icon: '💛',
+      color: '#FFFBEB',
+      textColor: '#D97706',
+      borderColor: '#FDE68A',
+      message: t('safeToSpendLow'),
       onTap: null,
-    }
+    })
   }
 
   return null

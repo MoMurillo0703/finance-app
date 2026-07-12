@@ -23,11 +23,17 @@ function AppContent() {
   const [prefsVersion, setPrefsVersion] = useState(0)
   const [txFilter, setTxFilter] = useState(null)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [cardDetailRequest, setCardDetailRequest] = useState(null)
 
   const bumpDashboard = () => setDashboardRefreshKey(k => k + 1)
   const bumpPrefs = () => setPrefsVersion(v => v + 1)
   const navHidden = hideNav || showSettings || showOnboarding
   const openSettings = () => setShowSettings(true)
+
+  const openCardPromotions = (cardId) => {
+    setCardDetailRequest({ cardId, initialTab: 'promotions' })
+    setActiveTab('accounts')
+  }
 
   const completeOnboarding = () => {
     localStorage.setItem('onboarding_complete', 'true')
@@ -78,6 +84,7 @@ function AppContent() {
             onNavigate={setActiveTab}
             setHideNav={setHideNav}
             onSettings={openSettings}
+            onOpenCardPromo={openCardPromotions}
           />
         )}
         {activeTab === 'transactions' && (
@@ -112,6 +119,8 @@ function AppContent() {
             onAccountSaved={bumpDashboard}
             setHideNav={setHideNav}
             onSettings={openSettings}
+            cardDetailRequest={cardDetailRequest}
+            onCardDetailRequestHandled={() => setCardDetailRequest(null)}
           />
         )}
         {activeTab === 'reports' && (

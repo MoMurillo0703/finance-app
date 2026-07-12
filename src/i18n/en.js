@@ -589,6 +589,7 @@ export default {
       saveExpense: 'Save expense',
       dueToday: 'due today',
       payPromoBy: 'Pay {{amount}} by {{date}} — avoid deferred interest',
+      promoMonthlyAvoidInterest: 'Pay {{monthly}}/mo to avoid {{interest}} in interest — {{days}} days left',
       billsDueThisWeekCount: '{{count}} bill(s) due this week — {{amount}}',
       safeToSpendLow: 'Safe to spend is getting low',
       belowVaultTargets: 'Below vault targets',

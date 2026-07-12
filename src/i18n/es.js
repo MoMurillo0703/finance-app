@@ -589,6 +589,7 @@ export default {
       saveExpense: 'Guardar gasto',
       dueToday: 'vence hoy',
       payPromoBy: 'Paga {{amount}} antes del {{date}} — evita interés diferido',
+      promoMonthlyAvoidInterest: 'Paga {{monthly}}/mes para evitar {{interest}} en intereses — {{days}} días restantes',
       billsDueThisWeekCount: '{{count}} factura(s) esta semana — {{amount}}',
       safeToSpendLow: 'Tu saldo disponible está bajo',
       belowVaultTargets: 'Por debajo de las metas de bóvedas',

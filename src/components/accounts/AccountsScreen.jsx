@@ -25,7 +25,14 @@ function accountTypeLabel(type, t) {
   return type
 }
 
-export default function AccountsScreen({ onAccountSaved, refreshKey = 0, setHideNav, onSettings }) {
+export default function AccountsScreen({
+  onAccountSaved,
+  refreshKey = 0,
+  setHideNav,
+  onSettings,
+  cardDetailRequest,
+  onCardDetailRequestHandled,
+}) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [banks, setBanks] = useState([])
@@ -40,6 +47,7 @@ export default function AccountsScreen({ onAccountSaved, refreshKey = 0, setHide
   const [editingCard, setEditingCard] = useState(null)
   const [editingLoan, setEditingLoan] = useState(null)
   const [detailCard, setDetailCard] = useState(null)
+  const [detailCardInitialTab, setDetailCardInitialTab] = useState('transactions')
   const [showSimulator, setShowSimulator] = useState(false)
   const [historyBank, setHistoryBank] = useState(null)
   const [dataRefreshKey, setDataRefreshKey] = useState(0)
@@ -89,6 +97,16 @@ export default function AccountsScreen({ onAccountSaved, refreshKey = 0, setHide
     setHideNav?.(modalOpen)
     return () => setHideNav?.(false)
   }, [modalOpen, setHideNav])
+
+  useEffect(() => {
+    if (!cardDetailRequest?.cardId || loading) return
+    const card = cards.find(c => c.id === cardDetailRequest.cardId)
+    if (card) {
+      setDetailCard(card)
+      setDetailCardInitialTab(cardDetailRequest.initialTab || 'transactions')
+      onCardDetailRequestHandled?.()
+    }
+  }, [cardDetailRequest, cards, loading, onCardDetailRequestHandled])
 
   const handleSaved = () => {
     setShowAddBank(false)
@@ -208,9 +226,12 @@ export default function AccountsScreen({ onAccountSaved, refreshKey = 0, setHide
                     key={card.id}
                     className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex items-start gap-3"
                   >
-                    <button
-                      type="button"
-                      onClick={() => setDetailCard(card)}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDetailCardInitialTab('transactions')
+                      setDetailCard(card)
+                    }}
                       className="flex-1 min-w-0 text-left"
                     >
                       <p className="text-sm font-semibold text-gray-800">{card.name}</p>
@@ -355,6 +376,7 @@ export default function AccountsScreen({ onAccountSaved, refreshKey = 0, setHide
       {detailCard && (
         <CardDetailSheet
           card={detailCard}
+          initialTab={detailCardInitialTab}
           setHideNav={setHideNav}
           onClose={() => setDetailCard(null)}
           onUpdated={async () => {

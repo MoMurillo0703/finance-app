@@ -38,7 +38,7 @@ const LALA = {
   progressFill: '#A78BFA',
 }
 
-export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettings }) {
+export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettings, onOpenCardPromo }) {
   const { user } = useAuth()
   const { t, i18n } = useTranslation()
   const [vaults, setVaults] = useState([])
@@ -196,8 +196,8 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
   const debtPaidOffPct = computeDebtPaidOffPct(loans, creditCards)
 
   const smartAlert = useMemo(
-    () => getSmartAlert({ bills, promos, safeToSpend, onNavigate, t }),
-    [bills, promos, safeToSpend, onNavigate, t],
+    () => getSmartAlert({ bills, promos, safeToSpend, onNavigate, onOpenCardPromo, t }),
+    [bills, promos, safeToSpend, onNavigate, onOpenCardPromo, t],
   )
 
   const currentMonthName = now.toLocaleDateString(
@@ -282,20 +282,28 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
           </div>
         </div>
 
-        {smartAlert && (
-          <button
-            type="button"
-            onClick={smartAlert.onTap ?? undefined}
-            disabled={!smartAlert.onTap}
-            className="mt-4 w-full rounded-2xl px-4 py-2.5 flex items-center justify-between disabled:cursor-default text-white"
-            style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
-          >
-            <p className="text-xs font-medium text-left">{smartAlert.message}</p>
-            {smartAlert.onTap && <ChevronRight size={14} className="text-white/60 shrink-0" />}
-          </button>
-        )}
         </div>
       </div>
+
+      {smartAlert && (
+        <button
+          type="button"
+          onClick={smartAlert.onTap ?? undefined}
+          disabled={!smartAlert.onTap}
+          className="mx-4 -mt-2 mb-3 px-4 py-3 rounded-2xl text-left w-full text-sm font-medium flex items-center gap-2 disabled:cursor-default"
+          style={{
+            backgroundColor: smartAlert.color,
+            border: `1px solid ${smartAlert.borderColor}`,
+            color: smartAlert.textColor,
+          }}
+        >
+          <span>{smartAlert.icon}</span>
+          <span className="flex-1">{smartAlert.message}</span>
+          {smartAlert.onTap && (
+            <span style={{ color: smartAlert.textColor, opacity: 0.6 }}>›</span>
+          )}
+        </button>
+      )}
 
       {/* QUICK ACTIONS */}
       <div
