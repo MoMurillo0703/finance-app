@@ -232,7 +232,7 @@ export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefi
     const today = new Date().toISOString().split('T')[0]
 
     if (!incomeAlreadyRecorded) {
-      const { error: txError } = await supabase.from('transactions').insert({
+      let incomeRow = {
         user_id: user.id,
         bank_id: bankId,
         type: 'income',
@@ -240,7 +240,13 @@ export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefi
         amount: payAmount,
         description: 'Paycheck',
         transaction_date: today,
-      })
+        source: 'manual',
+      }
+      let { error: txError } = await supabase.from('transactions').insert(incomeRow)
+      if (txError?.message?.includes('source')) {
+        const { source: _s, ...fallback } = incomeRow
+        ;({ error: txError } = await supabase.from('transactions').insert(fallback))
+      }
 
       if (txError) {
         setError(txError.message)

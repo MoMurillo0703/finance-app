@@ -109,17 +109,27 @@ export default function AddTransactionModal({
       transaction_date: date,
       bank_id: isCardExpense ? null : bankId,
       credit_card_id: isCardExpense ? creditCardId : null,
+      source: 'manual',
     }
 
     if (type === 'expense' && vaultId) {
       txPayload.vault_id = vaultId
     }
 
-    const { data: txData, error: txError } = await supabase
+    let { data: txData, error: txError } = await supabase
       .from('transactions')
       .insert(txPayload)
       .select('id')
       .single()
+
+    if (txError?.message?.includes('source')) {
+      const { source: _source, ...fallbackPayload } = txPayload
+      ;({ data: txData, error: txError } = await supabase
+        .from('transactions')
+        .insert(fallbackPayload)
+        .select('id')
+        .single())
+    }
 
     if (txError) { setError(txError.message); setSaving(false); return }
 

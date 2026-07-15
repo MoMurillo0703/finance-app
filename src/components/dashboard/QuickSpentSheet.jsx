@@ -61,6 +61,7 @@ export default function QuickSpentSheet({ onClose, onSaved }) {
       category,
       transaction_date: date || todayISO(),
       is_transfer: category === 'transfer',
+      source: 'manual',
     }
 
     if (accountType === 'card') {
@@ -70,8 +71,10 @@ export default function QuickSpentSheet({ onClose, onSaved }) {
     }
 
     let { error: txError } = await supabase.from('transactions').insert(row)
-    if (txError?.message?.includes('is_transfer')) {
-      const { is_transfer: _transfer, ...fallbackRow } = row
+    if (txError?.message?.includes('is_transfer') || txError?.message?.includes('source')) {
+      const fallbackRow = { ...row }
+      if (txError.message.includes('is_transfer')) delete fallbackRow.is_transfer
+      if (txError.message.includes('source')) delete fallbackRow.source
       ;({ error: txError } = await supabase.from('transactions').insert(fallbackRow))
     }
     if (txError) {

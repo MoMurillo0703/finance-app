@@ -3,9 +3,9 @@ import { useTranslation } from 'react-i18next'
 import Papa from 'papaparse'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { adjustBankBalance, bankDelta } from '../../lib/payments'
 import { fetchBanks, getBankDropdownLabel } from '../../utils/bank'
 import { categoryForDb } from '../../utils/categories'
+import { formatMoney } from '../../utils/currency'
 
 function parseAmount(value) {
   if (value == null || value === '') return NaN
@@ -64,14 +64,18 @@ function detectCategory(desc) {
   if (/^CHECK$/i.test(desc.trim()) || /^CHECK\s*#/i.test(desc)) return 'Check'
   if (/VENMO/i.test(desc)) return 'Transfer'
   if (/PAYROLL|SALARY|DIRECT DEP/i.test(desc)) return 'Income'
+  if (/ONLINE PAYMENT|PAYMENT THANK YOU|PAYMENT RECEIVED|AUTOPAY|PAYMENT - THANK/i.test(desc)) return 'Payment'
 
   return 'Other'
 }
 
-function detectCategoryMeta(desc) {
+function detectCategoryMeta(desc, accountType) {
   const label = detectCategory(desc)
   if (label === 'Transfer') {
     return { category: 'transfer', forceType: null, isTransfer: true }
+  }
+  if (label === 'Payment') {
+    return { category: 'utilities', forceType: 'payment', isTransfer: false }
   }
   if (label === 'Income') {
     return { category: 'income', forceType: 'income', isTransfer: false }
@@ -81,6 +85,16 @@ function detectCategoryMeta(desc) {
   }
   if (label === 'Check') {
     return { category: 'other', forceType: 'expense', isTransfer: false }
+  }
+  // Bank: positive = income, negative = expense
+  // Card: positive = charge (expense), negative = payment
+  if (accountType === 'card') {
+    return {
+      category: 'other',
+      forceType: null,
+      isTransfer: false,
+      cardSigned: true,
+    }
   }
   return { category: 'other', forceType: null, isTransfer: false }
 }
@@ -109,6 +123,23 @@ function parseWellsFargoRows(data) {
     .sort((a, b) => new Date(b.date) - new Date(a.date))
 }
 
+function stripOptionalColumns(payload, errorMessage) {
+  let next = { ...payload }
+  if (errorMessage.includes('is_transfer')) {
+    const { is_transfer: _t, ...rest } = next
+    next = rest
+  }
+  if (errorMessage.includes('balance_after')) {
+    const { balance_after: _b, ...rest } = next
+    next = rest
+  }
+  if (errorMessage.includes('source')) {
+    const { source: _s, ...rest } = next
+    next = rest
+  }
+  return next
+}
+
 const inputClass =
   'w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white'
 
@@ -117,10 +148,11 @@ export default function ImportCSVSheet({ onClose, onImport, showToast }) {
   const { user } = useAuth()
   const fileInputRef = useRef(null)
 
+  const [accountType, setAccountType] = useState('bank')
   const [banks, setBanks] = useState([])
-  const [bankId, setBankId] = useState('')
+  const [creditCards, setCreditCards] = useState([])
+  const [selectedAccountId, setSelectedAccountId] = useState('')
   const [file, setFile] = useState(null)
-  const [headers, setHeaders] = useState([])
   const [bankName, setBankName] = useState('')
   const [currentBalance, setCurrentBalance] = useState('')
   const [pendingTotal, setPendingTotal] = useState('')
@@ -133,13 +165,25 @@ export default function ImportCSVSheet({ onClose, onImport, showToast }) {
   useEffect(() => {
     let active = true
     ;(async () => {
-      const { data } = await fetchBanks(supabase, user.id, { orderByName: true })
+      const [banksRes, cardsRes] = await Promise.all([
+        fetchBanks(supabase, user.id, { orderByName: true }),
+        supabase
+          .from('credit_cards')
+          .select('id, name, current_balance, is_active')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .order('name'),
+      ])
       if (!active) return
-      setBanks(data ?? [])
-      if (data?.length === 1) setBankId(data[0].id)
+      setBanks(banksRes.data ?? [])
+      setCreditCards(cardsRes.data ?? [])
     })()
     return () => { active = false }
   }, [user.id])
+
+  useEffect(() => {
+    setSelectedAccountId('')
+  }, [accountType])
 
   const processFile = async (f) => {
     if (!f?.name?.toLowerCase().endsWith('.csv')) {
@@ -154,7 +198,6 @@ export default function ImportCSVSheet({ onClose, onImport, showToast }) {
     const hdrs = parsed.meta.fields ?? []
     const rows = parseWellsFargoRows(parsed.data)
 
-    setHeaders(hdrs)
     setBankName(detectBankName(hdrs, f.name))
     setPreview(rows.slice(0, 5))
     setRowCount(rows.length)
@@ -177,7 +220,7 @@ export default function ImportCSVSheet({ onClose, onImport, showToast }) {
       setError(t('importCsvOnly'))
       return
     }
-    if (!bankId) {
+    if (!selectedAccountId) {
       setError(t('importSelectAccount'))
       return
     }
@@ -210,8 +253,15 @@ export default function ImportCSVSheet({ onClose, onImport, showToast }) {
       })
 
       const tagged = withBalances.map(r => {
-        const meta = detectCategoryMeta(r.description)
-        const type = meta.forceType || (r.amount > 0 ? 'income' : 'expense')
+        const meta = detectCategoryMeta(r.description, accountType)
+        let type = meta.forceType
+        if (!type) {
+          if (accountType === 'card') {
+            type = r.amount > 0 ? 'expense' : 'payment'
+          } else {
+            type = r.amount > 0 ? 'income' : 'expense'
+          }
+        }
         return {
           ...r,
           category: meta.category,
@@ -221,13 +271,18 @@ export default function ImportCSVSheet({ onClose, onImport, showToast }) {
         }
       })
 
-      const { data: allExisting } = await supabase
+      let existingQuery = supabase
         .from('transactions')
         .select('id, transaction_date, amount, description')
         .eq('user_id', user.id)
-        .eq('bank_id', bankId)
 
-      const toInsert = []
+      existingQuery = accountType === 'card'
+        ? existingQuery.eq('credit_card_id', selectedAccountId)
+        : existingQuery.eq('bank_id', selectedAccountId)
+
+      const { data: allExisting } = await existingQuery
+
+      let insertedCount = 0
       let updatedCount = 0
 
       for (const row of tagged) {
@@ -240,16 +295,18 @@ export default function ImportCSVSheet({ onClose, onImport, showToast }) {
           let updatePayload = {
             category: categoryForDb(row.category),
             is_transfer: row.is_transfer,
+            source: 'csv_import',
           }
           let { error: updateError } = await supabase
             .from('transactions')
             .update(updatePayload)
             .eq('id', existing.id)
 
-          if (updateError && updateError.message.includes('is_transfer')) {
+          if (updateError && (updateError.message.includes('is_transfer') || updateError.message.includes('source'))) {
+            updatePayload = stripOptionalColumns(updatePayload, updateError.message)
             ;({ error: updateError } = await supabase
               .from('transactions')
-              .update({ category: categoryForDb(row.category) })
+              .update(updatePayload)
               .eq('id', existing.id))
           }
 
@@ -260,38 +317,55 @@ export default function ImportCSVSheet({ onClose, onImport, showToast }) {
           }
           updatedCount++
         } else {
-          toInsert.push(row)
+          let insertPayload = {
+            user_id: user.id,
+            description: row.description,
+            amount: row.amount,
+            type: row.type,
+            category: categoryForDb(row.category),
+            transaction_date: row.date,
+            is_transfer: row.is_transfer,
+            balance_after: row.balance_after,
+            bank_id: accountType === 'bank' ? selectedAccountId : null,
+            credit_card_id: accountType === 'card' ? selectedAccountId : null,
+            source: 'csv_import',
+          }
+
+          let { error: insertError } = await supabase.from('transactions').insert(insertPayload)
+
+          if (insertError && (
+            insertError.message.includes('is_transfer')
+            || insertError.message.includes('balance_after')
+            || insertError.message.includes('source')
+          )) {
+            insertPayload = stripOptionalColumns(insertPayload, insertError.message)
+            ;({ error: insertError } = await supabase.from('transactions').insert(insertPayload))
+          }
+
+          if (insertError) {
+            setError(insertError.message)
+            setImporting(false)
+            return
+          }
+          insertedCount++
         }
       }
 
-      if (toInsert.length > 0) {
-        const basePayload = toInsert.map(r => ({
-          user_id: user.id,
-          bank_id: bankId,
-          description: r.description,
-          amount: r.amount,
-          type: r.type,
-          category: categoryForDb(r.category),
-          transaction_date: r.date,
-          is_transfer: r.is_transfer,
-          balance_after: r.balance_after,
-        }))
-
-        let { error: insertError } = await supabase.from('transactions').insert(basePayload)
-
-        if (insertError && (insertError.message.includes('is_transfer') || insertError.message.includes('balance_after'))) {
-          const fallbackPayload = basePayload.map(({ is_transfer: _t, balance_after: _b, ...row }) => row)
-          ;({ error: insertError } = await supabase.from('transactions').insert(fallbackPayload))
-        }
-
-        if (insertError) {
-          setError(insertError.message)
+      if (accountType === 'bank') {
+        const { error: balanceError } = await supabase
+          .from('banks')
+          .update({ balance })
+          .eq('id', selectedAccountId)
+        if (balanceError) {
+          setError(balanceError.message)
           setImporting(false)
           return
         }
-
-        const delta = toInsert.reduce((sum, row) => sum + bankDelta(row.type, row.amount), 0)
-        const balanceError = await adjustBankBalance(bankId, delta)
+      } else {
+        const { error: balanceError } = await supabase
+          .from('credit_cards')
+          .update({ current_balance: balance })
+          .eq('id', selectedAccountId)
         if (balanceError) {
           setError(balanceError.message)
           setImporting(false)
@@ -299,14 +373,8 @@ export default function ImportCSVSheet({ onClose, onImport, showToast }) {
         }
       }
 
-      if (toInsert.length > 0 && updatedCount > 0) {
-        showToast?.(t('importNewAndUpdated', { imported: toInsert.length, updated: updatedCount }))
-      } else if (updatedCount > 0) {
-        showToast?.(t('importUpdatedCount', { count: updatedCount }))
-      } else {
-        showToast?.(t('importNewCount', { count: toInsert.length }))
-      }
-      onImport?.(toInsert.length + updatedCount)
+      showToast?.(t('importNewAndUpdated', { imported: insertedCount, updated: updatedCount }))
+      onImport?.(insertedCount + updatedCount)
       onClose()
     } catch (err) {
       setError(err.message || String(err))
@@ -314,6 +382,9 @@ export default function ImportCSVSheet({ onClose, onImport, showToast }) {
       setImporting(false)
     }
   }
+
+  const activeBanks = banks.filter(b => b.is_active !== false)
+  const activeCards = creditCards.filter(c => c.is_active !== false)
 
   return (
     <div className="fixed inset-0 z-[100]">
@@ -400,21 +471,76 @@ export default function ImportCSVSheet({ onClose, onImport, showToast }) {
             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
               {t('importToAccount')}
             </label>
-            <select
-              value={bankId}
-              onChange={e => setBankId(e.target.value)}
-              className={inputClass}
-            >
-              <option value="">{t('importSelectAccount')}</option>
-              {banks.map(b => (
-                <option key={b.id} value={b.id}>{getBankDropdownLabel(b)}</option>
-              ))}
-            </select>
+            <div className="flex gap-2 mb-4">
+              <button
+                type="button"
+                onClick={() => setAccountType('bank')}
+                className="flex-1 py-2 rounded-xl text-sm font-medium min-h-[44px]"
+                style={{
+                  backgroundColor: accountType === 'bank' ? '#7C3AED' : '#F5F3FF',
+                  color: accountType === 'bank' ? 'white' : '#7C3AED',
+                }}
+              >
+                🏦 {t('importBankAccount')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setAccountType('card')}
+                className="flex-1 py-2 rounded-xl text-sm font-medium min-h-[44px]"
+                style={{
+                  backgroundColor: accountType === 'card' ? '#7C3AED' : '#F5F3FF',
+                  color: accountType === 'card' ? 'white' : '#7C3AED',
+                }}
+              >
+                💳 {t('creditCard')}
+              </button>
+            </div>
+
+            {accountType === 'bank'
+              ? (activeBanks.length === 0 ? (
+                  <p className="text-xs text-gray-400 text-center py-4">{t('noAccounts')}</p>
+                ) : activeBanks.map(b => (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => setSelectedAccountId(b.id)}
+                    className="w-full flex justify-between items-center p-4 rounded-2xl mb-2 text-left"
+                    style={{
+                      backgroundColor: selectedAccountId === b.id ? '#F5F3FF' : '#F9FAFB',
+                      border: selectedAccountId === b.id ? '2px solid #7C3AED' : '2px solid transparent',
+                    }}
+                  >
+                    <span className="font-medium text-gray-800">{getBankDropdownLabel(b)}</span>
+                    <span className="text-gray-400 text-sm">{formatMoney(b.balance)}</span>
+                  </button>
+                )))
+              : (activeCards.length === 0 ? (
+                  <p className="text-xs text-gray-400 text-center py-4">{t('noAccounts')}</p>
+                ) : activeCards.map(c => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setSelectedAccountId(c.id)}
+                    className="w-full flex justify-between items-center p-4 rounded-2xl mb-2 text-left"
+                    style={{
+                      backgroundColor: selectedAccountId === c.id ? '#F5F3FF' : '#F9FAFB',
+                      border: selectedAccountId === c.id ? '2px solid #7C3AED' : '2px solid transparent',
+                    }}
+                  >
+                    <span className="font-medium text-gray-800">{c.name}</span>
+                    <span className="text-gray-400 text-sm">
+                      {formatMoney(c.current_balance)} {t('owed')}
+                    </span>
+                  </button>
+                )))}
           </div>
 
           <div>
             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
-              {t('importCurrentBalance')} *
+              {accountType === 'card'
+                ? t('importCurrentCardBalance')
+                : t('importCurrentBalance')}
+              {' '}*
             </label>
             <input
               type="text"
@@ -445,7 +571,7 @@ export default function ImportCSVSheet({ onClose, onImport, showToast }) {
           <button
             type="button"
             onClick={handleImport}
-            disabled={importing || !file || !bankId || !currentBalance.trim()}
+            disabled={importing || !file || !selectedAccountId || !currentBalance.trim()}
             className="w-full min-h-[44px] py-3 rounded-2xl text-white font-semibold text-sm disabled:opacity-50"
             style={{ backgroundColor: '#7C3AED' }}
           >

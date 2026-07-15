@@ -122,6 +122,7 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
       transaction_date: date,
       vault_id: newVaultId,
       is_transfer: saveIsTransfer,
+      source: 'manual',
     }
 
     let { error: txError } = await supabase
@@ -129,11 +130,18 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }) 
       .update(updatePayload)
       .eq('id', transaction.id)
 
-    if (txError && txError.message.includes('is_transfer')) {
-      const { is_transfer: _isTransfer, ...fallbackPayload } = updatePayload
+    if (txError && (txError.message.includes('is_transfer') || txError.message.includes('source'))) {
+      if (txError.message.includes('is_transfer')) {
+        const { is_transfer: _isTransfer, ...rest } = updatePayload
+        updatePayload = rest
+      }
+      if (txError.message.includes('source')) {
+        const { source: _source, ...rest } = updatePayload
+        updatePayload = rest
+      }
       ;({ error: txError } = await supabase
         .from('transactions')
-        .update(fallbackPayload)
+        .update(updatePayload)
         .eq('id', transaction.id))
     }
 
