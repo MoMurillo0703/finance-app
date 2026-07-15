@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import Papa from 'papaparse'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { fetchBanks, getBankDropdownLabel } from '../../utils/bank'
+import { getBankDropdownLabel } from '../../utils/bank'
 import { categoryForDb } from '../../utils/categories'
 import { formatMoney } from '../../utils/currency'
 
@@ -163,23 +163,41 @@ export default function ImportCSVSheet({ onClose, onImport, showToast }) {
   const [dragOver, setDragOver] = useState(false)
 
   useEffect(() => {
+    if (!user?.id) return
+
     let active = true
-    ;(async () => {
+
+    async function fetchAccounts() {
       const [banksRes, cardsRes] = await Promise.all([
-        fetchBanks(supabase, user.id, { orderByName: true }),
         supabase
-          .from('credit_cards')
-          .select('id, name, current_balance, is_active')
+          .from('banks')
+          .select('*')
           .eq('user_id', user.id)
           .eq('is_active', true)
           .order('name'),
+        supabase
+          .from('credit_cards')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('name'),
       ])
+
       if (!active) return
+
+      if (banksRes.error) {
+        console.error('Failed to fetch banks for import:', banksRes.error)
+      }
+      if (cardsRes.error) {
+        console.error('Failed to fetch credit cards for import:', cardsRes.error)
+      }
+
       setBanks(banksRes.data ?? [])
       setCreditCards(cardsRes.data ?? [])
-    })()
+    }
+
+    fetchAccounts()
     return () => { active = false }
-  }, [user.id])
+  }, [user?.id])
 
   useEffect(() => {
     setSelectedAccountId('')
@@ -437,6 +455,7 @@ export default function ImportCSVSheet({ onClose, onImport, showToast }) {
           />
 
           {preview?.length > 0 && (
+            <>
             <div>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                 {t('importDetectedBank', { bank: bankName })}
@@ -465,7 +484,6 @@ export default function ImportCSVSheet({ onClose, onImport, showToast }) {
                 {t('importReadyCount', { count: rowCount })}
               </p>
             </div>
-          )}
 
           <div>
             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
@@ -565,6 +583,8 @@ export default function ImportCSVSheet({ onClose, onImport, showToast }) {
               className={inputClass}
             />
           </div>
+            </>
+          )}
         </div>
 
         <div className="px-6 pb-8 pt-4 shrink-0 border-t border-gray-100">
