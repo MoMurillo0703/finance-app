@@ -232,6 +232,9 @@ export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, o
                       {bank.nickname?.trim() && (
                         <p className="text-xs text-gray-400 truncate">{bank.name}</p>
                       )}
+                      {bank.last_four && (
+                        <span className="text-xs text-gray-400">···· {bank.last_four}</span>
+                      )}
                       <p className="text-[11px] text-purple-500 mt-0.5">{t('viewActivity')} →</p>
                     </div>
                     <p className="text-sm font-bold text-purple-600 shrink-0">{formatMoney(bank.balance)}</p>

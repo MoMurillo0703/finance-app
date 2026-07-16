@@ -11,6 +11,7 @@ export default function AddBankModal({ onClose, onSaved }) {
   const { user } = useAuth()
   const [name, setName] = useState('')
   const [nickname, setNickname] = useState('')
+  const [lastFour, setLastFour] = useState('')
   const [accountType, setAccountType] = useState('checking')
   const balanceInput = useCurrencyInput()
   const currency = getUserCurrency()
@@ -33,6 +34,7 @@ export default function AddBankModal({ onClose, onSaved }) {
       accountType: accountType || 'checking',
       balance: balanceInput.numericValue,
       is_active: true,
+      last_four: lastFour || null,
     }))
 
     setSaving(false)
@@ -96,6 +98,24 @@ export default function AddBankModal({ onClose, onSaved }) {
               value={nickname}
               onChange={e => setNickname(e.target.value)}
             />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              {t('accountLastFour')}
+            </label>
+            <input
+              type="text"
+              maxLength={4}
+              inputMode="numeric"
+              placeholder={t('accountLastFourPlaceholder')}
+              value={lastFour}
+              onChange={e => setLastFour(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              className="w-full mt-2 px-4 py-3 rounded-2xl border border-gray-200 text-sm outline-none focus:border-purple-300"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              {t('accountLastFourHint')}
+            </p>
           </div>
 
           <div>

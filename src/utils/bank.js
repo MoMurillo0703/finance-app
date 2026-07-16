@@ -1,4 +1,4 @@
-export const BANK_SELECT = 'id, name, nickname, balance, type, account_type, is_active, created_at'
+export const BANK_SELECT = 'id, name, nickname, balance, type, account_type, is_active, last_four, created_at'
 export const BANK_SELECT_FALLBACK = 'id, name, balance, type, is_active, created_at'
 
 export const BANK_ACCOUNT_TYPES = [
@@ -73,6 +73,10 @@ export function isMissingIsActiveColumn(error) {
   return isMissingColumn(error, 'is_active')
 }
 
+export function isMissingLastFourColumn(error) {
+  return isMissingColumn(error, 'last_four')
+}
+
 export function buildBankInsertRow({
   user_id,
   name,
@@ -80,6 +84,7 @@ export function buildBankInsertRow({
   accountType = 'checking',
   balance,
   is_active = true,
+  last_four = null,
 }) {
   return {
     user_id,
@@ -89,6 +94,7 @@ export function buildBankInsertRow({
     account_type: accountType || 'checking',
     balance: parseFloat(balance) || 0,
     is_active,
+    last_four: last_four?.trim() || null,
   }
 }
 
@@ -115,6 +121,12 @@ export async function insertBank(supabase, row) {
   if (error && isMissingIsActiveColumn(error)) {
     const { is_active: _isActive, ...withoutIsActive } = payload
     payload = withoutIsActive
+    ;({ data, error } = await insertBankWithPayload(supabase, payload))
+  }
+
+  if (error && isMissingLastFourColumn(error)) {
+    const { last_four: _lastFour, ...withoutLastFour } = payload
+    payload = withoutLastFour
     ;({ data, error } = await insertBankWithPayload(supabase, payload))
   }
 
@@ -153,6 +165,12 @@ export async function updateBank(supabase, id, updates) {
     ;({ data, error } = await supabase.from('banks').update(payload).eq('id', id).select().single())
   }
 
+  if (error && isMissingLastFourColumn(error)) {
+    const { last_four: _lastFour, ...withoutLastFour } = payload
+    payload = withoutLastFour
+    ;({ data, error } = await supabase.from('banks').update(payload).eq('id', id).select().single())
+  }
+
   return { data, error }
 }
 
@@ -176,10 +194,20 @@ export async function fetchBanks(supabase, userId, { orderByName = false, orderB
   if (result.error && isMissingIsActiveColumn(result.error)) {
     result = await buildQuery(BANK_SELECT, { filterActive: false })
   }
-  if (result.error && (isMissingNicknameColumn(result.error) || isMissingAccountTypeColumn(result.error))) {
-    result = await buildQuery(BANK_SELECT_FALLBACK)
+  if (result.error && (isMissingNicknameColumn(result.error) || isMissingAccountTypeColumn(result.error) || isMissingLastFourColumn(result.error))) {
+    const selectWithoutLastFour = BANK_SELECT.replace(', last_four', '')
+    result = await buildQuery(
+      isMissingNicknameColumn(result.error) || isMissingAccountTypeColumn(result.error)
+        ? BANK_SELECT_FALLBACK
+        : selectWithoutLastFour,
+    )
     if (result.error && isMissingIsActiveColumn(result.error)) {
-      result = await buildQuery(BANK_SELECT_FALLBACK, { filterActive: false })
+      result = await buildQuery(
+        isMissingNicknameColumn(result.error) || isMissingAccountTypeColumn(result.error)
+          ? BANK_SELECT_FALLBACK
+          : selectWithoutLastFour,
+        { filterActive: false },
+      )
     }
   }
   if (result.error && isMissingColumn(result.error, 'created_at')) {

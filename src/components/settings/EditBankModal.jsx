@@ -14,6 +14,7 @@ export default function EditBankModal({ bank, onClose, onSaved }) {
   const currency = getUserCurrency()
   const [name, setName] = useState(bank.name ?? '')
   const [nickname, setNickname] = useState(bank.nickname ?? '')
+  const [lastFour, setLastFour] = useState(bank.last_four ?? '')
   const [accountType, setAccountType] = useState(getBankAccountType(bank))
   const balanceInput = useCurrencyInput(bank.balance ?? '')
   const [isActive, setIsActive] = useState(bank.is_active !== false)
@@ -41,6 +42,7 @@ export default function EditBankModal({ bank, onClose, onSaved }) {
       account_type: accountType,
       balance: balanceInput.numericValue,
       is_active: isActive,
+      last_four: lastFour || null,
     })
 
     setSaving(false)
@@ -87,6 +89,23 @@ export default function EditBankModal({ bank, onClose, onSaved }) {
           <div>
             <label className="text-xs text-gray-400 mb-1 block">{t('accountNickname')}</label>
             <input className={inputClass} value={nickname} onChange={e => setNickname(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              {t('accountLastFour')}
+            </label>
+            <input
+              type="text"
+              maxLength={4}
+              inputMode="numeric"
+              placeholder={t('accountLastFourPlaceholder')}
+              value={lastFour}
+              onChange={e => setLastFour(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              className="w-full mt-2 px-4 py-3 rounded-2xl border border-gray-200 text-sm outline-none focus:border-purple-300"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              {t('accountLastFourHint')}
+            </p>
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">

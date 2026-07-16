@@ -234,22 +234,24 @@ export default function TransactionsScreen({
     let active = true
 
     ;(async () => {
-      let txQuery = supabase
-        .from('transactions')
-        .select('id, type, amount, description, category, transaction_date, bank_id, credit_card_id, vault_id, is_transfer, banks(name, nickname)')
-        .eq('user_id', user.id)
-        .order('transaction_date', { ascending: false })
+      const selectWithPairing =
+        'id, type, amount, description, category, transaction_date, bank_id, credit_card_id, vault_id, is_transfer, paired_transaction_id, transfer_direction, banks(name, nickname)'
+      const selectBasic =
+        'id, type, amount, description, category, transaction_date, bank_id, credit_card_id, vault_id, is_transfer, banks(name, nickname)'
 
-      if (filterCreditCardId) {
-        txQuery = txQuery.eq('credit_card_id', filterCreditCardId)
+      const buildTxQuery = (select) => {
+        let q = supabase
+          .from('transactions')
+          .select(select)
+          .eq('user_id', user.id)
+          .order('transaction_date', { ascending: false })
+        if (filterCreditCardId) q = q.eq('credit_card_id', filterCreditCardId)
+        if (filterBankId) q = q.eq('bank_id', filterBankId)
+        return q
       }
 
-      if (filterBankId) {
-        txQuery = txQuery.eq('bank_id', filterBankId)
-      }
-
-      const [txRes, banksRes, cardsRes] = await Promise.all([
-        txQuery,
+      const [txResInitial, banksRes, cardsRes] = await Promise.all([
+        buildTxQuery(selectWithPairing),
         fetchBanks(supabase, user.id, { orderByName: true }),
         supabase
           .from('credit_cards')
@@ -258,6 +260,15 @@ export default function TransactionsScreen({
           .eq('is_active', true)
           .order('name'),
       ])
+
+      let txRes = txResInitial
+      if (
+        txRes.error
+        && (txRes.error.message?.includes('paired_transaction_id')
+          || txRes.error.message?.includes('transfer_direction'))
+      ) {
+        txRes = await buildTxQuery(selectBasic)
+      }
 
       if (!active) return
 
@@ -519,6 +530,7 @@ export default function TransactionsScreen({
           transaction={editingTransaction}
           onClose={() => setEditingTransaction(null)}
           onSaved={handleTransactionSaved}
+          showToast={showToast}
         />
       )}
 

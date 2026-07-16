@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 import { getBankDropdownLabel } from '../../utils/bank'
 import { categoryForDb } from '../../utils/categories'
 import { formatMoney } from '../../utils/currency'
+import { runAutoMatchForUser } from '../../utils/transferMatcher'
 
 function parseAmount(value) {
   if (value == null || value === '') return NaN
@@ -392,6 +393,13 @@ export default function ImportCSVSheet({ onClose, onImport, showToast }) {
       }
 
       showToast?.(t('importNewAndUpdated', { imported: insertedCount, updated: updatedCount }))
+
+      try {
+        await runAutoMatchForUser(supabase, user.id, banks)
+      } catch (matchErr) {
+        console.error('Transfer auto-match failed:', matchErr)
+      }
+
       onImport?.(insertedCount + updatedCount)
       onClose()
     } catch (err) {

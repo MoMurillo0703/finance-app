@@ -168,6 +168,9 @@ export default function AccountsScreen({
                     {bank.nickname?.trim() && (
                       <p className="text-xs text-gray-400">{bank.name}</p>
                     )}
+                    {bank.last_four && (
+                      <span className="text-xs text-gray-400 block mt-0.5">···· {bank.last_four}</span>
+                    )}
                     <span
                       className="text-xs px-2 py-0.5 rounded-full font-medium mt-1 inline-block"
                       style={accountTypeBadgeStyle(getBankAccountType(bank))}
