@@ -1,3 +1,5 @@
+import { isSpendingTransaction } from './transactionType'
+
 export function addDays(date, days) {
   const result = new Date(date)
   result.setDate(result.getDate() + days)
@@ -16,7 +18,7 @@ export function cleanMerchantName(desc) {
 export function detectRecurring(transactions) {
   const groups = {}
   transactions.forEach(t => {
-    if (t.type !== 'expense') return
+    if (!isSpendingTransaction(t)) return
     const key = cleanMerchantName(t.description)
     if (!groups[key]) groups[key] = []
     groups[key].push(t)

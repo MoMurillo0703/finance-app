@@ -17,6 +17,7 @@ import {
   getNearOrOverBudgetCategories,
 } from '../../utils/budgets'
 import { isIntroRateExpiringSoon, getIntroRateDaysLeft } from '../../utils/creditCard'
+import { isSpendingTransaction, isIncomeTransaction } from '../../utils/transactionType'
 
 export default function MonthSnapshot({ refreshKey, onViewReports }) {
   const { t } = useTranslation()
@@ -47,7 +48,7 @@ export default function MonthSnapshot({ refreshKey, onViewReports }) {
       const [txRes, loansRes, budgetsRes, cardsRes, promosRes] = await Promise.all([
         supabase
           .from('transactions')
-          .select('id, type, amount, description, transaction_date, category')
+          .select('id, type, amount, description, transaction_date, category, is_transfer')
           .eq('user_id', user.id)
           .gte('transaction_date', fetchStart),
         supabase
@@ -94,11 +95,11 @@ export default function MonthSnapshot({ refreshKey, onViewReports }) {
   if (thisMonth.length === 0 && loanPaymentsThisMonth <= 0) return null
 
   const totalSpent = thisMonth
-    .filter(tx => tx.type === 'expense')
+    .filter(tx => isSpendingTransaction(tx))
     .reduce((sum, tx) => sum + tx.amount, 0)
 
   const totalIncome = thisMonth
-    .filter(tx => tx.type === 'income')
+    .filter(tx => isIncomeTransaction(tx))
     .reduce((sum, tx) => sum + tx.amount, 0)
 
   const dayOfMonth = now.getDate()
@@ -106,7 +107,7 @@ export default function MonthSnapshot({ refreshKey, onViewReports }) {
 
   const lastMonthKey = monthKeys[monthKeys.length - 2]
   const lastMonthTotal = transactions
-    .filter(tx => tx.type === 'expense' && tx.transaction_date?.slice(0, 7) === lastMonthKey)
+    .filter(tx => isSpendingTransaction(tx) && tx.transaction_date?.slice(0, 7) === lastMonthKey)
     .reduce((sum, tx) => sum + tx.amount, 0)
 
   let barColor = 'bg-purple-600'
@@ -132,7 +133,7 @@ export default function MonthSnapshot({ refreshKey, onViewReports }) {
     detectRecurringCharges(transactions, monthKeys).map(item => item.merchant),
   )
   const recurringThisMonth = thisMonth
-    .filter(tx => tx.type === 'expense' && recurringMerchants.has(cleanMerchantName(tx.description)))
+    .filter(tx => isSpendingTransaction(tx) && recurringMerchants.has(cleanMerchantName(tx.description)))
     .reduce((sum, tx) => sum + tx.amount, 0)
 
   const expiringIntroCards = creditCards.filter(card => isIntroRateExpiringSoon(card))

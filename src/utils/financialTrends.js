@@ -1,3 +1,5 @@
+import { isSpendingTransaction, isIncomeTransaction } from './transactionType'
+
 export function buildMonthlyTrends(transactions, months = 6, asOf = new Date()) {
   const buckets = []
 
@@ -14,11 +16,11 @@ export function buildMonthlyTrends(transactions, months = 6, asOf = new Date()) 
     )
 
     const income = monthTx
-      .filter(tx => tx.type === 'income')
+      .filter(tx => isIncomeTransaction(tx))
       .reduce((sum, tx) => sum + tx.amount, 0)
 
     const expenses = monthTx
-      .filter(tx => tx.type === 'expense')
+      .filter(tx => isSpendingTransaction(tx))
       .reduce((sum, tx) => sum + tx.amount, 0)
 
     buckets.push({

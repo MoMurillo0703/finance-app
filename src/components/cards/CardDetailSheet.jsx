@@ -17,6 +17,7 @@ import {
 import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
 import { adjustBankBalance, adjustCardBalance, bankDelta, cardDelta } from '../../lib/payments'
 import { CATEGORY_EMOJI, normalizeSpendingCategory } from '../../utils/reports'
+import { isSpendingTransaction } from '../../utils/transactionType'
 import CuotasSection from './CuotasSection'
 import CardEstimatorPanel from './CardEstimatorPanel'
 import PromoSection from './PromoSection'
@@ -123,12 +124,12 @@ export default function CardDetailSheet({
     const cycleStart = getBillingCycleStart(card.statement_date)
     const { data: cycleTransactions } = await supabase
       .from('transactions')
-      .select('amount, type')
+      .select('amount, type, category, is_transfer')
       .eq('credit_card_id', card.id)
       .gte('transaction_date', cycleStart)
 
     const newCharges = (cycleTransactions ?? [])
-      .filter(tx => tx.type === 'expense')
+      .filter(tx => isSpendingTransaction(tx))
       .reduce((sum, tx) => sum + tx.amount, 0)
 
     setStatementSnapshot({

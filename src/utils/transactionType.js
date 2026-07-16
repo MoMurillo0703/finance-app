@@ -1,12 +1,16 @@
 export function isTransferTransaction(tx) {
   if (!tx) return false
-  if (tx.is_transfer) return true
+  if (tx.is_transfer === true) return true
   const category = (tx.category || '').toLowerCase()
   return category === 'transfer'
 }
 
 export function isSpendingTransaction(tx) {
   return tx?.type === 'expense' && !isTransferTransaction(tx)
+}
+
+export function isIncomeTransaction(tx) {
+  return tx?.type === 'income' && !isTransferTransaction(tx)
 }
 
 export function txTypeLabel(type, t) {

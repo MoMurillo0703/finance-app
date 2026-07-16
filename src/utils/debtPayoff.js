@@ -1,5 +1,6 @@
 import { getEffectiveRate, getCardMinimumPayment, isIntroRateActive } from './creditCard'
 import { getMonthBounds, getRecentMonthKeys } from './reports'
+import { isSpendingTransaction, isIncomeTransaction } from './transactionType'
 
 export const PAYOFF_STRATEGIES = [
   {
@@ -123,7 +124,7 @@ export function averageMonthlyTotals(transactions = [], monthKeys = getRecentMon
     const { firstDay, lastDay } = getMonthBounds(y, m)
     return transactions
       .filter(tx =>
-        tx.type === 'income'
+        isIncomeTransaction(tx)
         && tx.transaction_date >= firstDay
         && tx.transaction_date <= lastDay,
       )
@@ -135,7 +136,7 @@ export function averageMonthlyTotals(transactions = [], monthKeys = getRecentMon
     const { firstDay, lastDay } = getMonthBounds(y, m)
     return transactions
       .filter(tx =>
-        tx.type === 'expense'
+        isSpendingTransaction(tx)
         && tx.transaction_date >= firstDay
         && tx.transaction_date <= lastDay,
       )

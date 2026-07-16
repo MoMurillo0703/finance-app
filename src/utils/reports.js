@@ -140,11 +140,11 @@ function amountsWithinTolerance(amounts, tolerance = 0.1) {
 export function detectRecurringCharges(transactions, monthKeys = []) {
   const expenses = monthKeys.length > 0
     ? transactions.filter(tx => {
-      if (tx.type !== 'expense') return false
+      if (!isSpendingTransaction(tx)) return false
       const monthKey = tx.transaction_date?.slice(0, 7)
       return monthKey && monthKeys.includes(monthKey)
     })
-    : transactions.filter(tx => tx.type === 'expense')
+    : transactions.filter(tx => isSpendingTransaction(tx))
 
   return detectRecurring(expenses).map(item => ({
     merchant: item.name.charAt(0).toUpperCase() + item.name.slice(1),

@@ -96,7 +96,7 @@ export default function DebtPayoffPlanner({ onClose, setHideNav }) {
           .order('statement_date', { ascending: false }),
         supabase
           .from('transactions')
-          .select('type, amount, transaction_date')
+          .select('type, amount, transaction_date, category, is_transfer')
           .eq('user_id', user.id)
           .gte('transaction_date', rangeStart)
           .lte('transaction_date', endBounds),

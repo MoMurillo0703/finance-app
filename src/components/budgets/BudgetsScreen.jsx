@@ -323,7 +323,7 @@ export default function BudgetsScreen({ onClose }) {
       const [txRes, budgetRes] = await Promise.all([
         supabase
           .from('transactions')
-          .select('category, amount, type, description')
+          .select('category, amount, type, description, is_transfer')
           .eq('user_id', user.id)
           .eq('type', 'expense')
           .gte('transaction_date', startOfMonth),

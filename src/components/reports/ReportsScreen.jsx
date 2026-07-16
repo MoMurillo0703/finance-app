@@ -33,7 +33,7 @@ import {
   isChargeAlreadyABill,
   formatRecurringDate,
 } from '../../utils/recurringDetector'
-import { isSpendingTransaction } from '../../utils/transactionType'
+import { isSpendingTransaction, isIncomeTransaction } from '../../utils/transactionType'
 import {
   LOAN_EMOJI,
   calculateLoanStats,
@@ -149,7 +149,7 @@ export default function ReportsScreen({ setHideNav, onSettings, showToast }) {
           .order('name'),
         supabase
           .from('transactions')
-          .select('type, amount, transaction_date')
+          .select('type, amount, transaction_date, category, is_transfer')
           .eq('user_id', user.id)
           .gte('transaction_date', trendStart)
           .order('transaction_date', { ascending: false }),
@@ -266,7 +266,7 @@ export default function ReportsScreen({ setHideNav, onSettings, showToast }) {
     .reduce((sum, tx) => sum + tx.amount, 0)
 
   const totalIncome = monthTransactions
-    .filter(tx => tx.type === 'income')
+    .filter(tx => isIncomeTransaction(tx))
     .reduce((sum, tx) => sum + tx.amount, 0)
 
   const netCashflow = totalIncome - totalSpent
@@ -294,7 +294,7 @@ export default function ReportsScreen({ setHideNav, onSettings, showToast }) {
     const bounds = getMonthBounds(y, m)
     return recurringTransactions
       .filter(tx =>
-        tx.type === 'income'
+        isIncomeTransaction(tx)
         && tx.transaction_date >= bounds.firstDay
         && tx.transaction_date <= bounds.lastDay,
       )

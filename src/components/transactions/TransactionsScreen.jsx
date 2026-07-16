@@ -15,7 +15,7 @@ import { PageHeader } from '../layout/PageHeader'
 import { formatMoney } from '../../utils/currency'
 import { formatDate } from '../../utils/date'
 import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
-import { txTypeLabel, txAmountClass, txAmountPrefix, isSpendingTransaction } from '../../utils/transactionType'
+import { txTypeLabel, txAmountClass, txAmountPrefix, isSpendingTransaction, isIncomeTransaction } from '../../utils/transactionType'
 import {
   filterTransactions,
   DEFAULT_ADVANCED_FILTERS,
@@ -80,7 +80,7 @@ function monthSummary(items) {
   let payments = 0
   for (const tx of items) {
     if (isSpendingTransaction(tx)) charges += tx.amount
-    else if (tx.type === 'income') payments += tx.amount
+    else if (isIncomeTransaction(tx)) payments += tx.amount
   }
   return { charges, payments, count: items.length }
 }

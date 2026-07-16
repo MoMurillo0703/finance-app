@@ -7,13 +7,15 @@ import { fetchBanks, getBankDropdownLabel } from '../../utils/bank'
 import { getCardApr, calculateMinimumPayment, DEFAULT_CARD_APR } from '../../utils/cards'
 import { adjustBankBalance, adjustCardBalance } from '../../lib/payments'
 import { getRecentMonthKeys } from '../../utils/reports'
+import { isSpendingTransaction, isIncomeTransaction } from '../../utils/transactionType'
 import { useCurrencyInput, currencyAmountPlaceholder } from '../../hooks/useCurrencyInput'
 
 function avgMonthlyTotal(transactions, type, monthKeys) {
   if (monthKeys.length === 0) return 0
+  const match = type === 'income' ? isIncomeTransaction : isSpendingTransaction
   const totals = monthKeys.map(key =>
     transactions
-      .filter(tx => tx.type === type && tx.transaction_date?.slice(0, 7) === key)
+      .filter(tx => match(tx) && tx.transaction_date?.slice(0, 7) === key)
       .reduce((sum, tx) => sum + tx.amount, 0),
   )
   return totals.reduce((sum, v) => sum + v, 0) / monthKeys.length
@@ -192,7 +194,7 @@ export default function PurchaseSimulator({ onClose, onSaved, prefillCardId }) {
         fetchStart
           ? supabase
             .from('transactions')
-            .select('type, amount, transaction_date')
+            .select('type, amount, transaction_date, category, is_transfer')
             .eq('user_id', user.id)
             .gte('transaction_date', fetchStart)
           : Promise.resolve({ data: [] }),

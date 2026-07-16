@@ -22,6 +22,7 @@ import { detectRecurring, getUntrackedRecurring } from '../../utils/recurringDet
 import { getSpendingByBudgetCategory, getBudgetCategoryLabel } from '../../utils/budgets'
 import { isBillPaidThisMonth, getBillDisplayAmount, getDueDaysThisWeek } from '../../utils/bills'
 import { BUDGET_CATEGORIES, CATEGORY_EMOJIS } from '../../utils/transactionCategories'
+import { isSpendingTransaction, isIncomeTransaction } from '../../utils/transactionType'
 import {
   getGreetingKey,
   getFirstName,
@@ -120,19 +121,19 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
           .gt('remaining_balance', 0),
         supabase
           .from('transactions')
-          .select('id, type, amount, description, transaction_date, category')
+          .select('id, type, amount, description, transaction_date, category, is_transfer')
           .eq('user_id', user.id)
           .gte('transaction_date', firstDay)
           .order('transaction_date', { ascending: false }),
         supabase
           .from('transactions')
-          .select('id, type, amount, description, transaction_date, category')
+          .select('id, type, amount, description, transaction_date, category, is_transfer')
           .eq('user_id', user.id)
           .order('transaction_date', { ascending: false })
           .limit(3),
         supabase
           .from('transactions')
-          .select('type, amount, description, transaction_date, category')
+          .select('type, amount, description, transaction_date, category, is_transfer')
           .eq('user_id', user.id)
           .gte('transaction_date', `${recurringStart}-01`)
           .lte('transaction_date', recurringLastDay),
@@ -215,11 +216,11 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
   }, [overlayOpen, setHideNav])
 
   const monthSpent = monthTransactions
-    .filter(tx => tx.type === 'expense')
+    .filter(tx => isSpendingTransaction(tx))
     .reduce((sum, tx) => sum + tx.amount, 0)
 
   const monthIncome = monthTransactions
-    .filter(tx => tx.type === 'income')
+    .filter(tx => isIncomeTransaction(tx))
     .reduce((sum, tx) => sum + tx.amount, 0)
 
   const dayOfMonth = now.getDate()
