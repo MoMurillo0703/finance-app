@@ -23,6 +23,15 @@ const VAULT_COLORS = [
   'bg-indigo-400',
 ]
 
+const INCOME_TYPES = [
+  { emoji: '💼', labelKey: 'incomeTypeCommission', value: 'commission' },
+  { emoji: '💵', labelKey: 'incomeTypeSalary', value: 'salary' },
+  { emoji: '🎯', labelKey: 'incomeTypeBonus', value: 'bonus' },
+  { emoji: '🔁', labelKey: 'incomeTypeRecurring', value: 'recurring' },
+  { emoji: '📦', labelKey: 'incomeTypeReimbursement', value: 'reimbursement' },
+  { emoji: '💰', labelKey: 'incomeTypeOther', value: 'other' },
+]
+
 function AllocationProgressBar({ vaults, vaultAllocations, payAmount, remaining, currency, t }) {
   const segments = useMemo(() => {
     if (remaining < 0 || payAmount <= 0) return []
@@ -152,19 +161,41 @@ function VaultAllocationRow({ vault, amount, onAmountChange, onMax, t, currency 
   )
 }
 
+function stripMissingIncomeColumns(row, errorMessage = '') {
+  let next = { ...row }
+  if (errorMessage.includes('source')) {
+    const { source: _s, ...rest } = next
+    next = rest
+  }
+  if (errorMessage.includes('payer')) {
+    const { payer: _p, ...rest } = next
+    next = rest
+  }
+  if (errorMessage.includes('income_type')) {
+    const { income_type: _i, ...rest } = next
+    next = rest
+  }
+  return next
+}
+
 export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefillBankId }) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const currency = getUserCurrency()
   const incomeAlreadyRecorded = prefillAmount != null && prefillAmount > 0
+  const vaultStep = 3
 
-  const [step, setStep] = useState(incomeAlreadyRecorded ? 2 : 1)
+  const [step, setStep] = useState(incomeAlreadyRecorded ? vaultStep : 1)
   const [payAmount, setPayAmount] = useState(incomeAlreadyRecorded ? prefillAmount : 0)
   const amountInput = useCurrencyInput(incomeAlreadyRecorded ? prefillAmount : '')
   const [bankId, setBankId] = useState(prefillBankId ?? '')
   const [banks, setBanks] = useState([])
   const [vaults, setVaults] = useState([])
   const [vaultAllocations, setVaultAllocations] = useState([])
+  const [incomeType, setIncomeType] = useState('salary')
+  const [payer, setPayer] = useState('')
+  const [note, setNote] = useState('')
+  const [recentPayers, setRecentPayers] = useState([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -178,6 +209,50 @@ export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefi
       }
     })
   }, [user.id, prefillBankId])
+
+  useEffect(() => {
+    if (incomeAlreadyRecorded) return
+
+    let active = true
+    ;(async () => {
+      let { data, error: fetchError } = await supabase
+        .from('transactions')
+        .select('payer, transaction_date, type')
+        .eq('user_id', user.id)
+        .eq('type', 'income')
+        .order('transaction_date', { ascending: false })
+        .limit(40)
+
+      if (fetchError?.message?.includes('payer')) {
+        ;({ data, error: fetchError } = await supabase
+          .from('transactions')
+          .select('description, transaction_date, type')
+          .eq('user_id', user.id)
+          .eq('type', 'income')
+          .order('transaction_date', { ascending: false })
+          .limit(40))
+        if (!active || fetchError) return
+        const fromDesc = [...new Set(
+          (data ?? [])
+            .map(tx => (tx.description || '').trim())
+            .filter(d => d && d.toLowerCase() !== 'paycheck' && d.toLowerCase() !== 'income'),
+        )].slice(0, 5)
+        setRecentPayers(fromDesc)
+        return
+      }
+
+      if (!active || fetchError) return
+
+      const payers = [...new Set(
+        (data ?? [])
+          .filter(tx => tx.payer?.trim())
+          .map(tx => tx.payer.trim()),
+      )].slice(0, 5)
+      setRecentPayers(payers)
+    })()
+
+    return () => { active = false }
+  }, [user.id, incomeAlreadyRecorded])
 
   const loadVaults = async () => {
     const { data } = await supabase
@@ -193,7 +268,7 @@ export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefi
   }
 
   useEffect(() => {
-    if (step === 2) loadVaults()
+    if (step === vaultStep) loadVaults()
   }, [step])
 
   const totalAllocated = useMemo(
@@ -223,6 +298,15 @@ export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefi
     setStep(2)
   }
 
+  const handleStep2Next = () => {
+    if (!incomeType) {
+      setError(t('selectIncomeType'))
+      return
+    }
+    setError('')
+    setStep(vaultStep)
+  }
+
   const handleSave = async () => {
     if (remaining < 0) return
 
@@ -230,22 +314,31 @@ export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefi
     setError('')
 
     const today = new Date().toISOString().split('T')[0]
+    const trimmedPayer = payer.trim()
+    const trimmedNote = note.trim()
+    const description = trimmedNote || trimmedPayer || t('paycheckDefaultDesc')
 
     if (!incomeAlreadyRecorded) {
       let incomeRow = {
         user_id: user.id,
         bank_id: bankId,
         type: 'income',
-        category: 'salary',
+        category: 'Income',
+        income_type: incomeType,
+        payer: trimmedPayer || null,
         amount: payAmount,
-        description: 'Paycheck',
+        description,
         transaction_date: today,
         source: 'manual',
       }
       let { error: txError } = await supabase.from('transactions').insert(incomeRow)
-      if (txError?.message?.includes('source')) {
-        const { source: _s, ...fallback } = incomeRow
-        ;({ error: txError } = await supabase.from('transactions').insert(fallback))
+      if (txError && (
+        txError.message.includes('source')
+        || txError.message.includes('payer')
+        || txError.message.includes('income_type')
+      )) {
+        incomeRow = stripMissingIncomeColumns(incomeRow, txError.message)
+        ;({ error: txError } = await supabase.from('transactions').insert(incomeRow))
       }
 
       if (txError) {
@@ -283,8 +376,10 @@ export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefi
       ? t('saveFullyAllocated')
       : t('saveKeepInChecking', { amount: formatMoney(remaining, currency) })
 
-  const stepTitle = [t('wizardIncome'), t('wizardVaults')][step - 1]
-  const totalSteps = 2
+  const stepTitles = [t('wizardIncome'), t('wizardIncomeDetails'), t('wizardVaults')]
+  const totalSteps = incomeAlreadyRecorded ? 1 : 3
+  const displayStep = incomeAlreadyRecorded ? 1 : step
+  const stepTitle = incomeAlreadyRecorded ? t('wizardVaults') : stepTitles[step - 1]
 
   return (
     <div className="fixed inset-0 z-[100]">
@@ -303,12 +398,12 @@ export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefi
         </div>
         <div className="flex-shrink-0 px-6 pb-4">
           <h2 className="text-lg font-bold text-gray-800 mb-1">{t('paydayWizard')}</h2>
-          <p className="text-xs text-gray-400">{step}/{totalSteps} · {stepTitle}</p>
+          <p className="text-xs text-gray-400">{displayStep}/{totalSteps} · {stepTitle}</p>
           <div className="flex gap-1 mt-4">
-            {[1, 2].map(s => (
+            {Array.from({ length: totalSteps }, (_, i) => i + 1).map(s => (
               <div
                 key={s}
-                className={`h-1 flex-1 rounded-full ${s <= step ? 'bg-amber-500' : 'bg-gray-200'}`}
+                className={`h-1 flex-1 rounded-full ${s <= displayStep ? 'bg-amber-500' : 'bg-gray-200'}`}
               />
             ))}
           </div>
@@ -316,7 +411,7 @@ export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefi
         <div className="flex-1 overflow-y-auto px-6 pb-10">
         {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
-        {step === 1 && (
+        {step === 1 && !incomeAlreadyRecorded && (
           <div className="space-y-4">
             <div>
               <label className="text-xs text-gray-400 mb-1 block">{t('paycheck')} ({currency})</label>
@@ -345,7 +440,78 @@ export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefi
           </div>
         )}
 
-        {step === 2 && (
+        {step === 2 && !incomeAlreadyRecorded && (
+          <div className="space-y-5">
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
+                {t('incomeType')}
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {INCOME_TYPES.map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setIncomeType(opt.value)}
+                    className={`py-3 rounded-xl text-xs flex flex-col items-center gap-1 border min-h-[44px] ${
+                      incomeType === opt.value
+                        ? 'bg-amber-500 text-white border-amber-500'
+                        : 'border-gray-200 text-gray-500'
+                    }`}
+                  >
+                    <span>{opt.emoji}</span>
+                    <span className="truncate w-full text-center px-0.5">{t(opt.labelKey)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
+                {t('incomePayer')}
+              </label>
+              {recentPayers.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {recentPayers.map(name => (
+                    <button
+                      key={name}
+                      type="button"
+                      onClick={() => setPayer(name)}
+                      className={`px-3 py-1.5 rounded-full text-xs border min-h-[36px] ${
+                        payer === name
+                          ? 'bg-amber-50 border-amber-400 text-amber-700'
+                          : 'border-gray-200 text-gray-500'
+                      }`}
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <input
+                type="text"
+                placeholder={t('incomePayerPlaceholder')}
+                value={payer}
+                onChange={e => setPayer(e.target.value)}
+                className="w-full px-4 py-3 rounded-2xl border border-gray-200 text-sm outline-none focus:border-purple-300"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
+                {t('incomeNote')}
+              </label>
+              <input
+                type="text"
+                placeholder={t('incomeNotePlaceholder')}
+                value={note}
+                onChange={e => setNote(e.target.value)}
+                className="w-full px-4 py-3 rounded-2xl border border-gray-200 text-sm outline-none focus:border-purple-300"
+              />
+            </div>
+          </div>
+        )}
+
+        {step === vaultStep && (
           <div>
             <div
               className={`sticky top-0 z-10 rounded-2xl px-4 py-3 mb-4 ${
@@ -429,7 +595,7 @@ export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefi
           ) : !incomeAlreadyRecorded ? (
             <button
               type="button"
-              onClick={() => setStep(1)}
+              onClick={() => setStep(step === vaultStep ? 2 : 1)}
               className="flex-1 py-3 rounded-xl border border-gray-200 text-sm text-gray-500"
             >
               {t('back')}
@@ -448,6 +614,14 @@ export default function PaydayWizard({ onClose, onComplete, prefillAmount, prefi
             <button
               type="button"
               onClick={handleStep1Next}
+              className="flex-1 py-3 rounded-xl bg-amber-500 text-white text-sm font-medium"
+            >
+              {t('next')}
+            </button>
+          ) : step === 2 ? (
+            <button
+              type="button"
+              onClick={handleStep2Next}
               className="flex-1 py-3 rounded-xl bg-amber-500 text-white text-sm font-medium"
             >
               {t('next')}

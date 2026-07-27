@@ -182,6 +182,7 @@ export default function TransactionsScreen({
         </p>
         <p className="text-xs text-gray-400 mt-0.5">
           {[
+            tx.payer?.trim(),
             !isFiltered && (getBankDropdownLabel(tx.banks) || tx.credit_cards?.name),
             formatDate(tx.transaction_date),
             getTransactionCategoryLabel(tx.category, t),
@@ -235,9 +236,11 @@ export default function TransactionsScreen({
 
     ;(async () => {
       const selectWithPairing =
-        'id, type, amount, description, category, transaction_date, bank_id, credit_card_id, vault_id, is_transfer, paired_transaction_id, transfer_direction, banks(name, nickname)'
+        'id, type, amount, description, category, transaction_date, bank_id, credit_card_id, vault_id, is_transfer, paired_transaction_id, transfer_direction, payer, income_type, banks(name, nickname)'
       const selectBasic =
         'id, type, amount, description, category, transaction_date, bank_id, credit_card_id, vault_id, is_transfer, banks(name, nickname)'
+      const selectWithPayer =
+        'id, type, amount, description, category, transaction_date, bank_id, credit_card_id, vault_id, is_transfer, paired_transaction_id, transfer_direction, banks(name, nickname)'
 
       const buildTxQuery = (select) => {
         let q = supabase
@@ -250,8 +253,22 @@ export default function TransactionsScreen({
         return q
       }
 
-      const [txResInitial, banksRes, cardsRes] = await Promise.all([
-        buildTxQuery(selectWithPairing),
+      let txRes = await buildTxQuery(selectWithPairing)
+      if (
+        txRes.error
+        && (txRes.error.message?.includes('payer') || txRes.error.message?.includes('income_type'))
+      ) {
+        txRes = await buildTxQuery(selectWithPayer)
+      }
+      if (
+        txRes.error
+        && (txRes.error.message?.includes('paired_transaction_id')
+          || txRes.error.message?.includes('transfer_direction'))
+      ) {
+        txRes = await buildTxQuery(selectBasic)
+      }
+
+      const [banksRes, cardsRes] = await Promise.all([
         fetchBanks(supabase, user.id, { orderByName: true }),
         supabase
           .from('credit_cards')
@@ -260,15 +277,6 @@ export default function TransactionsScreen({
           .eq('is_active', true)
           .order('name'),
       ])
-
-      let txRes = txResInitial
-      if (
-        txRes.error
-        && (txRes.error.message?.includes('paired_transaction_id')
-          || txRes.error.message?.includes('transfer_direction'))
-      ) {
-        txRes = await buildTxQuery(selectBasic)
-      }
 
       if (!active) return
 

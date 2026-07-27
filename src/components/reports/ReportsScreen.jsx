@@ -107,7 +107,7 @@ export default function ReportsScreen({ setHideNav, onSettings, showToast }) {
       setLoading(true)
 
       const [
-        monthRes,
+        monthResInitial,
         recurringRes,
         interestRes,
         cardsRes,
@@ -118,7 +118,7 @@ export default function ReportsScreen({ setHideNav, onSettings, showToast }) {
       ] = await Promise.all([
         supabase
           .from('transactions')
-          .select('id, type, amount, description, transaction_date, category, credit_card_id, is_transfer')
+          .select('id, type, amount, description, transaction_date, category, credit_card_id, is_transfer, payer, income_type')
           .eq('user_id', user.id)
           .gte('transaction_date', firstDay)
           .lte('transaction_date', lastDay)
@@ -165,6 +165,20 @@ export default function ReportsScreen({ setHideNav, onSettings, showToast }) {
           .eq('user_id', user.id)
           .eq('is_active', true),
       ])
+
+      let monthRes = monthResInitial
+      if (
+        monthRes.error
+        && (monthRes.error.message?.includes('payer') || monthRes.error.message?.includes('income_type'))
+      ) {
+        monthRes = await supabase
+          .from('transactions')
+          .select('id, type, amount, description, transaction_date, category, credit_card_id, is_transfer')
+          .eq('user_id', user.id)
+          .gte('transaction_date', firstDay)
+          .lte('transaction_date', lastDay)
+          .order('transaction_date', { ascending: false })
+      }
 
       if (!active) return
 
@@ -276,6 +290,22 @@ export default function ReportsScreen({ setHideNav, onSettings, showToast }) {
     : totalSpent
 
   const { breakdown } = summarizeByCategory(monthTransactions, t)
+
+  const incomeByPayer = useMemo(() => {
+    const totals = {}
+    for (const tx of monthTransactions) {
+      if (!isIncomeTransaction(tx)) continue
+      const key = (tx.payer || '').trim() || t('unknownPayer')
+      totals[key] = (totals[key] || 0) + Number(tx.amount || 0)
+    }
+    return Object.entries(totals)
+      .map(([payer, amount]) => ({
+        payer,
+        amount,
+        percentage: totalIncome > 0 ? (amount / totalIncome) * 100 : 0,
+      }))
+      .sort((a, b) => b.amount - a.amount)
+  }, [monthTransactions, totalIncome, t])
 
   const chartData = breakdown.map(row => ({
     ...row,
@@ -396,6 +426,37 @@ export default function ReportsScreen({ setHideNav, onSettings, showToast }) {
               <p className="text-xl font-bold text-purple-600">{formatMoney(projectedMonthEnd)}</p>
             </div>
           </div>
+
+          <section className={SECTION_CLASS}>
+            <SectionTitle>{t('incomeBySource')}</SectionTitle>
+            {incomeByPayer.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-6">{t('noIncomeMonth')}</p>
+            ) : (
+              <div className="space-y-4">
+                {incomeByPayer.map(row => (
+                  <div key={row.payer}>
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                      <span className="font-medium text-gray-700 truncate">
+                        💵 {row.payer}
+                      </span>
+                      <span className="font-semibold text-gray-800 shrink-0">
+                        {formatMoney(row.amount)}
+                        <span className="text-gray-400 font-normal ml-1.5">
+                          {row.percentage.toFixed(1)}%
+                        </span>
+                      </span>
+                    </div>
+                    <div className="mt-1.5 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-green-500"
+                        style={{ width: `${Math.min(row.percentage, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
 
           <section className={SECTION_CLASS}>
             <SectionTitle>{t('spendingByCategory')}</SectionTitle>
