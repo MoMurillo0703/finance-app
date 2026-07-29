@@ -84,7 +84,7 @@ export default function AddLoanModal({ onClose, onSaved }) {
       return
     }
 
-    if (dueDayNum) {
+    if (dueDayNum && balance > 0) {
       const { error: billError } = await supabase.from('bills').insert({
         user_id: user.id,
         name: `${name.trim()} - ${t('loanPayment')}`,

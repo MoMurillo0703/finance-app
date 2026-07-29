@@ -54,6 +54,8 @@ export function getBillingCycleStart(statementDay, asOf = new Date()) {
 
 export function calculateAutoBillMinimum(card) {
   const balance = Number(card?.current_balance) || 0
+  if (balance <= 0) return 0
+
   const effectiveRate = getEffectiveRate(card)
   const monthlyInterest = balance * (effectiveRate / 100 / 12)
   return Math.max(balance * 0.02, 25) + monthlyInterest
@@ -72,6 +74,25 @@ export function getLastStatementDate(statementDay, asOf = new Date()) {
 
 export function getCardMinimumPayment(card, statements = []) {
   const balance = Number(card?.current_balance) || 0
+  if (balance <= 0) {
+    return {
+      amount: 0,
+      confidence: 'none',
+      formula: 'zero_balance',
+      monthsOfData: statements.length,
+    }
+  }
+
+  const manual = card?.manual_minimum_payment
+  if (manual != null && !Number.isNaN(Number(manual)) && Number(manual) > 0) {
+    return {
+      amount: Number(manual),
+      confidence: 'manual',
+      formula: 'manual',
+      monthsOfData: statements.length,
+    }
+  }
+
   const rate = getEffectiveRate(card)
   const monthlyInterest = balance * (rate / 100 / 12)
 
@@ -110,7 +131,7 @@ export function getCardMinimumPayment(card, statements = []) {
 }
 
 export function getCardMinimumAmount(card, statements = []) {
-  return getCardMinimumPayment(card, statements).amount
+  return getCardMinimumPayment(card, statements).amount ?? 0
 }
 
 export async function syncAutoBillMinimum(supabaseClient, card, statements = []) {

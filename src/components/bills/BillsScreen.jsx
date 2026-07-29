@@ -15,6 +15,7 @@ import {
   getBillDisplayAmount,
   groupBillsByStatus,
   getCurrentBillingMonth,
+  shouldShowBill,
 } from '../../utils/bills'
 
 function BillCard({ bill, displayAmount, paid, isOverdue, isDueSoon, faded, cardId, selected, onEdit, onPay, onUndo, t }) {
@@ -101,6 +102,7 @@ export default function BillsScreen({ onBillPaid, onSettings }) {
   const { user } = useAuth()
   const [bills, setBills] = useState([])
   const [cards, setCards] = useState([])
+  const [loans, setLoans] = useState([])
   const [statementsMap, setStatementsMap] = useState({})
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
@@ -115,6 +117,16 @@ export default function BillsScreen({ onBillPaid, onSettings }) {
   const cardMap = useMemo(
     () => Object.fromEntries(cards.map(card => [card.id, card])),
     [cards],
+  )
+
+  const loanMap = useMemo(
+    () => Object.fromEntries(loans.map(loan => [loan.id, loan])),
+    [loans],
+  )
+
+  const visibleBills = useMemo(
+    () => bills.filter(bill => shouldShowBill(bill, cardMap, statementsMap, loanMap)),
+    [bills, cardMap, statementsMap, loanMap],
   )
 
   useEffect(() => {
@@ -163,7 +175,14 @@ export default function BillsScreen({ onBillPaid, onSettings }) {
         )
       }
 
-      const fetches = [...cardQueries]
+      const fetches = [
+        ...cardQueries,
+        supabase
+          .from('loans')
+          .select('id, current_balance, is_active')
+          .eq('user_id', user.id)
+          .eq('is_active', true),
+      ]
       if (autoCardIds.length > 0) {
         fetches.push(
           supabase
@@ -176,6 +195,7 @@ export default function BillsScreen({ onBillPaid, onSettings }) {
 
       const results = await Promise.all(fetches)
       const cardResults = results.slice(0, cardQueries.length)
+      const loansResult = results[cardQueries.length]
       const statementsResult = autoCardIds.length > 0 ? results[results.length - 1] : null
       const cardsById = new Map()
       for (const result of cardResults) {
@@ -194,6 +214,7 @@ export default function BillsScreen({ onBillPaid, onSettings }) {
 
       setBills(billsList)
       setCards([...cardsById.values()])
+      setLoans(loansResult.data ?? [])
       setStatementsMap(stmtsByCard)
       setLoading(false)
     })()
@@ -201,31 +222,31 @@ export default function BillsScreen({ onBillPaid, onSettings }) {
     return () => { active = false }
   }, [user.id, refreshKey])
 
-  const grouped = useMemo(() => groupBillsByStatus(bills), [bills])
+  const grouped = useMemo(() => groupBillsByStatus(visibleBills), [visibleBills])
 
   const summary = useMemo(() => {
     let totalDue = 0
     let totalPaid = 0
 
-    for (const bill of bills) {
-      const amount = getBillDisplayAmount(bill, cardMap, statementsMap)
+    for (const bill of visibleBills) {
+      const amount = getBillDisplayAmount(bill, cardMap, statementsMap, loanMap)
       totalDue += amount
       if (isBillPaidThisMonth(bill)) totalPaid += amount
     }
 
     return { totalDue, totalPaid }
-  }, [bills, cardMap, statementsMap])
+  }, [visibleBills, cardMap, statementsMap, loanMap])
 
   const dayBills = useMemo(() => {
     if (selectedDay == null) return []
-    return bills
+    return visibleBills
       .filter(b => b.due_day === selectedDay)
       .map(bill => ({
         ...bill,
-        displayAmount: getBillDisplayAmount(bill, cardMap, statementsMap),
+        displayAmount: getBillDisplayAmount(bill, cardMap, statementsMap, loanMap),
         is_paid: isBillPaidThisMonth(bill),
       }))
-  }, [bills, selectedDay, cardMap, statementsMap])
+  }, [visibleBills, selectedDay, cardMap, statementsMap, loanMap])
 
   useEffect(() => {
     if (selectedDay == null) return
@@ -294,7 +315,7 @@ export default function BillsScreen({ onBillPaid, onSettings }) {
 
   const renderCard = (bill, seenDays) => {
     const paid = isBillPaidThisMonth(bill)
-    const displayAmount = getBillDisplayAmount(bill, cardMap, statementsMap)
+    const displayAmount = getBillDisplayAmount(bill, cardMap, statementsMap, loanMap)
     const isOverdue = !paid && bill.due_day < todayDate
     const isDueSoon = !paid && dueSoonDays.has(bill.due_day)
     const isSelected = selectedDay != null && bill.due_day === selectedDay
@@ -333,7 +354,7 @@ export default function BillsScreen({ onBillPaid, onSettings }) {
 
       {loading ? (
         <p className="text-gray-400 text-xs text-center py-10">{t('loading')}</p>
-      ) : bills.length === 0 ? (
+      ) : visibleBills.length === 0 ? (
         <div className="text-center py-12 text-gray-400 px-5">
           <p className="text-4xl mb-3">🎉</p>
           <p className="font-medium text-gray-600">{t('noBills')}</p>
@@ -349,7 +370,7 @@ export default function BillsScreen({ onBillPaid, onSettings }) {
       ) : (
         <div className="pt-4">
           <BillsCalendar
-            bills={bills}
+            bills={visibleBills}
             language={i18n.language}
             selectedDay={selectedDay}
             onSelectDay={setSelectedDay}
@@ -443,6 +464,7 @@ export default function BillsScreen({ onBillPaid, onSettings }) {
           bill={payingBill}
           cardMap={cardMap}
           statementsMap={statementsMap}
+          loanMap={loanMap}
           onClose={() => setPayingBill(null)}
           onPaid={handleBillPaid}
         />

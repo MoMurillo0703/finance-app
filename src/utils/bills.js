@@ -27,20 +27,28 @@ export function isBillPaidThisMonth(bill) {
   return false
 }
 
-export function getBillDisplayAmount(bill, cardMap = {}, statementsMap = {}) {
+export function getBillDisplayAmount(bill, cardMap = {}, statementsMap = {}, loanMap = {}) {
   if (bill.loan_id) {
+    const loan = loanMap[bill.loan_id]
+    if (loan != null && (Number(loan.current_balance) || 0) <= 0) return 0
     return Number(bill.amount) || 0
   }
 
   if (bill.credit_card_id && (bill.is_auto_card_bill || Number(bill.amount) === 0)) {
     const card = cardMap[bill.credit_card_id]
-    if (card) {
-      const statements = statementsMap[bill.credit_card_id] || []
-      return getCardMinimumAmount(card, statements)
-    }
+    if (!card || (Number(card.current_balance) || 0) <= 0) return 0
+    const statements = statementsMap[bill.credit_card_id] || []
+    return getCardMinimumAmount(card, statements)
   }
 
   return Number(bill.amount) || 0
+}
+
+export function shouldShowBill(bill, cardMap = {}, statementsMap = {}, loanMap = {}) {
+  if (bill.loan_id || (bill.credit_card_id && bill.is_auto_card_bill)) {
+    return getBillDisplayAmount(bill, cardMap, statementsMap, loanMap) > 0
+  }
+  return true
 }
 
 export function getDueDaysThisWeek(asOf = new Date()) {

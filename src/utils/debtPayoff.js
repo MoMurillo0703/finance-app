@@ -46,12 +46,7 @@ function soonestPromo(promos = []) {
 }
 
 function resolveCardMinimum(card, statements = []) {
-  const { amount: computed } = getCardMinimumPayment(card, statements)
-  const manual = card?.manual_minimum_payment
-  if (manual != null && !Number.isNaN(Number(manual))) {
-    return Math.max(computed, Number(manual))
-  }
-  return computed
+  return getCardMinimumPayment(card, statements).amount ?? 0
 }
 
 export function buildDebtList({

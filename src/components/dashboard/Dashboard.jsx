@@ -20,7 +20,7 @@ import { fetchBanks, isCheckingBank } from '../../utils/bank'
 import { getMonthBounds, getRecentMonthKeys } from '../../utils/reports'
 import { detectRecurring, getUntrackedRecurring } from '../../utils/recurringDetector'
 import { getSpendingByBudgetCategory, getBudgetCategoryLabel } from '../../utils/budgets'
-import { isBillPaidThisMonth, getBillDisplayAmount, getDueDaysThisWeek } from '../../utils/bills'
+import { isBillPaidThisMonth, getBillDisplayAmount, shouldShowBill, getDueDaysThisWeek } from '../../utils/bills'
 import { BUDGET_CATEGORIES, CATEGORY_EMOJIS } from '../../utils/transactionCategories'
 import { isSpendingTransaction, isIncomeTransaction } from '../../utils/transactionType'
 import {
@@ -162,6 +162,11 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
     [creditCards],
   )
 
+  const loanMap = useMemo(
+    () => Object.fromEntries(loans.map(loan => [loan.id, loan])),
+    [loans],
+  )
+
   const checkingBalance = useMemo(
     () => banks
       .filter(isCheckingBank)
@@ -185,9 +190,10 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
       const dueDays = getDueDaysThisWeek()
       return bills
         .filter(b => dueDays.includes(Number(b.due_day)) && !isBillPaidThisMonth(b))
-        .reduce((sum, b) => sum + getBillDisplayAmount(b, cardMap), 0)
+        .filter(b => shouldShowBill(b, cardMap, {}, loanMap))
+        .reduce((sum, b) => sum + getBillDisplayAmount(b, cardMap, {}, loanMap), 0)
     },
-    [bills, cardMap],
+    [bills, cardMap, loanMap],
   )
 
   const safeToSpend = checkingBalance - protectedAmount - upcomingBillsThisWeek

@@ -8,11 +8,11 @@ import { getCurrentBillingMonth, getBillDisplayAmount } from '../../utils/bills'
 import { formatMoney, getUserCurrency } from '../../utils/currency'
 import { useCurrencyInput, currencyAmountPlaceholder } from '../../hooks/useCurrencyInput'
 
-export default function PayBillModal({ bill, cardMap, statementsMap = {}, onClose, onPaid }) {
+export default function PayBillModal({ bill, cardMap, statementsMap = {}, loanMap = {}, onClose, onPaid }) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const currency = getUserCurrency()
-  const defaultAmount = getBillDisplayAmount(bill, cardMap, statementsMap)
+  const defaultAmount = getBillDisplayAmount(bill, cardMap, statementsMap, loanMap)
   const amountInput = useCurrencyInput(defaultAmount)
   const [paymentSource, setPaymentSource] = useState('bank')
   const [bankId, setBankId] = useState('')

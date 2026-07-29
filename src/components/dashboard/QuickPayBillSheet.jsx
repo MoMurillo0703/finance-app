@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { adjustBankBalance, bankDelta } from '../../lib/payments'
 import { fetchBanks, getBankDropdownLabel } from '../../utils/bank'
-import { isBillPaidThisMonth, getCurrentBillingMonth, getBillDisplayAmount } from '../../utils/bills'
+import { isBillPaidThisMonth, getCurrentBillingMonth, getBillDisplayAmount, shouldShowBill } from '../../utils/bills'
 import { formatMoney } from '../../utils/currency'
 
 export default function QuickPayBillSheet({ onClose, onPaid }) {
@@ -13,6 +13,7 @@ export default function QuickPayBillSheet({ onClose, onPaid }) {
   const [step, setStep] = useState(1)
   const [bills, setBills] = useState([])
   const [cards, setCards] = useState([])
+  const [loans, setLoans] = useState([])
   const [statementsMap, setStatementsMap] = useState({})
   const [selectedBill, setSelectedBill] = useState(null)
   const [bankId, setBankId] = useState('')
@@ -25,7 +26,7 @@ export default function QuickPayBillSheet({ onClose, onPaid }) {
     let active = true
 
     ;(async () => {
-      const [billsRes, banksRes, cardsRes, statementsRes] = await Promise.all([
+      const [billsRes, banksRes, cardsRes, loansRes, statementsRes] = await Promise.all([
         supabase
           .from('bills')
           .select('*')
@@ -39,6 +40,11 @@ export default function QuickPayBillSheet({ onClose, onPaid }) {
           .eq('user_id', user.id)
           .eq('is_active', true),
         supabase
+          .from('loans')
+          .select('id, current_balance, is_active')
+          .eq('user_id', user.id)
+          .eq('is_active', true),
+        supabase
           .from('card_statements')
           .select('*')
           .eq('user_id', user.id)
@@ -47,7 +53,8 @@ export default function QuickPayBillSheet({ onClose, onPaid }) {
 
       if (!active) return
 
-      const cardMap = Object.fromEntries((cardsRes.data ?? []).map(c => [c.id, c]))
+      const cardMapLocal = Object.fromEntries((cardsRes.data ?? []).map(c => [c.id, c]))
+      const loanMapLocal = Object.fromEntries((loansRes.data ?? []).map(l => [l.id, l]))
       const stmts = (statementsRes.data ?? []).reduce((acc, row) => {
         if (!acc[row.credit_card_id]) acc[row.credit_card_id] = []
         if (acc[row.credit_card_id].length < 12) acc[row.credit_card_id].push(row)
@@ -56,13 +63,15 @@ export default function QuickPayBillSheet({ onClose, onPaid }) {
 
       const unpaid = (billsRes.data ?? [])
         .filter(b => !isBillPaidThisMonth(b))
+        .filter(b => shouldShowBill(b, cardMapLocal, stmts, loanMapLocal))
         .map(b => ({
           ...b,
-          displayAmount: getBillDisplayAmount(b, cardMap, stmts),
+          displayAmount: getBillDisplayAmount(b, cardMapLocal, stmts, loanMapLocal),
         }))
 
       setBills(unpaid)
       setCards(cardsRes.data ?? [])
+      setLoans(loansRes.data ?? [])
       setStatementsMap(stmts)
       setBanks(banksRes.data ?? [])
       if (banksRes.data?.length) setBankId(banksRes.data[0].id)
@@ -73,6 +82,7 @@ export default function QuickPayBillSheet({ onClose, onPaid }) {
   }, [user.id])
 
   const cardMap = Object.fromEntries(cards.map(c => [c.id, c]))
+  const loanMap = Object.fromEntries(loans.map(l => [l.id, l]))
 
   const handlePay = async () => {
     if (!selectedBill || !bankId) return
@@ -163,7 +173,7 @@ export default function QuickPayBillSheet({ onClose, onPaid }) {
         ) : (
           <div className="space-y-2 mb-4">
             {bills.map(bill => {
-              const amount = bill.displayAmount ?? getBillDisplayAmount(bill, cardMap, statementsMap)
+              const amount = bill.displayAmount ?? getBillDisplayAmount(bill, cardMap, statementsMap, loanMap)
               const isOverdue = Number(bill.due_day) < new Date().getDate()
               return (
                 <button

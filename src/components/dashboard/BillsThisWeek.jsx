@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import PayBillModal from '../bills/PayBillModal'
 import { formatMoney } from '../../utils/currency'
-import { isBillPaidThisMonth, getBillDisplayAmount } from '../../utils/bills'
+import { isBillPaidThisMonth, getBillDisplayAmount, shouldShowBill } from '../../utils/bills'
 
 const getDueDaysThisWeek = () => {
   const now = new Date()
@@ -35,6 +35,7 @@ export default function BillsThisWeek({ refreshKey }) {
   const { user } = useAuth()
   const [bills, setBills] = useState([])
   const [cards, setCards] = useState([])
+  const [loans, setLoans] = useState([])
   const [loading, setLoading] = useState(true)
   const [payingBill, setPayingBill] = useState(null)
 
@@ -45,11 +46,16 @@ export default function BillsThisWeek({ refreshKey }) {
     [cards],
   )
 
+  const loanMap = useMemo(
+    () => Object.fromEntries(loans.map(loan => [loan.id, loan])),
+    [loans],
+  )
+
   useEffect(() => {
     let active = true
 
     ;(async () => {
-      const [billsRes, cardsRes] = await Promise.all([
+      const [billsRes, cardsRes, loansRes] = await Promise.all([
         supabase
           .from('bills')
           .select('*')
@@ -61,11 +67,21 @@ export default function BillsThisWeek({ refreshKey }) {
           .select('*')
           .eq('user_id', user.id)
           .eq('is_active', true),
+        supabase
+          .from('loans')
+          .select('id, current_balance, is_active')
+          .eq('user_id', user.id)
+          .eq('is_active', true),
       ])
 
       if (!active) return
-      setBills((billsRes.data ?? []).filter(isBillDueThisWeek))
+      setBills(
+        (billsRes.data ?? [])
+          .filter(isBillDueThisWeek)
+          .filter(b => shouldShowBill(b, Object.fromEntries((cardsRes.data ?? []).map(c => [c.id, c])), {}, Object.fromEntries((loansRes.data ?? []).map(l => [l.id, l])))),
+      )
       setCards(cardsRes.data ?? [])
+      setLoans(loansRes.data ?? [])
       setLoading(false)
     })()
 
@@ -104,7 +120,7 @@ export default function BillsThisWeek({ refreshKey }) {
         <div className="flex gap-3 overflow-x-auto pb-1">
           {bills.map(bill => {
             const paid = isBillPaidThisMonth(bill)
-            const displayAmount = getBillDisplayAmount(bill, cardMap)
+            const displayAmount = getBillDisplayAmount(bill, cardMap, {}, loanMap)
             return (
               <div
                 key={bill.id}
