@@ -1,7 +1,7 @@
 import { Settings } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-export function PageHeader({ title, onSettings, light = false }) {
+export function PageHeader({ title, onSettings, light = false, actions = null }) {
   const { t } = useTranslation()
 
   return (
@@ -16,18 +16,21 @@ export function PageHeader({ title, onSettings, light = false }) {
       ) : (
         <div />
       )}
-      <button
-        type="button"
-        onClick={onSettings}
-        aria-label={t('settings')}
-        className="min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center"
-        style={{
-          backgroundColor: light ? 'rgba(255,255,255,0.25)' : '#F5F3FF',
-          backdropFilter: light ? 'blur(8px)' : 'none',
-        }}
-      >
-        <Settings size={18} className={light ? 'text-white' : 'text-gray-600'} />
-      </button>
+      <div className="flex items-center gap-2">
+        {actions}
+        <button
+          type="button"
+          onClick={onSettings}
+          aria-label={t('settings')}
+          className="min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center"
+          style={{
+            backgroundColor: light ? 'rgba(255,255,255,0.25)' : '#F5F3FF',
+            backdropFilter: light ? 'blur(8px)' : 'none',
+          }}
+        >
+          <Settings size={18} className={light ? 'text-white' : 'text-gray-600'} />
+        </button>
+      </div>
     </div>
   )
 }

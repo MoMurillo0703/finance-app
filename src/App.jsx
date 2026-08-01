@@ -174,6 +174,7 @@ function AppContent() {
             onAccountSaved={bumpDashboard}
             setHideNav={setHideNav}
             onSettings={openSettings}
+            showToast={showToast}
             cardDetailRequest={cardDetailRequest}
             onCardDetailRequestHandled={() => setCardDetailRequest(null)}
           />

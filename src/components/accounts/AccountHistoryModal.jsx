@@ -28,7 +28,7 @@ function formatMonthLabel(monthKey, language) {
   })
 }
 
-export default function AccountHistoryModal({ bank, onClose }) {
+export default function AccountHistoryModal({ bank, onClose, onTransferFrom, canTransfer = false }) {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const [transactions, setTransactions] = useState([])
@@ -134,11 +134,21 @@ export default function AccountHistoryModal({ bank, onClose }) {
           )}
         </div>
 
-        <div className="px-5 pb-6 pt-2 shrink-0">
+        <div className="px-5 pb-6 pt-2 shrink-0 space-y-2">
+          {canTransfer && (
+            <button
+              type="button"
+              onClick={onTransferFrom}
+              className="w-full py-3 rounded-xl text-sm font-medium min-h-[44px]"
+              style={{ backgroundColor: '#F5F3FF', color: '#7C3AED' }}
+            >
+              {t('transferFromThisAccount')}
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}
-            className="w-full py-3 rounded-xl border border-gray-200 text-sm text-gray-500 bg-white"
+            className="w-full py-3 rounded-xl border border-gray-200 text-sm text-gray-500 bg-white min-h-[44px]"
           >
             {t('close')}
           </button>

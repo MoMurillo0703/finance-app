@@ -12,6 +12,7 @@ import EditBankModal from '../settings/EditBankModal'
 import EditCardModal from '../cards/EditCardModal'
 import CardDetailSheet from '../cards/CardDetailSheet'
 import AccountHistoryModal from './AccountHistoryModal'
+import TransferSheet from './TransferSheet'
 import LoansSection from '../loans/LoansSection'
 import AddLoanModal from '../loans/AddLoanModal'
 import EditLoanModal from '../loans/EditLoanModal'
@@ -23,6 +24,7 @@ export default function AccountsScreen({
   refreshKey = 0,
   setHideNav,
   onSettings,
+  showToast,
   cardDetailRequest,
   onCardDetailRequestHandled,
 }) {
@@ -36,6 +38,8 @@ export default function AccountsScreen({
   const [showAddBank, setShowAddBank] = useState(false)
   const [showAddCard, setShowAddCard] = useState(false)
   const [showAddLoan, setShowAddLoan] = useState(false)
+  const [showTransfer, setShowTransfer] = useState(false)
+  const [transferFromBank, setTransferFromBank] = useState(null)
   const [editingBank, setEditingBank] = useState(null)
   const [editingCard, setEditingCard] = useState(null)
   const [editingLoan, setEditingLoan] = useState(null)
@@ -80,6 +84,7 @@ export default function AccountsScreen({
     showAddBank ||
     showAddCard ||
     showAddLoan ||
+    showTransfer ||
     !!editingBank ||
     !!editingCard ||
     !!editingLoan ||
@@ -113,9 +118,37 @@ export default function AccountsScreen({
     onAccountSaved?.()
   }
 
+  const openTransfer = (fromBank = null) => {
+    setTransferFromBank(fromBank)
+    setShowTransfer(true)
+  }
+
+  const handleTransferComplete = () => {
+    setShowTransfer(false)
+    setTransferFromBank(null)
+    setHistoryBank(null)
+    setDataRefreshKey(k => k + 1)
+    onAccountSaved?.()
+  }
+
   return (
     <div className="bg-lala-50 min-h-full">
-      <PageHeader title={t('accounts')} onSettings={onSettings} />
+      <PageHeader
+        title={t('accounts')}
+        onSettings={onSettings}
+        actions={
+          banks.filter(b => b.is_active !== false).length >= 2 ? (
+            <button
+              type="button"
+              onClick={() => openTransfer()}
+              className="text-sm px-4 py-2 rounded-xl font-medium min-h-[44px]"
+              style={{ backgroundColor: '#F5F3FF', color: '#7C3AED' }}
+            >
+              {t('transferAction')}
+            </button>
+          ) : null
+        }
+      />
       <div className="px-4 py-4 pb-24 space-y-6">
         <button
           type="button"
@@ -369,6 +402,24 @@ export default function AccountsScreen({
         <AccountHistoryModal
           bank={historyBank}
           onClose={() => setHistoryBank(null)}
+          onTransferFrom={() => {
+            const bank = historyBank
+            setHistoryBank(null)
+            openTransfer(bank)
+          }}
+          canTransfer={banks.filter(b => b.is_active !== false && b.id !== historyBank.id).length > 0}
+        />
+      )}
+
+      {showTransfer && (
+        <TransferSheet
+          initialFromBank={transferFromBank}
+          onClose={() => {
+            setShowTransfer(false)
+            setTransferFromBank(null)
+          }}
+          onComplete={handleTransferComplete}
+          showToast={showToast}
         />
       )}
 
