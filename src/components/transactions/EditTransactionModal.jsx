@@ -199,7 +199,7 @@ export default function EditTransactionModal({ transaction, onClose, onSaved, sh
     if (!amountInput.raw || amountInput.numericValue <= 0) { setError(t('invalidAmount')); return }
     if (!category) { setError(t('selectCategory')); return }
 
-    const isCardExpense = type === 'expense' && paymentMethod === 'card'
+    const isCardExpense = type === 'expense' && paymentMethod === 'card' && !isTransfer
 
     if (isCardExpense) {
       if (!creditCardId) { setError(t('selectCard')); return }
@@ -215,11 +215,15 @@ export default function EditTransactionModal({ transaction, onClose, onSaved, sh
     const oldType = transaction.type
     const oldBankId = transaction.bank_id
     const oldCardId = transaction.credit_card_id
-    const newVaultId = type === 'expense' && vaultId ? vaultId : null
+    const newVaultId = type === 'expense' && !isTransfer && vaultId ? vaultId : null
     const oldVaultId = transaction.vault_id
 
-    const saveCategory = category === 'income' ? 'salary' : category
-    const saveIsTransfer = category === 'transfer'
+    const saveIsTransfer = isTransfer || (category || '').toLowerCase() === 'transfer'
+    const saveCategory = saveIsTransfer
+      ? 'Transfer'
+      : category === 'income'
+        ? 'salary'
+        : category
 
     let updatePayload = {
       bank_id: isCardExpense ? null : bankId,
@@ -311,6 +315,8 @@ export default function EditTransactionModal({ transaction, onClose, onSaved, sh
       if (applyVaultError) { setError(applyVaultError.message); setSaving(false); return }
     }
 
+    setSaving(false)
+    showToast?.(t('transactionUpdated'))
     onSaved()
   }
 
@@ -319,6 +325,13 @@ export default function EditTransactionModal({ transaction, onClose, onSaved, sh
     setError('')
 
     const txAmount = Number(transaction.amount)
+
+    if (transaction.paired_transaction_id) {
+      await unpairTransfer(supabase, {
+        id: transaction.id,
+        paired_transaction_id: transaction.paired_transaction_id,
+      })
+    }
 
     if (transaction.credit_card_id) {
       const cardError = await adjustCardBalance(
@@ -331,7 +344,7 @@ export default function EditTransactionModal({ transaction, onClose, onSaved, sh
         .from('cuotas')
         .update({ is_active: false })
         .eq('transaction_id', transaction.id)
-    } else {
+    } else if (transaction.bank_id) {
       const bankError = await adjustBankBalance(
         transaction.bank_id,
         -bankDelta(transaction.type, txAmount),
@@ -355,14 +368,24 @@ export default function EditTransactionModal({ transaction, onClose, onSaved, sh
       return
     }
 
+    setDeleting(false)
+    showToast?.(t('transactionDeleted'))
     onSaved()
   }
 
-  const handleTypeChange = (nextType) => {
-    setType(nextType)
+  const handleTypeOption = (opt) => {
+    if (opt === 'transfer') {
+      setType('expense')
+      setIsTransfer(true)
+      setCategory('transfer')
+      setPaymentMethod('bank')
+      setVaultId('')
+      return
+    }
+    setType(opt)
     setIsTransfer(false)
-    setCategory(nextType === 'income' ? 'salary' : 'other')
-    if (nextType === 'income') {
+    setCategory(opt === 'income' ? 'salary' : 'other')
+    if (opt === 'income') {
       setVaultId('')
       setPaymentMethod('bank')
     }
@@ -379,14 +402,27 @@ export default function EditTransactionModal({ transaction, onClose, onSaved, sh
     if (key === 'transfer') {
       setIsTransfer(true)
       if (type === 'income') setType('expense')
+      setPaymentMethod('bank')
     } else {
       setIsTransfer(false)
     }
   }
 
-  const categoryOptions = type === 'income'
+  const categoryOptions = type === 'income' && !isTransfer
     ? INCOME_CATEGORIES
     : EDIT_EXPENSE_CATEGORIES
+
+  const typeOptions = [
+    { label: t('typeExpense'), value: 'expense', color: '#EF4444' },
+    { label: t('typeIncome'), value: 'income', color: '#16A34A' },
+    { label: t('typeTransfer'), value: 'transfer', color: '#7C3AED' },
+  ]
+
+  const isTypeSelected = (opt) => {
+    if (opt === 'transfer') return isTransfer
+    if (opt === 'expense') return type === 'expense' && !isTransfer
+    return type === 'income' && !isTransfer
+  }
 
   return (
     <div className="fixed inset-0 z-[110] flex items-end justify-center">
@@ -459,25 +495,25 @@ export default function EditTransactionModal({ transaction, onClose, onSaved, sh
 
           <div>
             <label className="text-xs text-gray-400 mb-1 block">{t('type')}</label>
-            <div className="grid grid-cols-2 gap-2 mt-1">
-              <button
-                type="button"
-                onClick={() => handleTypeChange('expense')}
-                className={`py-2 rounded-xl text-sm border ${type === 'expense' ? 'bg-red-500 text-white border-red-500' : 'border-gray-200 text-gray-500'}`}
-              >
-                {t('expense')}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleTypeChange('income')}
-                className={`py-2 rounded-xl text-sm border ${type === 'income' ? 'bg-green-500 text-white border-green-500' : 'border-gray-200 text-gray-500'}`}
-              >
-                {t('income')}
-              </button>
+            <div className="flex gap-2 mt-1">
+              {typeOptions.map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => handleTypeOption(opt.value)}
+                  className="flex-1 py-3 rounded-2xl text-sm font-semibold transition-all min-h-[44px]"
+                  style={{
+                    backgroundColor: isTypeSelected(opt.value) ? opt.color : '#F9FAFB',
+                    color: isTypeSelected(opt.value) ? 'white' : '#6B7280',
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
           </div>
 
-          {type === 'expense' && (
+          {type === 'expense' && !isTransfer && (
             <div>
               <label className="text-xs text-gray-400 mb-1 block">{t('assignVault')}</label>
               <select
@@ -493,7 +529,7 @@ export default function EditTransactionModal({ transaction, onClose, onSaved, sh
             </div>
           )}
 
-          {type === 'expense' && (
+          {type === 'expense' && !isTransfer && (
             <div>
               <label className="text-xs text-gray-400 mb-1 block">{t('paymentMethod')}</label>
               <div className="flex gap-2">
@@ -523,7 +559,7 @@ export default function EditTransactionModal({ transaction, onClose, onSaved, sh
             </div>
           )}
 
-          {type === 'expense' && paymentMethod === 'card' ? (
+          {type === 'expense' && paymentMethod === 'card' && !isTransfer ? (
             <div>
               <label className="text-xs text-gray-400 mb-1 block">{t('creditCard')}</label>
               <select

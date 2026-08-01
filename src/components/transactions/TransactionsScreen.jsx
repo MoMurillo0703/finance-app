@@ -7,6 +7,7 @@ import AddTransactionModal from './AddTransactionModal'
 import EditTransactionModal from './EditTransactionModal'
 import RecategorizeTransactionSheet from './RecategorizeTransactionSheet'
 import ImportCSVSheet from './ImportCSVSheet'
+import TransferSheet from '../accounts/TransferSheet'
 import { useDevice } from '../../hooks/useDevice'
 import PaydayWizard from '../payday/PaydayWizard'
 import FilterSheet from './FilterSheet'
@@ -106,6 +107,7 @@ export default function TransactionsScreen({
   const [creditCards, setCreditCards] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
+  const [showTransfer, setShowTransfer] = useState(false)
   const [recategorizeTransaction, setRecategorizeTransaction] = useState(null)
   const [editingTransaction, setEditingTransaction] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -145,6 +147,7 @@ export default function TransactionsScreen({
 
   const overlayOpen =
     showAdd ||
+    showTransfer ||
     showImport ||
     showFilters ||
     !!editingTransaction ||
@@ -331,7 +334,7 @@ export default function TransactionsScreen({
           <p className="text-xs text-gray-400 mb-2">{filterBankName} · {t('accountActivity')}</p>
         )}
         {!isFiltered && (
-          <div className="flex justify-end gap-3 items-center mb-1">
+          <div className="flex justify-end gap-2 items-center mb-1">
             {isWeb && (
               <button
                 type="button"
@@ -342,12 +345,23 @@ export default function TransactionsScreen({
                 {t('importCsv')}
               </button>
             )}
+            {banks.filter(b => b.is_active !== false).length >= 2 && (
+              <button
+                type="button"
+                onClick={() => setShowTransfer(true)}
+                className="text-sm px-4 py-2 rounded-xl font-medium min-h-[44px]"
+                style={{ backgroundColor: '#F5F3FF', color: '#7C3AED' }}
+              >
+                {t('transferAction')}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setShowAdd(true)}
-              className="text-xs text-purple-600 font-medium"
+              className="text-sm px-4 py-2 rounded-xl font-medium text-white min-h-[44px]"
+              style={{ backgroundColor: '#7C3AED' }}
             >
-              {t('addTransaction')}
+              + {t('newShort')}
             </button>
           </div>
         )}
@@ -522,6 +536,17 @@ export default function TransactionsScreen({
           onClose={() => setShowAdd(false)}
           onSaved={handleTransactionSaved}
           onOpenWizard={handleOpenWizard}
+        />
+      )}
+
+      {showTransfer && (
+        <TransferSheet
+          onClose={() => setShowTransfer(false)}
+          onComplete={() => {
+            setShowTransfer(false)
+            handleTransactionSaved()
+          }}
+          showToast={showToast}
         />
       )}
 

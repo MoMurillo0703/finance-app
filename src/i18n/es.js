@@ -33,6 +33,12 @@ export default {
       // Transactions
       transactions: "Transacciones",
       addTransaction: "Nueva transacción",
+      newShort: "Nueva",
+      transactionUpdated: "Transacción actualizada ✓",
+      transactionDeleted: "Transacción eliminada ✓",
+      typeExpense: "↓ Gasto",
+      typeIncome: "↑ Ingreso",
+      typeTransfer: "↔ Transferencia",
       editTransaction: "Editar transacción",
       deleteTransaction: "Eliminar transacción",
       amount: "Monto",
