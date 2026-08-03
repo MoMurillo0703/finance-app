@@ -1,13 +1,23 @@
 import { Settings } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-export function PageHeader({ title, onSettings, light = false, actions = null }) {
+export function PageHeader({
+  title,
+  onSettings,
+  light = false,
+  actions = null,
+  safeArea = true,
+}) {
   const { t } = useTranslation()
 
   return (
     <div
       className="flex items-center justify-between px-5 pb-3"
-      style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1rem)' }}
+      style={{
+        paddingTop: safeArea
+          ? 'calc(env(safe-area-inset-top) + 3.5rem)'
+          : '1rem',
+      }}
     >
       {title ? (
         <h1 className={`text-xl font-bold ${light ? 'text-white' : 'text-gray-900'}`}>

@@ -27,7 +27,10 @@ export default function Signup({ onToggle }) {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-white flex flex-col justify-center px-6">
+      <div
+        className="min-h-screen bg-white flex flex-col justify-center px-6"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1rem)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
         <div className="text-center">
           <h1 className="text-4xl font-bold text-purple-600">Lala</h1>
           <p className="text-gray-600 mt-4">Check your email to confirm your account.</p>
@@ -40,7 +43,10 @@ export default function Signup({ onToggle }) {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col justify-center px-6">
+    <div
+      className="min-h-screen bg-white flex flex-col justify-center px-6"
+      style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1rem)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
       <div className="mb-10">
         <h1 className="text-4xl font-bold text-purple-600">Lala</h1>
         <p className="text-gray-500 mt-2">{t('signup')}</p>

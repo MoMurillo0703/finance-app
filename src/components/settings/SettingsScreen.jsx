@@ -434,7 +434,10 @@ export default function SettingsScreen({ onClose, onBankSaved, onPrefsChanged, o
 
   return (
     <div className="bg-lala-50 min-h-full">
-      <div className="px-6 pt-6 pb-24">
+      <div
+        className="px-6 pb-24"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 3.5rem)' }}
+      >
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900">{t('settings')}</h1>
         </div>

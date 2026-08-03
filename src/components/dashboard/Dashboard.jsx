@@ -326,9 +326,12 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
       {/* HERO */}
       <div
         className="relative pb-8 rounded-b-[2.5rem]"
-        style={{ background: 'linear-gradient(135deg, #6D28D9 0%, #8B5CF6 40%, #C4B5FD 100%)' }}
+        style={{
+          background: 'linear-gradient(135deg, #6D28D9 0%, #8B5CF6 40%, #C4B5FD 100%)',
+          paddingTop: 'calc(env(safe-area-inset-top) + 1rem)',
+        }}
       >
-        <PageHeader onSettings={onSettings} light />
+        <PageHeader onSettings={onSettings} light safeArea={false} />
 
         <div className="px-6">
         <p className="text-purple-200 text-sm font-medium mb-3">
