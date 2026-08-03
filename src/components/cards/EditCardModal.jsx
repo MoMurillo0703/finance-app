@@ -4,18 +4,21 @@ import { supabase } from '../../lib/supabase'
 import { getUserCurrency } from '../../utils/currency'
 import { useCurrencyInput, currencyAmountPlaceholder } from '../../hooks/useCurrencyInput'
 import { syncAutoBillMinimum } from '../../utils/creditCard'
+import { deleteCreditCard } from '../../utils/deleteCreditCard'
 import DeleteConfirmBlock from '../shared/DeleteConfirmBlock'
+import IssuingBankField from './IssuingBankField'
 
 const NETWORKS = ['Visa', 'Mastercard', 'Amex', 'Discover', 'Store']
 
 const inputClass =
   'w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400'
 
-export default function EditCardModal({ card, onClose, onSaved }) {
+export default function EditCardModal({ card, onClose, onSaved, onDeleted, showToast }) {
   const { t } = useTranslation()
   const currency = getUserCurrency()
   const [name, setName] = useState(card.name ?? '')
   const [network, setNetwork] = useState(card.network ?? 'Visa')
+  const [issuingBank, setIssuingBank] = useState(card.issuing_bank ?? '')
   const creditLimitInput = useCurrencyInput(card.credit_limit ?? '')
   const currentBalanceInput = useCurrencyInput(card.current_balance ?? '')
   const [interestRate, setInterestRate] = useState(
@@ -68,6 +71,7 @@ export default function EditCardModal({ card, onClose, onSaved }) {
     const updates = {
       name: name.trim(),
       network,
+      issuing_bank: issuingBank.trim() || null,
       credit_limit: creditLimitInput.numericValue,
       current_balance: currentBalanceInput.numericValue,
       statement_date: statementDate ? parseInt(statementDate, 10) : card.statement_date,
@@ -83,12 +87,22 @@ export default function EditCardModal({ card, onClose, onSaved }) {
       if (introRateExpires) updates.intro_rate_expires = introRateExpires
     }
 
-    const { data: updatedCard, error: dbError } = await supabase
+    let { data: updatedCard, error: dbError } = await supabase
       .from('credit_cards')
       .update(updates)
       .eq('id', card.id)
       .select('*')
       .single()
+
+    if (dbError?.message?.includes('issuing_bank')) {
+      const { issuing_bank: _ib, ...withoutIssuer } = updates
+      ;({ data: updatedCard, error: dbError } = await supabase
+        .from('credit_cards')
+        .update(withoutIssuer)
+        .eq('id', card.id)
+        .select('*')
+        .single())
+    }
 
     if (dbError) {
       setError(dbError.message)
@@ -124,20 +138,17 @@ export default function EditCardModal({ card, onClose, onSaved }) {
     setDeleting(true)
     setError('')
 
-    await supabase.from('bills').update({ is_active: false }).eq('credit_card_id', card.id)
-    await supabase.from('promotional_purchases').update({ is_active: false }).eq('credit_card_id', card.id)
-
-    const { error: dbError } = await supabase
-      .from('credit_cards')
-      .update({ is_active: false })
-      .eq('id', card.id)
+    const { error: dbError } = await deleteCreditCard(supabase, card.id)
 
     setDeleting(false)
     if (dbError) {
       setError(dbError.message)
-    } else {
-      onSaved()
+      return
     }
+
+    showToast?.(t('cardRemoved'))
+    if (onDeleted) onDeleted()
+    else onSaved()
   }
 
   return (
@@ -154,6 +165,12 @@ export default function EditCardModal({ card, onClose, onSaved }) {
             <label className="text-xs text-gray-400 mb-1 block">{t('cardName')}</label>
             <input className={inputClass} value={name} onChange={e => setName(e.target.value)} />
           </div>
+          <IssuingBankField
+            value={issuingBank}
+            onChange={setIssuingBank}
+            label={t('issuingBank')}
+            placeholder={t('issuingBankPlaceholder')}
+          />
           <div>
             <label className="text-xs text-gray-400 mb-1 block">{t('network')}</label>
             <div className="grid grid-cols-3 gap-2">
@@ -277,6 +294,7 @@ export default function EditCardModal({ card, onClose, onSaved }) {
 
         <DeleteConfirmBlock
           show={showDeleteConfirm}
+          title={t('deleteCardConfirmTitle')}
           message={t('deleteCardConfirm')}
           onCancel={() => setShowDeleteConfirm(false)}
           onConfirm={handleDelete}

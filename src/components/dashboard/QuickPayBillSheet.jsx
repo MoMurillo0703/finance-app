@@ -256,10 +256,13 @@ export default function QuickPayBillSheet({ onClose, onPaid, showToast }) {
                   border: cardId === c.id ? '2px solid #7C3AED' : '2px solid transparent',
                 }}
               >
-                <span className="font-medium text-gray-800">{c.name}</span>
-                <span className="text-sm text-red-500">
-                  {formatMoney(c.current_balance)} {t('owed')}
-                </span>
+                <div className="min-w-0">
+                  <p className="font-medium text-gray-800">{c.name}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {c.issuing_bank ? `${c.issuing_bank} · ` : ''}
+                    {formatMoney(c.current_balance)} {t('owed')}
+                  </p>
+                </div>
               </button>
             ))
           )

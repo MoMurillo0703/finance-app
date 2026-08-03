@@ -267,10 +267,17 @@ export default function AccountsScreen({
                       className="flex-1 min-w-0 text-left"
                     >
                       <p className="text-sm font-semibold text-gray-800">{card.name}</p>
+                      {card.issuing_bank && (
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {card.issuing_bank} · {card.network || 'Credit'}
+                        </p>
+                      )}
                       <div className="flex flex-wrap gap-1 mt-1">
-                        <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-                          {card.network}
-                        </span>
+                        {!card.issuing_bank && (
+                          <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                            {card.network}
+                          </span>
+                        )}
                         <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
                           {t('interestRateShort', { rate: getCardApr(card).toFixed(2) })}
                         </span>
@@ -428,7 +435,13 @@ export default function AccountsScreen({
           card={detailCard}
           initialTab={detailCardInitialTab}
           setHideNav={setHideNav}
+          showToast={showToast}
           onClose={() => setDetailCard(null)}
+          onDeleted={() => {
+            setDetailCard(null)
+            setDataRefreshKey(k => k + 1)
+            onAccountSaved?.()
+          }}
           onUpdated={async () => {
             setDataRefreshKey(k => k + 1)
             const { data } = await supabase

@@ -40,7 +40,7 @@ export default function PayBillModal({
 
     supabase
       .from('credit_cards')
-      .select('id, name, current_balance')
+      .select('id, name, current_balance, issuing_bank')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .order('name')
@@ -182,7 +182,9 @@ export default function PayBillModal({
                   <option value="">{t('noCardsHint')}</option>
                 )}
                 {creditCards.map(card => (
-                  <option key={card.id} value={card.id}>{card.name}</option>
+                  <option key={card.id} value={card.id}>
+                    {card.issuing_bank ? `${card.name} (${card.issuing_bank})` : card.name}
+                  </option>
                 ))}
               </select>
             </div>

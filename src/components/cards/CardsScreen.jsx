@@ -94,10 +94,17 @@ export default function CardsScreen({ onCardSaved }) {
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <p className="text-sm font-medium text-gray-700">{card.name}</p>
+                        {card.issuing_bank && (
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {card.issuing_bank} · {card.network || 'Credit'}
+                          </p>
+                        )}
                         <div className="flex flex-wrap gap-1 mt-1">
-                          <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-                            {card.network}
-                          </span>
+                          {!card.issuing_bank && (
+                            <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                              {card.network}
+                            </span>
+                          )}
                           <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
                             {t('interestRateShort', { rate: getCardApr(card).toFixed(2) })}
                           </span>
@@ -156,6 +163,7 @@ export default function CardsScreen({ onCardSaved }) {
           card={editingCard}
           onClose={() => setEditingCard(null)}
           onSaved={handleSaved}
+          onDeleted={handleSaved}
         />
       )}
 
@@ -164,6 +172,11 @@ export default function CardsScreen({ onCardSaved }) {
           card={detailCard}
           onClose={() => setDetailCard(null)}
           onUpdated={handleDetailUpdated}
+          onDeleted={() => {
+            setDetailCard(null)
+            setRefreshKey(k => k + 1)
+            onCardSaved?.()
+          }}
         />
       )}
     </div>

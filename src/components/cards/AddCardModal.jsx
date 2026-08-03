@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { formatMoney, getUserCurrency } from '../../utils/currency'
 import { useCurrencyInput, currencyAmountPlaceholder } from '../../hooks/useCurrencyInput'
+import IssuingBankField from './IssuingBankField'
 
 const NETWORKS = ['Visa', 'Mastercard', 'Amex', 'Discover', 'Store']
 
@@ -27,6 +28,7 @@ export default function AddCardModal({ onClose, onSaved }) {
   const { user } = useAuth()
   const [name, setName] = useState('')
   const [network, setNetwork] = useState('Visa')
+  const [issuingBank, setIssuingBank] = useState('')
   const creditLimitInput = useCurrencyInput()
   const currentBalanceInput = useCurrencyInput()
   const currency = getUserCurrency()
@@ -80,6 +82,7 @@ export default function AddCardModal({ onClose, onSaved }) {
       user_id: user.id,
       name: name.trim(),
       network,
+      issuing_bank: issuingBank.trim() || null,
       credit_limit: creditLimitInput.numericValue,
       current_balance: currentBalanceInput.numericValue,
       statement_date: parseInt(statementDate, 10),
@@ -99,11 +102,20 @@ export default function AddCardModal({ onClose, onSaved }) {
       }
     }
 
-    const { data: newCard, error: dbError } = await supabase
+    let { data: newCard, error: dbError } = await supabase
       .from('credit_cards')
       .insert(row)
       .select('id')
       .single()
+
+    if (dbError?.message?.includes('issuing_bank')) {
+      const { issuing_bank: _ib, ...withoutIssuer } = row
+      ;({ data: newCard, error: dbError } = await supabase
+        .from('credit_cards')
+        .insert(withoutIssuer)
+        .select('id')
+        .single())
+    }
 
     if (dbError) {
       setError(dbError.message)
@@ -177,6 +189,13 @@ export default function AddCardModal({ onClose, onSaved }) {
                 onChange={e => setName(e.target.value)}
               />
             </div>
+
+            <IssuingBankField
+              value={issuingBank}
+              onChange={setIssuingBank}
+              label={t('issuingBank')}
+              placeholder={t('issuingBankPlaceholder')}
+            />
 
             <div>
               <FieldLabel>{t('network')}</FieldLabel>

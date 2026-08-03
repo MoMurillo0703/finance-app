@@ -62,8 +62,10 @@ export default function CardDetailSheet({
   card: initialCard,
   onClose,
   onUpdated,
+  onDeleted,
   setHideNav,
   initialTab = 'transactions',
+  showToast,
 }) {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
@@ -305,7 +307,7 @@ export default function CardDetailSheet({
                       ? `🏪 ${t('storeCredit')}`
                       : liveCard.network}
                   </p>
-                  <div className="flex items-center gap-2 flex-wrap mb-3">
+                  <div className={`flex items-center gap-2 flex-wrap ${liveCard.issuing_bank ? 'mb-1' : 'mb-3'}`}>
                     <p className="text-lg font-bold text-white">{liveCard.name}</p>
                     <button
                       type="button"
@@ -326,6 +328,11 @@ export default function CardDetailSheet({
                       </span>
                     )}
                   </div>
+                  {liveCard.issuing_bank && (
+                    <p className="text-xs text-gray-400 mb-3">
+                      {liveCard.issuing_bank} · {liveCard.network || 'Credit'}
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="text-xs bg-white/20 px-2 py-1 rounded-full">
@@ -674,10 +681,16 @@ export default function CardDetailSheet({
       {showEditCard && (
         <EditCardModal
           card={liveCard}
+          showToast={showToast}
           onClose={() => setShowEditCard(false)}
           onSaved={() => {
             setShowEditCard(false)
             refreshData()
+          }}
+          onDeleted={() => {
+            setShowEditCard(false)
+            onDeleted?.()
+            onClose()
           }}
         />
       )}

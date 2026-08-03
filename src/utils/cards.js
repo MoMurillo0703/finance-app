@@ -2,8 +2,28 @@ import { getEffectiveRate, DEFAULT_CARD_APR } from './creditCard'
 
 export { DEFAULT_CARD_APR }
 
+export const ISSUING_BANK_SUGGESTIONS = [
+  'Chase',
+  'Citi',
+  'Wells Fargo',
+  'Bank of America',
+  'Capital One',
+  'Barclays',
+  'American Express',
+  'Discover',
+  'Synchrony',
+  'US Bank',
+]
+
 export function getCardApr(card) {
   return getEffectiveRate(card)
+}
+
+/** Subtitle like "Chase · Visa" or "Credit" */
+export function getCardIssuerLabel(card, fallbackType = 'Credit') {
+  const type = card?.network || card?.card_type || fallbackType
+  if (card?.issuing_bank) return `${card.issuing_bank} · ${type}`
+  return null
 }
 
 export function calculateMinimumPayment(card, cuotas = []) {

@@ -38,7 +38,7 @@ export default function QuickSpentSheet({ onClose, onSaved }) {
 
     supabase
       .from('credit_cards')
-      .select('id, name, current_balance')
+      .select('id, name, current_balance, issuing_bank')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .order('name')
@@ -246,13 +246,22 @@ export default function QuickSpentSheet({ onClose, onSaved }) {
                         border: accountId === acct.id ? '2px solid #7C3AED' : '2px solid transparent',
                       }}
                     >
-                      <p className="text-sm font-medium text-gray-800">
-                        {acct.nickname?.trim() || acct.name}
-                      </p>
-                      <p className={`text-sm font-bold ${accountType === 'card' ? 'text-red-500' : 'text-gray-700'}`}>
-                        {formatMoney(accountType === 'card' ? (acct.current_balance || 0) : (acct.balance || 0))}
-                        {accountType === 'card' ? ` ${t('owed')}` : ''}
-                      </p>
+                      <div className="min-w-0 text-left">
+                        <p className="text-sm font-medium text-gray-800">
+                          {acct.nickname?.trim() || acct.name}
+                        </p>
+                        {accountType === 'card' && (
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {acct.issuing_bank ? `${acct.issuing_bank} · ` : ''}
+                            {formatMoney(acct.current_balance || 0)} {t('owed')}
+                          </p>
+                        )}
+                      </div>
+                      {accountType === 'bank' && (
+                        <p className="text-sm font-bold text-gray-700 shrink-0">
+                          {formatMoney(acct.balance || 0)}
+                        </p>
+                      )}
                     </button>
                   ))
                 )}
