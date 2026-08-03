@@ -206,22 +206,26 @@ export default function QuickSpentSheet({ onClose, onSaved }) {
             <div className="flex-1 overflow-y-auto min-h-0 px-6">
               {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
 
-              <div className="grid grid-cols-2 gap-2 mb-4">
+              <div className="flex gap-2 mb-4">
                 <button
                   type="button"
                   onClick={() => { setAccountType('bank'); setAccountId('') }}
-                  className={`py-2.5 rounded-xl text-sm font-medium border ${
-                    accountType === 'bank' ? 'bg-lala-600 text-white border-lala-600' : 'border-gray-200 text-gray-500'
-                  }`}
+                  className="flex-1 py-2 rounded-xl text-sm font-medium min-h-[44px]"
+                  style={{
+                    backgroundColor: accountType === 'bank' ? '#7C3AED' : '#F5F3FF',
+                    color: accountType === 'bank' ? 'white' : '#7C3AED',
+                  }}
                 >
                   🏦 {t('bank')}
                 </button>
                 <button
                   type="button"
                   onClick={() => { setAccountType('card'); setAccountId('') }}
-                  className={`py-2.5 rounded-xl text-sm font-medium border ${
-                    accountType === 'card' ? 'bg-lala-600 text-white border-lala-600' : 'border-gray-200 text-gray-500'
-                  }`}
+                  className="flex-1 py-2 rounded-xl text-sm font-medium min-h-[44px]"
+                  style={{
+                    backgroundColor: accountType === 'card' ? '#7C3AED' : '#F5F3FF',
+                    color: accountType === 'card' ? 'white' : '#7C3AED',
+                  }}
                 >
                   💳 {t('creditCard')}
                 </button>
@@ -236,17 +240,18 @@ export default function QuickSpentSheet({ onClose, onSaved }) {
                       key={acct.id}
                       type="button"
                       onClick={() => setAccountId(acct.id)}
-                      className={`w-full flex justify-between items-center p-4 rounded-2xl border text-left transition-all ${
-                        accountId === acct.id
-                          ? 'border-lala-600 ring-2 ring-purple-400 bg-lala-50'
-                          : 'border-gray-100 bg-white'
-                      }`}
+                      className="w-full flex justify-between items-center p-4 rounded-2xl text-left min-h-[44px]"
+                      style={{
+                        backgroundColor: accountId === acct.id ? '#F5F3FF' : '#F9FAFB',
+                        border: accountId === acct.id ? '2px solid #7C3AED' : '2px solid transparent',
+                      }}
                     >
                       <p className="text-sm font-medium text-gray-800">
                         {acct.nickname?.trim() || acct.name}
                       </p>
                       <p className={`text-sm font-bold ${accountType === 'card' ? 'text-red-500' : 'text-gray-700'}`}>
                         {formatMoney(accountType === 'card' ? (acct.current_balance || 0) : (acct.balance || 0))}
+                        {accountType === 'card' ? ` ${t('owed')}` : ''}
                       </p>
                     </button>
                   ))

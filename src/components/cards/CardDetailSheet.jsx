@@ -139,7 +139,7 @@ export default function CardDetailSheet({
   }
 
   const refreshData = async () => {
-    const [cardRes, cuotasRes, txRes, promosRes, statementsRes] = await Promise.all([
+    const [cardRes, cuotasRes, txResInitial, promosRes, statementsRes] = await Promise.all([
       supabase.from('credit_cards').select('*').eq('id', initialCard.id).single(),
       supabase
         .from('cuotas')
@@ -149,7 +149,7 @@ export default function CardDetailSheet({
         .order('start_date'),
       supabase
         .from('transactions')
-        .select('id, type, amount, description, transaction_date, category')
+        .select('id, type, amount, description, transaction_date, category, is_transfer, source, bank_id, credit_card_id')
         .eq('user_id', user.id)
         .eq('credit_card_id', initialCard.id)
         .order('transaction_date', { ascending: false }),
@@ -166,6 +166,19 @@ export default function CardDetailSheet({
         .order('statement_date', { ascending: false })
         .limit(12),
     ])
+
+    let txRes = txResInitial
+    if (
+      txRes.error
+      && (txRes.error.message?.includes('is_transfer') || txRes.error.message?.includes('source'))
+    ) {
+      txRes = await supabase
+        .from('transactions')
+        .select('id, type, amount, description, transaction_date, category, bank_id, credit_card_id')
+        .eq('user_id', user.id)
+        .eq('credit_card_id', initialCard.id)
+        .order('transaction_date', { ascending: false })
+    }
 
     const stmts = statementsRes.data ?? []
     setStatements(stmts)

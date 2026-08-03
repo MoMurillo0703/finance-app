@@ -8,6 +8,27 @@ import { getCurrentBillingMonth, getBillDisplayAmount } from '../../utils/bills'
 import { formatMoney, getUserCurrency } from '../../utils/currency'
 import { useCurrencyInput, currencyAmountPlaceholder } from '../../hooks/useCurrencyInput'
 
+async function recordBillPayment(row) {
+  let { error } = await supabase.from('bill_payments').insert(row)
+  if (!error) return null
+  if (
+    error.message?.includes('payment_source')
+    || error.message?.includes('credit_card_id')
+    || error.message?.includes('bank_id')
+  ) {
+    const fallback = { ...row }
+    if (error.message.includes('payment_source')) delete fallback.payment_source
+    if (error.message.includes('credit_card_id')) delete fallback.credit_card_id
+    if (error.message.includes('bank_id')) delete fallback.bank_id
+    ;({ error } = await supabase.from('bill_payments').insert(fallback))
+  }
+  if (error?.message?.includes('bill_payments') || error?.code === '42P01') {
+    console.warn('bill_payments insert skipped:', error.message)
+    return null
+  }
+  return error
+}
+
 export default function PayBillModal({ bill, cardMap, statementsMap = {}, loanMap = {}, onClose, onPaid }) {
   const { t } = useTranslation()
   const { user } = useAuth()
@@ -64,15 +85,28 @@ export default function PayBillModal({ bill, cardMap, statementsMap = {}, loanMa
         return
       }
 
-      const { error: txError } = await supabase.from('transactions').insert({
+      if (bill.credit_card_id && bill.credit_card_id === creditCardId) {
+        setError(t('cannotPayCardBillWithSameCard'))
+        setPaying(false)
+        return
+      }
+
+      let txRow = {
         user_id: user.id,
         credit_card_id: creditCardId,
+        bank_id: null,
         type: 'expense',
         amount: billAmount,
-        description: bill.name,
-        category: 'bills',
+        description: `${bill.name} payment`,
+        category: bill.category || 'bills',
         transaction_date: today,
-      })
+        source: 'manual',
+      }
+      let { error: txError } = await supabase.from('transactions').insert(txRow)
+      if (txError?.message?.includes('source')) {
+        const { source: _s, ...rest } = txRow
+        ;({ error: txError } = await supabase.from('transactions').insert(rest))
+      }
 
       if (txError) {
         setError(txError.message)
@@ -86,6 +120,15 @@ export default function PayBillModal({ bill, cardMap, statementsMap = {}, loanMa
         setPaying(false)
         return
       }
+
+      await recordBillPayment({
+        user_id: user.id,
+        bill_id: bill.id,
+        amount_paid: billAmount,
+        paid_date: today,
+        payment_source: 'credit_card',
+        credit_card_id: creditCardId,
+      })
     } else {
       let resolvedBankId = bankId || bill.bank_id
 
@@ -107,15 +150,22 @@ export default function PayBillModal({ bill, cardMap, statementsMap = {}, loanMa
         return
       }
 
-      const { error: txError } = await supabase.from('transactions').insert({
+      let txRow = {
         user_id: user.id,
         bank_id: resolvedBankId,
+        credit_card_id: null,
         type: 'expense',
         category: 'bills',
         amount: billAmount,
         description: bill.name,
         transaction_date: today,
-      })
+        source: 'manual',
+      }
+      let { error: txError } = await supabase.from('transactions').insert(txRow)
+      if (txError?.message?.includes('source')) {
+        const { source: _s, ...rest } = txRow
+        ;({ error: txError } = await supabase.from('transactions').insert(rest))
+      }
 
       if (txError) {
         setError(txError.message)
@@ -129,6 +179,15 @@ export default function PayBillModal({ bill, cardMap, statementsMap = {}, loanMa
         setPaying(false)
         return
       }
+
+      await recordBillPayment({
+        user_id: user.id,
+        bill_id: bill.id,
+        amount_paid: billAmount,
+        paid_date: today,
+        payment_source: 'bank',
+        bank_id: resolvedBankId,
+      })
     }
 
     let { error: billUpdateError } = await supabase
@@ -190,29 +249,29 @@ export default function PayBillModal({ bill, cardMap, statementsMap = {}, loanMa
           </div>
 
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">{t('paymentMethod')}</label>
-            <div className="flex gap-2">
+            <label className="text-xs text-gray-400 mb-1 block">{t('payFrom')}</label>
+            <div className="flex gap-2 mb-3">
               <button
                 type="button"
                 onClick={() => setPaymentSource('bank')}
-                className={`flex-1 py-2.5 rounded-xl text-xs border ${
-                  paymentSource === 'bank'
-                    ? 'bg-purple-600 text-white border-purple-600'
-                    : 'border-gray-200 text-gray-500'
-                }`}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium min-h-[44px]"
+                style={{
+                  backgroundColor: paymentSource === 'bank' ? '#7C3AED' : '#F5F3FF',
+                  color: paymentSource === 'bank' ? 'white' : '#7C3AED',
+                }}
               >
-                {t('bank')}
+                🏦 {t('bank')}
               </button>
               <button
                 type="button"
                 onClick={() => setPaymentSource('card')}
-                className={`flex-1 py-2.5 rounded-xl text-xs border ${
-                  paymentSource === 'card'
-                    ? 'bg-purple-600 text-white border-purple-600'
-                    : 'border-gray-200 text-gray-500'
-                }`}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium min-h-[44px]"
+                style={{
+                  backgroundColor: paymentSource === 'card' ? '#7C3AED' : '#F5F3FF',
+                  color: paymentSource === 'card' ? 'white' : '#7C3AED',
+                }}
               >
-                {t('payWithCard')}
+                💳 {t('creditCard')}
               </button>
             </div>
           </div>
