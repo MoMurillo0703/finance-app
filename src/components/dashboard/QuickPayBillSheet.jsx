@@ -2,37 +2,12 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { adjustBankBalance, adjustCardBalance, bankDelta } from '../../lib/payments'
 import { fetchBanks, getBankDropdownLabel } from '../../utils/bank'
-import { isBillPaidThisMonth, getCurrentBillingMonth, getBillDisplayAmount, shouldShowBill } from '../../utils/bills'
+import { isBillPaidThisMonth, getBillDisplayAmount, shouldShowBill } from '../../utils/bills'
+import { confirmBillPayment } from '../../utils/billPayment'
 import { formatMoney } from '../../utils/currency'
 
-async function recordBillPayment(row) {
-  let { error } = await supabase.from('bill_payments').insert(row)
-  if (!error) return null
-
-  // Table or columns may be missing — try without optional fields, then ignore
-  if (
-    error.message?.includes('payment_source')
-    || error.message?.includes('credit_card_id')
-    || error.message?.includes('bank_id')
-  ) {
-    const fallback = { ...row }
-    if (error.message.includes('payment_source')) delete fallback.payment_source
-    if (error.message.includes('credit_card_id')) delete fallback.credit_card_id
-    if (error.message.includes('bank_id')) delete fallback.bank_id
-    ;({ error } = await supabase.from('bill_payments').insert(fallback))
-  }
-
-  if (error?.message?.includes('bill_payments') || error?.code === '42P01') {
-    console.warn('bill_payments insert skipped:', error.message)
-    return null
-  }
-
-  return error
-}
-
-export default function QuickPayBillSheet({ onClose, onPaid }) {
+export default function QuickPayBillSheet({ onClose, onPaid, showToast }) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [step, setStep] = useState(1)
@@ -113,26 +88,12 @@ export default function QuickPayBillSheet({ onClose, onPaid }) {
   const cardMap = Object.fromEntries(cards.map(c => [c.id, c]))
   const loanMap = Object.fromEntries(loans.map(l => [l.id, l]))
 
-  const markBillPaid = async (bill) => {
-    const currentMonth = getCurrentBillingMonth()
-    let { error: billUpdateError } = await supabase
-      .from('bills')
-      .update({
-        is_paid: true,
-        paid_at: new Date().toISOString(),
-        billing_month: currentMonth,
-      })
-      .eq('id', bill.id)
-
-    if (billUpdateError) {
-      const fallback = await supabase
-        .from('bills')
-        .update({ category: `paid:${currentMonth}` })
-        .eq('id', bill.id)
-      billUpdateError = fallback.error
-    }
-
-    return billUpdateError
+  const mapPaymentError = (err) => {
+    if (!err) return t('transferFailed')
+    if (err.message === 'invalid_amount') return t('invalidAmount')
+    if (err.message === 'missing_payment_source') return t('selectBank')
+    if (err.message === 'same_card') return t('cannotPayCardBillWithSameCard')
+    return err.message || t('transferFailed')
   }
 
   const handlePay = async () => {
@@ -144,117 +105,26 @@ export default function QuickPayBillSheet({ onClose, onPaid }) {
     setError('')
 
     const billAmount = selectedBill.displayAmount ?? (Number(selectedBill.amount) || 0)
-    if (billAmount <= 0) {
-      setError(t('invalidAmount'))
+    const source = paymentSourceType === 'card'
+      ? { type: 'credit_card', id: cardId }
+      : { type: 'bank', id: bankId }
+
+    const { error: payError } = await confirmBillPayment({
+      supabase,
+      userId: user.id,
+      bill: selectedBill,
+      amount: billAmount,
+      source,
+    })
+
+    if (payError) {
+      setError(mapPaymentError(payError))
       setPaying(false)
       return
-    }
-
-    const today = new Date().toISOString().split('T')[0]
-
-    if (paymentSourceType === 'card') {
-      if (selectedBill.credit_card_id && selectedBill.credit_card_id === cardId) {
-        setError(t('cannotPayCardBillWithSameCard'))
-        setPaying(false)
-        return
-      }
-
-      let txRow = {
-        user_id: user.id,
-        credit_card_id: cardId,
-        bank_id: null,
-        type: 'expense',
-        category: selectedBill.category || 'bills',
-        amount: billAmount,
-        description: `${selectedBill.name} payment`,
-        transaction_date: today,
-        source: 'manual',
-      }
-
-      let { error: txError } = await supabase.from('transactions').insert(txRow)
-      if (txError?.message?.includes('source')) {
-        const { source: _s, ...rest } = txRow
-        ;({ error: txError } = await supabase.from('transactions').insert(rest))
-      }
-
-      if (txError) {
-        setError(txError.message)
-        setPaying(false)
-        return
-      }
-
-      const cardError = await adjustCardBalance(cardId, billAmount)
-      if (cardError) {
-        setError(cardError.message)
-        setPaying(false)
-        return
-      }
-
-      await recordBillPayment({
-        user_id: user.id,
-        bill_id: selectedBill.id,
-        amount_paid: billAmount,
-        paid_date: today,
-        payment_source: 'credit_card',
-        credit_card_id: cardId,
-      })
-    } else {
-      let txRow = {
-        user_id: user.id,
-        bank_id: bankId,
-        credit_card_id: null,
-        type: 'expense',
-        category: 'bills',
-        amount: billAmount,
-        description: selectedBill.name,
-        transaction_date: today,
-        source: 'manual',
-      }
-
-      let { error: txError } = await supabase.from('transactions').insert(txRow)
-      if (txError?.message?.includes('source')) {
-        const { source: _s, ...rest } = txRow
-        ;({ error: txError } = await supabase.from('transactions').insert(rest))
-      }
-
-      if (txError) {
-        setError(txError.message)
-        setPaying(false)
-        return
-      }
-
-      const bankError = await adjustBankBalance(bankId, bankDelta('expense', billAmount))
-      if (bankError) {
-        setError(bankError.message)
-        setPaying(false)
-        return
-      }
-
-      await recordBillPayment({
-        user_id: user.id,
-        bill_id: selectedBill.id,
-        amount_paid: billAmount,
-        paid_date: today,
-        payment_source: 'bank',
-        bank_id: bankId,
-      })
-    }
-
-    const billUpdateError = await markBillPaid(selectedBill)
-    if (billUpdateError) {
-      setError(billUpdateError.message)
-      setPaying(false)
-      return
-    }
-
-    if (selectedBill.vault_id) {
-      await supabase
-        .from('vaults')
-        .update({ current_amount: 0 })
-        .eq('id', selectedBill.vault_id)
     }
 
     setPaying(false)
+    showToast?.(t('billMarkedPaid', { name: selectedBill.name }))
     onPaid?.()
     onClose?.()
   }

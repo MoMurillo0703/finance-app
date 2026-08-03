@@ -97,7 +97,7 @@ function SectionHeader({ emoji, label, count }) {
   )
 }
 
-export default function BillsScreen({ onBillPaid, onSettings }) {
+export default function BillsScreen({ onBillPaid, onSettings, showToast }) {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const [bills, setBills] = useState([])
@@ -467,6 +467,7 @@ export default function BillsScreen({ onBillPaid, onSettings }) {
           loanMap={loanMap}
           onClose={() => setPayingBill(null)}
           onPaid={handleBillPaid}
+          showToast={showToast}
         />
       )}
     </div>

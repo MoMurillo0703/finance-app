@@ -40,7 +40,7 @@ const LALA = {
   progressFill: '#A78BFA',
 }
 
-export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettings, onOpenCardPromo }) {
+export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettings, onOpenCardPromo, showToast }) {
   const { user } = useAuth()
   const { t, i18n } = useTranslation()
   const [vaults, setVaults] = useState([])
@@ -559,7 +559,7 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
       )}
 
       <div className="mx-4 mb-4">
-        <BillsThisWeek refreshKey={modalRefreshKey} />
+        <BillsThisWeek refreshKey={modalRefreshKey} showToast={showToast} />
       </div>
 
       {/* VAULTS */}
@@ -687,6 +687,7 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
             <QuickPayBillSheet
               onClose={closeSheet}
               onPaid={bumpRefresh}
+              showToast={showToast}
             />
           </div>
         </div>

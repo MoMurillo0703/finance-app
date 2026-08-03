@@ -83,6 +83,7 @@ export default {
       deductFrom: "Descontar de",
       payFrom: "Pagar desde",
       cannotPayCardBillWithSameCard: "Elige otra tarjeta — no puedes cargar el pago de una tarjeta a sí misma",
+      billMarkedPaid: "{{name}} marcado como pagado ✓",
       totalDueThisMonth: "Total del mes",
       paidSoFar: "Pagado hasta ahora",
       showCalendar: "Mostrar calendario",

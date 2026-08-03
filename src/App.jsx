@@ -138,6 +138,7 @@ function AppContent() {
             setHideNav={setHideNav}
             onSettings={openSettings}
             onOpenCardPromo={openCardPromotions}
+            showToast={showToast}
           />
         )}
         {activeTab === 'transactions' && (

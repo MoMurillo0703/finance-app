@@ -83,7 +83,7 @@ export default {
       deductFrom: "Deduct from",
       payFrom: "Pay from",
       cannotPayCardBillWithSameCard: "Choose a different card — you can't charge a card's own bill to itself",
-      noCardsHint: "No credit cards yet",
+      billMarkedPaid: "{{name}} marked as paid ✓",
       totalDueThisMonth: "Total due this month",
       paidSoFar: "Paid so far",
       showCalendar: "Show calendar",

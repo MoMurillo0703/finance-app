@@ -30,7 +30,7 @@ function getBillBorderClass(bill, today) {
   return 'border-l-gray-300'
 }
 
-export default function BillsThisWeek({ refreshKey }) {
+export default function BillsThisWeek({ refreshKey, showToast }) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [bills, setBills] = useState([])
@@ -158,6 +158,7 @@ export default function BillsThisWeek({ refreshKey }) {
           cardMap={cardMap}
           onClose={() => setPayingBill(null)}
           onPaid={handleBillPaid}
+          showToast={showToast}
         />
       )}
     </div>
