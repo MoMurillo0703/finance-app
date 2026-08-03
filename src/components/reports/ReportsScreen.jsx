@@ -48,6 +48,7 @@ import {
 } from '../../utils/financialTrends'
 import BudgetsScreen from '../budgets/BudgetsScreen'
 import DebtPayoffPlanner from '../debt/DebtPayoffPlanner'
+import CreditUtilizationBar from '../cards/CreditUtilizationBar'
 import { PageHeader } from '../layout/PageHeader'
 
 const SECTION_CLASS = 'bg-white rounded-2xl mx-4 mb-4 p-4 shadow-sm border border-gray-100'
@@ -344,6 +345,11 @@ export default function ReportsScreen({ setHideNav, onSettings, showToast }) {
   } = calculateNetWorth({ banks, creditCards, loans })
 
   const activeCardsWithBalance = creditCards.filter(c => c.is_active && c.current_balance > 0)
+  const totalCreditLimit = creditCards.reduce((sum, c) => sum + (c.credit_limit || 0), 0)
+  const totalCreditUsed = creditCards.reduce((sum, c) => sum + (c.current_balance || 0), 0)
+  const totalAvailableCredit = Math.max(0, totalCreditLimit - totalCreditUsed)
+  const overallUtilization = totalCreditLimit > 0 ? (totalCreditUsed / totalCreditLimit) * 100 : 0
+  const paydownToThirty = Math.max(0, totalCreditUsed - totalCreditLimit * 0.3)
   const activeLoansWithBalance = loans.filter(l => l.is_active && l.current_balance > 0)
 
   const totalMonthlyInterest = [
@@ -666,6 +672,90 @@ export default function ReportsScreen({ setHideNav, onSettings, showToast }) {
               </>
             )}
           </section>
+
+          {creditCards.length > 0 && totalCreditLimit > 0 && (
+            <div
+              className="mx-4 mb-4 p-5 rounded-3xl bg-white shadow-sm"
+              style={{ border: '1px solid #EDE9FE' }}
+            >
+              <h3 className="text-sm font-bold text-gray-900 mb-4">{t('creditOverview')}</h3>
+
+              <div className="grid grid-cols-3 gap-3 mb-5">
+                <div className="text-center p-3 rounded-2xl" style={{ backgroundColor: '#FAFAFA' }}>
+                  <p className="text-xs text-gray-400 mb-1">{t('totalLimit')}</p>
+                  <p className="text-base font-bold text-gray-900">{formatMoney(totalCreditLimit)}</p>
+                </div>
+                <div className="text-center p-3 rounded-2xl" style={{ backgroundColor: '#F0FDF4' }}>
+                  <p className="text-xs text-gray-400 mb-1">{t('available')}</p>
+                  <p className="text-base font-bold text-green-600">{formatMoney(totalAvailableCredit)}</p>
+                </div>
+                <div className="text-center p-3 rounded-2xl" style={{ backgroundColor: '#FEF2F2' }}>
+                  <p className="text-xs text-gray-400 mb-1">{t('creditUsed')}</p>
+                  <p className="text-base font-bold text-red-500">{formatMoney(totalCreditUsed)}</p>
+                </div>
+              </div>
+
+              <CreditUtilizationBar
+                currentBalance={totalCreditUsed}
+                creditLimit={totalCreditLimit}
+                showLabel
+              />
+
+              <div className="mt-5 space-y-4">
+                {creditCards
+                  .filter(c => (c.credit_limit || 0) > 0)
+                  .sort((a, b) => {
+                    const aUtil = (a.current_balance || 0) / a.credit_limit
+                    const bUtil = (b.current_balance || 0) / b.credit_limit
+                    return bUtil - aUtil
+                  })
+                  .map(card => {
+                    const available = Math.max(0, (card.credit_limit || 0) - (card.current_balance || 0))
+                    const utilization = ((card.current_balance || 0) / card.credit_limit) * 100
+                    return (
+                      <div key={card.id}>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <div>
+                            <p className="text-sm font-semibold text-gray-800">
+                              {card.nickname || card.name}
+                            </p>
+                            {card.issuing_bank && (
+                              <p className="text-xs text-gray-400">{card.issuing_bank}</p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-green-600">
+                              {t('amountLeft', { amount: formatMoney(available) })}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {t('percentUsedShort', { pct: utilization.toFixed(1) })}
+                            </p>
+                          </div>
+                        </div>
+                        <CreditUtilizationBar
+                          currentBalance={card.current_balance}
+                          creditLimit={card.credit_limit}
+                          showLabel={false}
+                        />
+                      </div>
+                    )
+                  })}
+              </div>
+
+              {overallUtilization > 30 && (
+                <div
+                  className="mt-4 p-3 rounded-2xl"
+                  style={{ backgroundColor: '#FFF7ED', border: '1px solid #FED7AA' }}
+                >
+                  <p className="text-xs text-orange-700 font-medium">
+                    💡 {t('creditScoreTip')}
+                    {' '}
+                    {t('creditScoreTipPaydown', { amount: formatMoney(paydownToThirty) })}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           <section className={SECTION_CLASS}>
             <SectionTitle>{t('assetBreakdown')}</SectionTitle>

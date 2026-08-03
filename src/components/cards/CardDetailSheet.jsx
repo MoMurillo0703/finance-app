@@ -353,26 +353,27 @@ export default function CardDetailSheet({
                   ⚠️ {liveCard.name} {t('introRateWarning')} {introDaysLeft} {t('daysLeft')}
                 </p>
               )}
-              <p className={`text-xs mb-1 ${isOverLimit ? 'text-red-400' : 'text-gray-400'}`}>
-                {t('availableCredit')}
-              </p>
-              <p className={`text-3xl font-bold mb-1 ${isOverLimit ? 'text-red-400' : ''}`}>
-                {formatMoney(isOverLimit ? 0 : availableCredit, currency)}
-              </p>
-              <p className="text-xs text-gray-400 mb-3">
-                {t('of')} {formatMoney(limit, currency)}
-              </p>
-              <div className="flex justify-between text-[10px] text-gray-400 mt-1">
-                <span>{t('balance')}: {formatMoney(balance, currency)}</span>
-                <span>{t('limit')}: {formatMoney(limit, currency)}</span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 mx-4 mt-4">
+              <div className="p-3 rounded-2xl text-center" style={{ backgroundColor: '#F5F3FF' }}>
+                <p className="text-xs text-gray-400 mb-1">{t('balance')}</p>
+                <p className="text-sm font-bold text-gray-900">{formatMoney(balance, currency)}</p>
+              </div>
+              <div className="p-3 rounded-2xl text-center" style={{ backgroundColor: '#F0FDF4' }}>
+                <p className="text-xs text-gray-400 mb-1">{t('available')}</p>
+                <p className={`text-sm font-bold ${isOverLimit ? 'text-red-500' : 'text-green-600'}`}>
+                  {formatMoney(availableCredit, currency)}
+                </p>
+              </div>
+              <div className="p-3 rounded-2xl text-center" style={{ backgroundColor: '#FAFAFA' }}>
+                <p className="text-xs text-gray-400 mb-1">{t('limit')}</p>
+                <p className="text-sm font-bold text-gray-500">{formatMoney(limit, currency)}</p>
               </div>
             </div>
 
             {limit > 0 && (
-              <div
-                className="mx-4 mt-4 p-4 rounded-2xl"
-                style={{ backgroundColor: '#FAFAFA', border: '1px solid #F3F4F6' }}
-              >
+              <div className="mx-4 mt-3">
                 <CreditUtilizationBar
                   currentBalance={balance}
                   creditLimit={limit}

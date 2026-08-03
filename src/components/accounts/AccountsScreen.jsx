@@ -298,6 +298,11 @@ export default function AccountsScreen({
                           <p className="text-xs mt-1" style={{ color: getUtilizationColor(card) }}>
                             {t('percentUtilized', { pct: utilizationPct.toFixed(1) })}
                           </p>
+                          <p className="text-xs mt-1" style={{ color: '#16A34A' }}>
+                            {t('availableAmount', {
+                              amount: formatMoney(Math.max(0, limit - balance), currency),
+                            })}
+                          </p>
                         </div>
                       )}
                     </button>
