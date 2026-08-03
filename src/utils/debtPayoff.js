@@ -1,4 +1,4 @@
-import { getEffectiveRate, getCardMinimumPayment, isIntroRateActive } from './creditCard'
+import { getEffectiveRate, getCardMinimumPayment, DEFAULT_CARD_APR } from './creditCard'
 import { getMonthBounds, getRecentMonthKeys } from './reports'
 import { isSpendingTransaction, isIncomeTransaction } from './transactionType'
 
@@ -49,6 +49,41 @@ function resolveCardMinimum(card, statements = []) {
   return getCardMinimumPayment(card, statements).amount ?? 0
 }
 
+function monthsUntilDate(dateValue, today = new Date()) {
+  if (!dateValue) return null
+  const expires = new Date(dateValue)
+  const days = Math.ceil((expires - today) / (1000 * 60 * 60 * 24))
+  return Math.ceil(days / 30)
+}
+
+/** Active promo purchases that would add deferred interest if unpaid at expiry */
+export function hasDeferredInterest(debt) {
+  const promos = debt?.promotional_purchases || debt?.promos || debt?.promoDeadlines || []
+  return promos.some(p =>
+    Number(p.remaining_balance) > 0
+    && Number(p.deferred_interest) > 0,
+  )
+}
+
+export function getDebtRateInfo(debt) {
+  if (debt?.rateInfo) return debt.rateInfo
+  if (debt?.type === 'loan') {
+    return {
+      rate: Number(debt.apr) || 0,
+      isPromo: false,
+      promoExpires: null,
+      daysUntilPromoExpires: null,
+    }
+  }
+  return getEffectiveRate(debt)
+}
+
+/** 0% intro with no deferred-interest cliff — pay minimum only */
+export function isTrue0PromoDebt(debt) {
+  const info = getDebtRateInfo(debt)
+  return Boolean(info.isPromo && Number(info.rate) === 0 && !hasDeferredInterest(debt))
+}
+
 export function buildDebtList({
   creditCards = [],
   loans = [],
@@ -59,36 +94,58 @@ export function buildDebtList({
     .filter(c => c.is_active && Number(c.current_balance) > 0)
     .map(c => {
       const statements = statementsByCard[c.id] || []
-      const promoDeadlines = promotionalPurchases
-        .filter(p => p.credit_card_id === c.id && p.is_active && Number(p.remaining_balance) > 0)
+      const promos = promotionalPurchases
+        .filter(p => p.credit_card_id === c.id && p.is_active !== false && Number(p.remaining_balance) > 0)
         .sort((a, b) => new Date(a.expiration_date) - new Date(b.expiration_date))
+      const rateInfo = getEffectiveRate(c)
+      const regularRate = c.interest_rate != null ? Number(c.interest_rate) : DEFAULT_CARD_APR
 
       return {
         id: c.id,
         name: c.name,
+        nickname: c.nickname,
         balance: Number(c.current_balance),
         originalBalance: Number(c.current_balance),
         minPayment: resolveCardMinimum(c, statements),
-        apr: getEffectiveRate(c),
+        apr: rateInfo.rate,
+        interest_rate: Number.isFinite(regularRate) ? regularRate : DEFAULT_CARD_APR,
+        intro_rate: c.intro_rate,
+        intro_rate_expires: c.intro_rate_expires,
+        rateInfo,
         type: 'card',
-        introRateExpires: isIntroRateActive(c) ? c.intro_rate_expires : null,
-        promoDeadlines,
+        introRateExpires: rateInfo.isPromo ? c.intro_rate_expires : null,
+        promoDeadlines: promos,
+        promos,
+        promotional_purchases: promos,
       }
     })
 
   const loanDebts = loans
     .filter(l => l.is_active && Number(l.current_balance) > 0)
-    .map(l => ({
-      id: l.id,
-      name: l.name,
-      balance: Number(l.current_balance),
-      originalBalance: Number(l.current_balance),
-      minPayment: Number(l.monthly_payment) || 0,
-      apr: Number(l.interest_rate) || 0,
-      type: 'loan',
-      introRateExpires: null,
-      promoDeadlines: [],
-    }))
+    .map(l => {
+      const apr = Number(l.interest_rate) || 0
+      const rateInfo = {
+        rate: apr,
+        isPromo: false,
+        promoExpires: null,
+        daysUntilPromoExpires: null,
+      }
+      return {
+        id: l.id,
+        name: l.name,
+        balance: Number(l.current_balance),
+        originalBalance: Number(l.current_balance),
+        minPayment: Number(l.monthly_payment) || 0,
+        apr,
+        interest_rate: apr,
+        rateInfo,
+        type: 'loan',
+        introRateExpires: null,
+        promoDeadlines: [],
+        promos: [],
+        promotional_purchases: [],
+      }
+    })
 
   return [...cards, ...loanDebts]
 }
@@ -98,14 +155,17 @@ export function hasUpcomingPromoDeadlines(debts, withinMonths = 12) {
   cutoff.setMonth(cutoff.getMonth() + withinMonths)
   const now = new Date()
   return debts.some(d => {
+    if (hasDeferredInterest(d)) {
+      return d.promoDeadlines?.some(p => {
+        const expires = new Date(p.expiration_date)
+        return expires <= cutoff && expires >= now && Number(p.deferred_interest) > 0
+      })
+    }
     if (d.introRateExpires) {
       const expires = new Date(d.introRateExpires)
       if (expires <= cutoff && expires >= now) return true
     }
-    return d.promoDeadlines?.some(p => {
-      const expires = new Date(p.expiration_date)
-      return expires <= cutoff && expires >= now
-    })
+    return false
   })
 }
 
@@ -149,44 +209,110 @@ export function averageMonthlyTotals(transactions = [], monthKeys = getRecentMon
 
 function getDebtDeadline(debt) {
   const dates = []
-  if (debt.introRateExpires) {
-    dates.push(new Date(debt.introRateExpires))
+  if (hasDeferredInterest(debt)) {
+    for (const p of debt.promoDeadlines || []) {
+      if (Number(p.deferred_interest) > 0 && p.expiration_date) {
+        dates.push(new Date(p.expiration_date))
+      }
+    }
   }
-  const promo = soonestPromo(debt.promoDeadlines)
-  if (promo?.expiration_date) {
-    dates.push(new Date(promo.expiration_date))
+  if (dates.length === 0 && debt.introRateExpires) {
+    dates.push(new Date(debt.introRateExpires))
   }
   if (dates.length === 0) return FAR_FUTURE
   return new Date(Math.min(...dates.map(d => d.getTime())))
 }
 
-export function sortDebtsByStrategy(debts, strategy) {
-  const sorted = [...debts]
+function sortAvalanche(debts) {
+  return [...debts].sort((a, b) => {
+    const aTrue0 = isTrue0PromoDebt(a)
+    const bTrue0 = isTrue0PromoDebt(b)
+    if (aTrue0 && !bTrue0) return 1
+    if (!aTrue0 && bTrue0) return -1
+    return getDebtRateInfo(b).rate - getDebtRateInfo(a).rate
+  })
+}
 
-  if (strategy === 'deadline') {
-    sorted.sort((a, b) => {
+function sortSnowball(debts) {
+  return [...debts].sort((a, b) => {
+    const aTrue0 = isTrue0PromoDebt(a)
+    const bTrue0 = isTrue0PromoDebt(b)
+    if (aTrue0 && !bTrue0) return 1
+    if (!aTrue0 && bTrue0) return -1
+    return a.balance - b.balance
+  })
+}
+
+function sortDeadlineFirst(debts) {
+  return [...debts].sort((a, b) => {
+    const aInfo = getDebtRateInfo(a)
+    const bInfo = getDebtRateInfo(b)
+    const aHasDeferred = hasDeferredInterest(a)
+    const bHasDeferred = hasDeferredInterest(b)
+    const aTrue0 = isTrue0PromoDebt(a)
+    const bTrue0 = isTrue0PromoDebt(b)
+
+    // Deferred interest promos first
+    if (aHasDeferred && !bHasDeferred) return -1
+    if (!aHasDeferred && bHasDeferred) return 1
+
+    // Both deferred: soonest expiry first
+    if (aHasDeferred && bHasDeferred) {
       const diff = getDebtDeadline(a) - getDebtDeadline(b)
       if (diff !== 0) return diff
-      return b.apr - a.apr
-    })
-  } else if (strategy === 'avalanche') {
-    sorted.sort((a, b) => b.apr - a.apr)
-  } else {
-    sorted.sort((a, b) => a.balance - b.balance)
-  }
+    }
 
-  return sorted
+    // True 0% last
+    if (aTrue0 && !bTrue0) return 1
+    if (!aTrue0 && bTrue0) return -1
+
+    return bInfo.rate - aInfo.rate
+  })
+}
+
+export function sortDebtsByStrategy(debts, strategy) {
+  if (strategy === 'deadline') return sortDeadlineFirst(debts)
+  if (strategy === 'avalanche') return sortAvalanche(debts)
+  return sortSnowball(debts)
+}
+
+function buildPromoEvents(debt, today = new Date()) {
+  return (debt.promos || debt.promoDeadlines || []).map(p => ({
+    ...p,
+    monthsUntilExpiry: monthsUntilDate(p.expiration_date, today) ?? 0,
+    fired: false,
+    wasTriggered: false,
+  }))
+}
+
+function rateForMonth(debt, monthsFromNow) {
+  const info = getDebtRateInfo(debt)
+  const regular = Number(debt.interest_rate)
+  const fallback = Number.isFinite(regular) ? regular : (Number(debt.apr) || 0)
+
+  if (!info.isPromo) return fallback
+
+  const promoMonthsLeft = info.daysUntilPromoExpires != null
+    ? Math.ceil(info.daysUntilPromoExpires / 30)
+    : 0
+
+  if (monthsFromNow <= promoMonthsLeft) return Number(info.rate) || 0
+  return fallback
 }
 
 /**
- * Month-by-month waterfall simulation.
- * Pays minimums on all debts; rolls extra (+ freed mins) onto the current focus debt.
+ * Month-by-month waterfall simulation with promo rates + deferred interest cliffs.
  */
 export function simulateDebtPayoff(debts, strategy, extraPayment = 0, maxMonths = 600) {
+  const today = new Date()
   const order = sortDebtsByStrategy(debts, strategy)
   const state = order.map(d => ({
     id: d.id,
+    debt: d,
     apr: d.apr,
+    interest_rate: d.interest_rate,
+    rateInfo: getDebtRateInfo(d),
+    isTrue0: isTrue0PromoDebt(d),
     minPayment: Math.max(0, d.minPayment || 0),
     originalBalance: d.originalBalance ?? d.balance,
     remaining: d.balance,
@@ -194,24 +320,48 @@ export function simulateDebtPayoff(debts, strategy, extraPayment = 0, maxMonths 
     paidPrincipal: 0,
     payoffMonth: null,
     peakMonthlyPayment: 0,
+    promoEvents: buildPromoEvents(d, today),
   }))
 
-  const paymentByDebt = Object.fromEntries(state.map(d => [d.id, 0]))
-
   let month = 0
+  let deferredInterestHits = 0
   const baseExtra = Math.max(0, extraPayment)
 
   while (month < maxMonths && state.some(d => d.remaining > 0.01)) {
     month += 1
     const monthPayments = Object.fromEntries(state.map(d => [d.id, 0]))
 
+    // 1. Deferred interest deadlines
+    for (const debt of state) {
+      for (const event of debt.promoEvents) {
+        if (event.fired) continue
+        const dueMonth = Math.max(1, event.monthsUntilExpiry || 0)
+        if (month < dueMonth) continue
+
+        const promoRemaining = Math.min(Number(event.remaining_balance) || 0, debt.remaining)
+        if (promoRemaining > 0.01) {
+          const hit = Number(event.deferred_interest) || 0
+          debt.remaining += hit
+          debt.paidInterest += hit
+          deferredInterestHits += hit
+          event.wasTriggered = true
+        } else {
+          event.wasTriggered = false
+        }
+        event.fired = true
+      }
+    }
+
+    // 2. Monthly interest at effective rate
     for (const debt of state) {
       if (debt.remaining <= 0.01) continue
-      const interest = debt.remaining * (debt.apr / 100 / 12)
+      const currentRate = rateForMonth(debt.debt, month)
+      const interest = debt.remaining * (currentRate / 100 / 12)
       debt.paidInterest += interest
       debt.remaining += interest
     }
 
+    // 3. Minimums + freed mins for attack budget
     const freedMins = state
       .filter(d => d.remaining <= 0.01)
       .reduce((sum, d) => sum + d.minPayment, 0)
@@ -230,26 +380,43 @@ export function simulateDebtPayoff(debts, strategy, extraPayment = 0, maxMonths 
       }
     }
 
-    while (attackBudget > 0.01) {
-      const focus = state.find(d => d.remaining > 0.01)
-      if (!focus) break
-      const payment = Math.min(attackBudget, focus.remaining)
-      focus.remaining -= payment
-      focus.paidPrincipal += payment
-      monthPayments[focus.id] += payment
-      attackBudget -= payment
-      if (focus.remaining <= 0.01) {
-        focus.remaining = 0
-        if (!focus.payoffMonth) focus.payoffMonth = month
+    // 4. Extra — skip true 0% first, then spill to them
+    const applyExtra = (predicate) => {
+      while (attackBudget > 0.01) {
+        const focus = state.find(d => d.remaining > 0.01 && predicate(d))
+        if (!focus) break
+        const payment = Math.min(attackBudget, focus.remaining)
+        focus.remaining -= payment
+        focus.paidPrincipal += payment
+        monthPayments[focus.id] += payment
+        attackBudget -= payment
+        if (focus.remaining <= 0.01) {
+          focus.remaining = 0
+          if (!focus.payoffMonth) focus.payoffMonth = month
+        }
       }
     }
+
+    applyExtra(d => !d.isTrue0)
+    applyExtra(() => true)
 
     for (const debt of state) {
       debt.peakMonthlyPayment = Math.max(debt.peakMonthlyPayment, monthPayments[debt.id])
     }
   }
 
-  const now = new Date()
+  // Deadlines never reached because debt cleared earlier → safe
+  for (const debt of state) {
+    for (const event of debt.promoEvents) {
+      if (!event.fired) {
+        event.fired = true
+        event.wasTriggered = false
+      }
+    }
+  }
+
+  const allPromoEvents = state.flatMap(d => d.promoEvents)
+
   const plan = order.map((debt, i) => {
     const sim = state[i]
     const payoffMonths = sim.payoffMonth
@@ -265,13 +432,17 @@ export function simulateDebtPayoff(debts, strategy, extraPayment = 0, maxMonths 
 
     return {
       ...debt,
+      rateInfo: getDebtRateInfo(debt),
+      isTrue0: isTrue0PromoDebt(debt),
+      hasDeferred: hasDeferredInterest(debt),
       payoffMonths,
-      payoffDate: payoffMonths ? addMonths(now, payoffMonths) : null,
+      payoffDate: payoffMonths ? addMonths(today, payoffMonths) : null,
       totalInterest: sim.paidInterest,
       monthlyPayment: sim.peakMonthlyPayment || debt.minPayment,
       paidSoFar,
       progressPct,
       soonestPromo: soonestPromo(debt.promoDeadlines),
+      promoEvents: sim.promoEvents,
     }
   })
 
@@ -280,9 +451,32 @@ export function simulateDebtPayoff(debts, strategy, extraPayment = 0, maxMonths 
     0,
   )
   const totalInterestPaid = plan.reduce((sum, d) => sum + (d.totalInterest || 0), 0)
-  const debtFreeDate = maxPayoffMonths > 0 ? addMonths(now, maxPayoffMonths) : null
+  const debtFreeDate = maxPayoffMonths > 0 ? addMonths(today, maxPayoffMonths) : null
 
-  return { plan, maxPayoffMonths, totalInterestPaid, debtFreeDate }
+  return {
+    plan,
+    maxPayoffMonths,
+    totalInterestPaid,
+    debtFreeDate,
+    deferredInterestHits,
+    promoEvents: allPromoEvents,
+  }
+}
+
+/** Binary search: minimum extra $/mo that avoids all deferred interest cliffs */
+export function findMinimumExtraToAvoidDeferred(debts, strategy = 'deadline', maxExtra = 5000) {
+  const baseline = simulateDebtPayoff(debts, strategy, 0)
+  if ((baseline.deferredInterestHits || 0) <= 0) return 0
+
+  let low = 0
+  let high = maxExtra
+  while (high - low > 5) {
+    const mid = Math.floor((low + high) / 2)
+    const test = simulateDebtPayoff(debts, strategy, mid)
+    if ((test.deferredInterestHits || 0) <= 0) high = mid
+    else low = mid
+  }
+  return high
 }
 
 export function calculateInterestSaved(debts, strategy, extraPayment) {
@@ -303,11 +497,21 @@ export function buildStrategyInsight({
   strategy,
   interestSaved,
   firstDebtPayoffDate,
+  debts = [],
   formatMoney,
   formatPayoffMonthLong,
   t,
   locale,
 }) {
+  const true0 = (debts || []).filter(isTrue0PromoDebt)
+  if (true0.length > 0) {
+    const names = true0.map(c => c.nickname || c.name).join(', ')
+    return t('insightTrue0Promo', {
+      names,
+      verb: true0.length > 1 ? t('are') : t('is'),
+    })
+  }
+
   if (strategy === 'avalanche') {
     return t('insightAvalanche', { saved: formatMoney(interestSaved) })
   }

@@ -135,7 +135,7 @@ export function computeMonthlyInterest(creditCards, loans) {
   const cardInterest = (creditCards ?? [])
     .filter(c => c.is_active && (c.current_balance || 0) > 0)
     .reduce((sum, c) => {
-      const rate = getEffectiveRate(c)
+      const rate = getEffectiveRate(c).rate
       return sum + (c.current_balance * (rate / 100 / 12))
     }, 0)
 

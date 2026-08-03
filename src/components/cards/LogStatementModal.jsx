@@ -36,7 +36,7 @@ export default function LogStatementModal({ card, onClose, onSaved }) {
     setSaving(true)
     setError('')
 
-    const rate = getEffectiveRate(card)
+    const rate = getEffectiveRate(card).rate
     const interestCharged = balanceInput.numericValue * (rate / 100 / 12)
 
     const { error: insertError } = await supabase.from('card_statements').upsert({

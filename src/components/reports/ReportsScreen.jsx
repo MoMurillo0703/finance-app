@@ -354,7 +354,7 @@ export default function ReportsScreen({ setHideNav, onSettings, showToast }) {
 
   const totalMonthlyInterest = [
     ...activeCardsWithBalance.map(card => {
-      const rate = getEffectiveRate(card)
+      const rate = getEffectiveRate(card).rate
       return card.current_balance * (rate / 100 / 12)
     }),
     ...activeLoansWithBalance.map(loan =>
@@ -606,7 +606,7 @@ export default function ReportsScreen({ setHideNav, onSettings, showToast }) {
             ) : (
               <>
                 {activeCardsWithBalance.map(card => {
-                  const rate = getEffectiveRate(card)
+                  const rate = getEffectiveRate(card).rate
                   const monthlyInterest = card.current_balance * (rate / 100 / 12)
                   const utilization = card.credit_limit
                     ? Math.round((card.current_balance / card.credit_limit) * 100)

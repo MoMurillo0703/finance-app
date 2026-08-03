@@ -16,7 +16,7 @@ export const ISSUING_BANK_SUGGESTIONS = [
 ]
 
 export function getCardApr(card) {
-  return getEffectiveRate(card)
+  return getEffectiveRate(card).rate
 }
 
 /** Subtitle like "Chase · Visa" or "Credit" */

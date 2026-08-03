@@ -14,6 +14,7 @@ import {
   calculateInterestSaved,
   buildStrategyInsight,
   monthsSoonerWithExtra,
+  findMinimumExtraToAvoidDeferred,
   formatPayoffMonth,
   formatPayoffMonthLong,
 } from '../../utils/debtPayoff'
@@ -135,7 +136,10 @@ export default function DebtPayoffPlanner({ onClose, setHideNav }) {
       setStrategy(defaultStrategy)
       setStrategyReady(true)
 
-      const initialExtra = available > 0 ? snapToStep(Math.min(available, SLIDER_MAX)) : 0
+      const deferredSafeExtra = findMinimumExtraToAvoidDeferred(debtList, defaultStrategy)
+      const initialExtra = available > 0
+        ? snapToStep(Math.min(Math.max(available, deferredSafeExtra), SLIDER_MAX))
+        : snapToStep(Math.min(deferredSafeExtra, SLIDER_MAX))
       setExtraPayment(initialExtra)
 
       setLoading(false)
@@ -152,6 +156,11 @@ export default function DebtPayoffPlanner({ onClose, setHideNav }) {
   const totalMonthlyPayment = totalMinPayments + extraPayment
   const availableForDebt = suggestedExtra
 
+  const deferredAvoidExtra = useMemo(
+    () => (debts.length ? findMinimumExtraToAvoidDeferred(debts, strategy) : 0),
+    [debts, strategy],
+  )
+
   const { withExtra, interestSaved } = useMemo(() => {
     if (debts.length === 0) {
       return {
@@ -160,6 +169,8 @@ export default function DebtPayoffPlanner({ onClose, setHideNav }) {
           maxPayoffMonths: 0,
           totalInterestPaid: 0,
           debtFreeDate: null,
+          deferredInterestHits: 0,
+          promoEvents: [],
         },
         interestSaved: 0,
       }
@@ -175,8 +186,11 @@ export default function DebtPayoffPlanner({ onClose, setHideNav }) {
   const payoffPlan = withExtra.plan
   const maxMonths = withExtra.maxPayoffMonths
   const debtFreeDate = withExtra.debtFreeDate
+  const deferredInterestHits = withExtra.deferredInterestHits || 0
+  const promoEvents = withExtra.promoEvents || []
   const activeStrategy = PAYOFF_STRATEGIES.find(s => s.key === strategy)
   const firstDebtPayoffDate = payoffPlan[0]?.payoffDate ?? null
+  const hasDeferredPromos = promoEvents.some(e => Number(e.deferred_interest) > 0)
 
   const strategyInsight = useMemo(() => {
     if (loading || debts.length === 0) return ''
@@ -184,12 +198,13 @@ export default function DebtPayoffPlanner({ onClose, setHideNav }) {
       strategy,
       interestSaved,
       firstDebtPayoffDate,
+      debts,
       formatMoney,
       formatPayoffMonthLong: date => formatPayoffMonthLong(date, locale),
       t,
       locale,
     })
-  }, [loading, debts.length, strategy, interestSaved, firstDebtPayoffDate, t, locale])
+  }, [loading, debts, strategy, interestSaved, firstDebtPayoffDate, t, locale])
 
   const handleSliderChange = useCallback(e => {
     setExtraPayment(Number(e.target.value))
@@ -326,6 +341,11 @@ export default function DebtPayoffPlanner({ onClose, setHideNav }) {
                 <p className="text-xs text-gray-400 mt-2">
                   {t('suggestedExtra', { amount: formatMoney(availableForDebt) })}
                 </p>
+                {deferredAvoidExtra > 0 && (
+                  <p className="text-sm text-purple-700 font-medium mt-2">
+                    💡 {t('suggestedExtraAvoidDeferred', { amount: formatMoney(deferredAvoidExtra) })}
+                  </p>
+                )}
                 {extraPayment > 0 && monthsSooner > 0 && (
                   <p className="text-xs text-purple-600 font-medium mt-1">
                     {t('extraPaymentSooner', {
@@ -359,6 +379,36 @@ export default function DebtPayoffPlanner({ onClose, setHideNav }) {
               </div>
             </div>
 
+            {deferredInterestHits > 0 && (
+              <div
+                className="mb-4 p-4 rounded-2xl"
+                style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}
+              >
+                <p className="text-sm font-bold text-red-700 mb-1">
+                  ⚠️ {t('deferredInterestTriggeredTitle')}
+                </p>
+                <p className="text-sm text-red-600">
+                  {t('deferredInterestTriggeredBody', {
+                    amount: formatMoney(deferredInterestHits),
+                  })}
+                </p>
+              </div>
+            )}
+
+            {deferredInterestHits === 0 && hasDeferredPromos && (
+              <div
+                className="mb-4 p-4 rounded-2xl"
+                style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0' }}
+              >
+                <p className="text-sm font-bold text-green-700 mb-1">
+                  ✓ {t('promoDeadlinesClearedTitle')}
+                </p>
+                <p className="text-sm text-green-600">
+                  {t('promoDeadlinesClearedBody')}
+                </p>
+              </div>
+            )}
+
             <p className="text-sm font-semibold text-gray-700 mb-3">{t('payoffOrder')}</p>
             {payoffPlan.map((debt, index) => (
               <div key={`${debt.type}-${debt.id}`} className="bg-white rounded-2xl p-4 mb-3 border border-gray-100">
@@ -375,8 +425,32 @@ export default function DebtPayoffPlanner({ onClose, setHideNav }) {
                       <p className="font-bold text-red-500 shrink-0">{formatMoney(debt.balance)}</p>
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {debt.apr.toFixed(2)}% APR · {t('payPerMonth', { amount: formatMoney(debt.monthlyPayment) })}
+                      {Number(debt.apr || 0).toFixed(2)}% APR · {t('payPerMonth', { amount: formatMoney(debt.monthlyPayment) })}
                     </p>
+
+                    {debt.isTrue0 && (
+                      <span
+                        className="inline-block text-xs px-2 py-1 rounded-full font-medium mt-2"
+                        style={{ backgroundColor: '#DCFCE7', color: '#16A34A' }}
+                      >
+                        {t('promoPayMinimumOnly')}
+                      </span>
+                    )}
+
+                    {debt.hasDeferred && (
+                      <span
+                        className="inline-block text-xs px-2 py-1 rounded-full font-medium mt-2 ml-1"
+                        style={{ backgroundColor: '#FEF3C7', color: '#D97706' }}
+                      >
+                        ⚠️ {t('deferredInterestPayBy', {
+                          date: formatDate(
+                            debt.soonestPromo?.expiration_date
+                              || debt.rateInfo?.promoExpires
+                              || debt.introRateExpires,
+                          ),
+                        })}
+                      </span>
+                    )}
 
                     {debt.payoffDate && (
                       <p className="text-xs text-purple-600 font-medium mt-1">
@@ -384,7 +458,62 @@ export default function DebtPayoffPlanner({ onClose, setHideNav }) {
                       </p>
                     )}
 
-                    {debt.soonestPromo && (
+                    {(debt.promos || []).map(promo => {
+                      const event = (debt.promoEvents || []).find(e => e.id === promo.id)
+                      if (!event || Number(promo.deferred_interest) <= 0) return null
+                      const beatsDeadline = event.fired ? !event.wasTriggered : null
+                      const safe = beatsDeadline === true
+                      const danger = beatsDeadline === false
+                      return (
+                        <div
+                          key={promo.id}
+                          className="mt-2 p-3 rounded-xl"
+                          style={{
+                            backgroundColor: danger ? '#FEF2F2' : '#F0FDF4',
+                            border: `1px solid ${danger ? '#FECACA' : '#BBF7D0'}`,
+                          }}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p
+                                className="text-xs font-semibold"
+                                style={{ color: danger ? '#DC2626' : '#16A34A' }}
+                              >
+                                {danger
+                                  ? t('deferredInterestHits')
+                                  : safe
+                                    ? t('paidBeforeDeadline')
+                                    : t('promoDeadlinePending')}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-0.5">
+                                {promo.description || t('promotionalPurchase')} · {t('expiresOn', {
+                                  date: formatDate(promo.expiration_date),
+                                })}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p
+                                className="text-xs font-bold"
+                                style={{ color: danger ? '#DC2626' : '#16A34A' }}
+                              >
+                                {danger
+                                  ? formatMoney(promo.deferred_interest)
+                                  : safe
+                                    ? t('safe')
+                                    : formatMoney(promo.remaining_balance)}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                {t('monthsLeftShort', {
+                                  months: Math.max(0, event.monthsUntilExpiry || 0),
+                                })}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+
+                    {debt.soonestPromo && Number(debt.soonestPromo.deferred_interest) <= 0 && (
                       <div className="mt-2 bg-amber-50 border border-amber-100 rounded-lg px-3 py-1.5 text-xs text-amber-700">
                         ⚠️ {t('promoDeadlineWarning', {
                           balance: formatMoney(debt.soonestPromo.remaining_balance),

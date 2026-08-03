@@ -1,22 +1,33 @@
 export const DEFAULT_CARD_APR = 24.99
 
+/**
+ * Effective APR for a card, including intro/promo status.
+ * @returns {{ rate: number, isPromo: boolean, promoExpires: Date|null, daysUntilPromoExpires: number|null }}
+ */
 export function getEffectiveRate(card) {
-  if (
-    card?.intro_rate != null
+  const now = new Date()
+  const promoActive = card?.intro_rate != null
     && card?.intro_rate_expires
-    && new Date(card.intro_rate_expires) > new Date()
-  ) {
-    return Number(card.intro_rate)
+    && new Date(card.intro_rate_expires) > now
+
+  const regularRate = card?.interest_rate != null
+    ? Number(card.interest_rate)
+    : DEFAULT_CARD_APR
+  const promoRate = promoActive ? Number(card.intro_rate) : regularRate
+  const rate = Number.isFinite(promoRate) ? promoRate : DEFAULT_CARD_APR
+
+  return {
+    rate,
+    isPromo: Boolean(promoActive),
+    promoExpires: promoActive ? new Date(card.intro_rate_expires) : null,
+    daysUntilPromoExpires: promoActive
+      ? Math.ceil((new Date(card.intro_rate_expires) - now) / (1000 * 60 * 60 * 24))
+      : null,
   }
-  return card?.interest_rate ?? DEFAULT_CARD_APR
 }
 
 export function isIntroRateActive(card) {
-  return Boolean(
-    card?.intro_rate != null
-    && card?.intro_rate_expires
-    && new Date(card.intro_rate_expires) > new Date(),
-  )
+  return getEffectiveRate(card).isPromo
 }
 
 export function getIntroRateDaysLeft(card) {
@@ -56,7 +67,7 @@ export function calculateAutoBillMinimum(card) {
   const balance = Number(card?.current_balance) || 0
   if (balance <= 0) return 0
 
-  const effectiveRate = getEffectiveRate(card)
+  const effectiveRate = getEffectiveRate(card).rate
   const monthlyInterest = balance * (effectiveRate / 100 / 12)
   return Math.max(balance * 0.02, 25) + monthlyInterest
 }
@@ -93,7 +104,7 @@ export function getCardMinimumPayment(card, statements = []) {
     }
   }
 
-  const rate = getEffectiveRate(card)
+  const rate = getEffectiveRate(card).rate
   const monthlyInterest = balance * (rate / 100 / 12)
 
   if (statements.length >= 3) {
