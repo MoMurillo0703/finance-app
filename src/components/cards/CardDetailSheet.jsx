@@ -26,6 +26,7 @@ import AddCuotaModal from './AddCuotaModal'
 import PurchaseSimulator from '../simulator/PurchaseSimulator'
 import EditCardModal from './EditCardModal'
 import LogStatementModal from './LogStatementModal'
+import CreditUtilizationBar from './CreditUtilizationBar'
 
 
 function getPromoDaysLeft(expirationDate) {
@@ -100,7 +101,6 @@ export default function CardDetailSheet({
   const balance = liveCard.current_balance || 0
   const availableCredit = Math.max(0, limit - balance)
   const isOverLimit = balance > limit
-  const utilization = limit > 0 ? Math.min((balance / limit) * 100, 100) : 0
   const latAmUser = isLatAmUser()
   const visibleTabs = useMemo(() => {
     const tabs = ['transactions']
@@ -362,17 +362,25 @@ export default function CardDetailSheet({
               <p className="text-xs text-gray-400 mb-3">
                 {t('of')} {formatMoney(limit, currency)}
               </p>
-              <div className="w-full bg-white/20 rounded-full h-1.5 mb-1">
-                <div
-                  className="bg-white h-1.5 rounded-full"
-                  style={{ width: `${utilization}%` }}
-                />
-              </div>
               <div className="flex justify-between text-[10px] text-gray-400 mt-1">
                 <span>{t('balance')}: {formatMoney(balance, currency)}</span>
                 <span>{t('limit')}: {formatMoney(limit, currency)}</span>
               </div>
             </div>
+
+            {limit > 0 && (
+              <div
+                className="mx-4 mt-4 p-4 rounded-2xl"
+                style={{ backgroundColor: '#FAFAFA', border: '1px solid #F3F4F6' }}
+              >
+                <CreditUtilizationBar
+                  currentBalance={balance}
+                  creditLimit={limit}
+                  currency={currency}
+                  showLabel
+                />
+              </div>
+            )}
 
             {urgentPromos.length > 0 && (
               <div className="mx-4 mt-2 bg-amber-100 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-800">

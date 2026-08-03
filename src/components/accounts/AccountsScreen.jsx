@@ -6,6 +6,11 @@ import { useAuth } from '../../context/AuthContext'
 import { formatMoney } from '../../utils/currency'
 import { fetchBanks, accountTypeBadgeStyle, accountTypeLabel, getBankAccountType } from '../../utils/bank'
 import { getCardApr } from '../../utils/cards'
+import {
+  CreditUtilizationBar,
+  getUtilizationColor,
+  getUtilizationPercent,
+} from '../cards/CreditUtilizationBar'
 import AddBankModal from '../dashboard/AddBankModal'
 import AddCardModal from '../cards/AddCardModal'
 import EditBankModal from '../settings/EditBankModal'
@@ -251,7 +256,7 @@ export default function AccountsScreen({
                 const currency = card.currency || 'COP'
                 const balance = card.current_balance || 0
                 const limit = card.credit_limit || 0
-                const utilization = limit > 0 ? Math.min((balance / limit) * 100, 100) : 0
+                const utilizationPct = getUtilizationPercent(balance, limit)
 
                 return (
                   <div
@@ -282,18 +287,19 @@ export default function AccountsScreen({
                           {t('interestRateShort', { rate: getCardApr(card).toFixed(2) })}
                         </span>
                       </div>
-                      <div className="mt-3">
-                        <div className="flex justify-between text-[10px] text-gray-400 mb-1">
-                          <span>{t('utilization')}</span>
-                          <span>{Math.round(utilization)}%</span>
-                        </div>
-                        <div className="w-full bg-gray-100 rounded-full h-1">
-                          <div
-                            className="bg-purple-400 h-1 rounded-full"
-                            style={{ width: `${utilization}%` }}
+                      {limit > 0 && (
+                        <div className="mt-2">
+                          <CreditUtilizationBar
+                            currentBalance={balance}
+                            creditLimit={limit}
+                            currency={currency}
+                            showLabel={false}
                           />
+                          <p className="text-xs mt-1" style={{ color: getUtilizationColor(card) }}>
+                            {t('percentUtilized', { pct: utilizationPct.toFixed(1) })}
+                          </p>
                         </div>
-                      </div>
+                      )}
                     </button>
                     <div className="text-right shrink-0 flex flex-col items-end">
                       <p className="text-base font-bold text-gray-800">{formatMoney(balance, currency)}</p>

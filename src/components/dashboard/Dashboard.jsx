@@ -14,6 +14,7 @@ import AddVaultModal from './AddVaultModal'
 import EditVaultModal from '../vaults/EditVaultModal'
 import BillsThisWeek from './BillsThisWeek'
 import { formatMoney } from '../../utils/currency'
+import CreditUtilizationBar from '../cards/CreditUtilizationBar'
 import { calculateNetWorth } from '../../utils/netWorth'
 import { formatDate } from '../../utils/date'
 import { fetchBanks, isCheckingBank } from '../../utils/bank'
@@ -249,6 +250,8 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
   }, [monthTransactions, t])
 
   const totalDebt = creditCards.reduce((s, c) => s + (c.current_balance || 0), 0)
+  const totalCardLimit = creditCards.reduce((s, c) => s + (c.credit_limit || 0), 0)
+  const totalCardBalance = creditCards.reduce((s, c) => s + (c.current_balance || 0), 0)
     + loans.reduce((s, l) => s + (l.current_balance || 0), 0)
 
   const monthlyInterest = computeMonthlyInterest(creditCards, loans)
@@ -543,6 +546,15 @@ export default function Dashboard({ refreshKey, onNavigate, setHideNav, onSettin
               <p className="text-xs text-gray-400">{t('inInterest')}</p>
             </div>
           </div>
+          {totalCardLimit > 0 && (
+            <div className="mt-3 mb-3">
+              <CreditUtilizationBar
+                currentBalance={totalCardBalance}
+                creditLimit={totalCardLimit}
+                showLabel
+              />
+            </div>
+          )}
           <div className="h-2 bg-red-100 rounded-full overflow-hidden">
             <div
               className="h-2 rounded-full transition-all"

@@ -242,9 +242,10 @@ export default function AddCardModal({ onClose, onSaved }) {
                 className={inputClass}
                 type="text"
                 inputMode="decimal"
-                placeholder={currencyAmountPlaceholder(currency)}
+                placeholder={t('creditLimitPlaceholder')}
                 value={creditLimitInput.displayValue}
                 onChange={creditLimitInput.handleChange}
+                required
               />
             </div>
             <div>
