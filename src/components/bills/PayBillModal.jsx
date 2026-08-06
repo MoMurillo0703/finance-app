@@ -35,19 +35,26 @@ export default function PayBillModal({
 
     ;(async () => {
       const [banksRes, cardsRes] = await Promise.all([
-        fetchBanks(supabase, user.id, { orderByName: true }),
         supabase
-          .from('credit_cards')
-          .select('id, name, current_balance, issuing_bank')
+          .from('banks')
+          .select('*')
           .eq('user_id', user.id)
           .eq('is_active', true)
+          .order('name'),
+        supabase
+          .from('credit_cards')
+          .select('*')
+          .eq('user_id', user.id)
           .order('name'),
       ])
 
       if (!active) return
 
-      const bankList = banksRes.data ?? []
-      const cardList = cardsRes.data ?? []
+      if (banksRes.error) console.error('PayBillModal banks fetch:', banksRes.error)
+      if (cardsRes.error) console.error('PayBillModal cards fetch:', cardsRes.error)
+
+      const bankList = banksRes.data || []
+      const cardList = (cardsRes.data || []).filter(c => c.is_active !== false)
       setBanks(bankList)
       setCreditCards(cardList)
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { fetchBanks, getBankDisplayName, getBankAccountType, accountTypeLabel } from '../../utils/bank'
+import { getBankDisplayName, getBankAccountType, accountTypeLabel } from '../../utils/bank'
 import { formatMoney } from '../../utils/currency'
 
 /**
@@ -22,27 +22,43 @@ export default function BillPaymentMethodFields({
   const [creditCards, setCreditCards] = useState([])
 
   useEffect(() => {
-    fetchBanks(supabase, user.id, { orderByName: true }).then(({ data }) => {
-      const list = data ?? []
-      setBanks(list)
-      if (!defaultBankId && list.length > 0 && paymentSource === 'bank') {
-        onDefaultBankIdChange(list[0].id)
-      }
-    })
+    let active = true
 
-    supabase
-      .from('credit_cards')
-      .select('id, name, current_balance, credit_limit, issuing_bank, is_active')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .order('name')
-      .then(({ data }) => {
-        const list = data ?? []
-        setCreditCards(list)
-        if (!defaultCreditCardId && list.length > 0 && paymentSource === 'credit_card') {
-          onDefaultCreditCardIdChange(list[0].id)
-        }
-      })
+    ;(async () => {
+      const [{ data: bankData, error: bankError }, { data: cardData, error: cardError }] = await Promise.all([
+        supabase
+          .from('banks')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .order('name'),
+        supabase
+          .from('credit_cards')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('name'),
+      ])
+
+      if (!active) return
+
+      if (bankError) console.error('BillPaymentMethodFields banks fetch:', bankError)
+      if (cardError) console.error('BillPaymentMethodFields cards fetch:', cardError)
+
+      const bankList = bankData || []
+      const cardList = (cardData || []).filter(c => c.is_active !== false)
+
+      setBanks(bankList)
+      setCreditCards(cardList)
+
+      if (!defaultBankId && bankList.length > 0 && paymentSource === 'bank') {
+        onDefaultBankIdChange(bankList[0].id)
+      }
+      if (!defaultCreditCardId && cardList.length > 0 && paymentSource === 'credit_card') {
+        onDefaultCreditCardIdChange(cardList[0].id)
+      }
+    })()
+
+    return () => { active = false }
   }, [user.id])
 
   useEffect(() => {

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { fetchBanks, getBankDropdownLabel } from '../../utils/bank'
+import { getBankDropdownLabel } from '../../utils/bank'
 import { isBillPaidThisMonth, getBillDisplayAmount, shouldShowBill } from '../../utils/bills'
 import { confirmBillPayment } from '../../utils/billPayment'
 import { formatMoney } from '../../utils/currency'
@@ -28,19 +28,31 @@ export default function QuickPayBillSheet({ onClose, onPaid, showToast }) {
     let active = true
 
     ;(async () => {
-      const [billsRes, banksRes, cardsRes, loansRes, statementsRes] = await Promise.all([
+      setLoading(true)
+
+      const [
+        billsRes,
+        banksRes,
+        cardsRes,
+        loansRes,
+        statementsRes,
+      ] = await Promise.all([
         supabase
           .from('bills')
           .select('*')
           .eq('user_id', user.id)
           .eq('is_active', true)
           .order('due_day'),
-        fetchBanks(supabase, user.id, { orderByName: true }),
+        supabase
+          .from('banks')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .order('name'),
         supabase
           .from('credit_cards')
           .select('*')
           .eq('user_id', user.id)
-          .eq('is_active', true)
           .order('name'),
         supabase
           .from('loans')
@@ -56,7 +68,12 @@ export default function QuickPayBillSheet({ onClose, onPaid, showToast }) {
 
       if (!active) return
 
-      const cardMapLocal = Object.fromEntries((cardsRes.data ?? []).map(c => [c.id, c]))
+      if (banksRes.error) console.error('QuickPayBillSheet banks fetch:', banksRes.error)
+      if (cardsRes.error) console.error('QuickPayBillSheet cards fetch:', cardsRes.error)
+
+      const bankList = banksRes.data || []
+      const cardList = (cardsRes.data || []).filter(c => c.is_active !== false)
+      const cardMapLocal = Object.fromEntries(cardList.map(c => [c.id, c]))
       const loanMapLocal = Object.fromEntries((loansRes.data ?? []).map(l => [l.id, l]))
       const stmts = (statementsRes.data ?? []).reduce((acc, row) => {
         if (!acc[row.credit_card_id]) acc[row.credit_card_id] = []
@@ -73,12 +90,12 @@ export default function QuickPayBillSheet({ onClose, onPaid, showToast }) {
         }))
 
       setBills(unpaid)
-      setCards(cardsRes.data ?? [])
+      setCards(cardList)
       setLoans(loansRes.data ?? [])
       setStatementsMap(stmts)
-      setBanks(banksRes.data ?? [])
-      if (banksRes.data?.length) setBankId(banksRes.data[0].id)
-      if (cardsRes.data?.length) setCardId(cardsRes.data[0].id)
+      setBanks(bankList)
+      if (bankList.length) setBankId(bankList[0].id)
+      if (cardList.length) setCardId(cardList[0].id)
       setLoading(false)
     })()
 
