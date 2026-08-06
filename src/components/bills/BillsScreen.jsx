@@ -10,6 +10,8 @@ import PayBillModal from './PayBillModal'
 import BillsCalendar from './BillsCalendar'
 import { PageHeader } from '../layout/PageHeader'
 import { formatMoney } from '../../utils/currency'
+import { fetchBanks } from '../../utils/bank'
+import { billPaymentSourceLabel } from './BillPaymentMethodFields'
 import {
   isBillPaidThisMonth,
   getBillDisplayAmount,
@@ -18,7 +20,21 @@ import {
   shouldShowBill,
 } from '../../utils/bills'
 
-function BillCard({ bill, displayAmount, paid, isOverdue, isDueSoon, faded, cardId, selected, onEdit, onPay, onUndo, t }) {
+function BillCard({
+  bill,
+  displayAmount,
+  paid,
+  isOverdue,
+  isDueSoon,
+  faded,
+  cardId,
+  selected,
+  onEdit,
+  onPay,
+  onUndo,
+  paymentLabel,
+  t,
+}) {
   const borderClass = selected
     ? 'border-purple-400 shadow-purple-100 shadow-md ring-2 ring-purple-300'
     : paid
@@ -51,7 +67,10 @@ function BillCard({ bill, displayAmount, paid, isOverdue, isDueSoon, faded, card
           {bill.loan_id && <span className="mr-1">🏦</span>}
           {bill.name}
         </p>
-        <p className="text-xs text-gray-400 mb-2">{t('dayLabel', { day: bill.due_day })}</p>
+        <p className="text-xs text-gray-400 mb-1">{t('dayLabel', { day: bill.due_day })}</p>
+        {paymentLabel && (
+          <p className="text-xs text-gray-400 mb-2 truncate">{paymentLabel}</p>
+        )}
         <p className="text-lg font-bold text-gray-900">{formatMoney(displayAmount)}</p>
       </button>
 
@@ -101,6 +120,7 @@ export default function BillsScreen({ onBillPaid, onSettings, showToast }) {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const [bills, setBills] = useState([])
+  const [banks, setBanks] = useState([])
   const [cards, setCards] = useState([])
   const [loans, setLoans] = useState([])
   const [statementsMap, setStatementsMap] = useState({})
@@ -176,6 +196,7 @@ export default function BillsScreen({ onBillPaid, onSettings, showToast }) {
       }
 
       const fetches = [
+        fetchBanks(supabase, user.id, { orderByName: true }),
         ...cardQueries,
         supabase
           .from('loans')
@@ -194,8 +215,11 @@ export default function BillsScreen({ onBillPaid, onSettings, showToast }) {
       }
 
       const results = await Promise.all(fetches)
-      const cardResults = results.slice(0, cardQueries.length)
-      const loansResult = results[cardQueries.length]
+      if (!active) return
+
+      const banksResult = results[0]
+      const cardResults = results.slice(1, 1 + cardQueries.length)
+      const loansResult = results[1 + cardQueries.length]
       const statementsResult = autoCardIds.length > 0 ? results[results.length - 1] : null
       const cardsById = new Map()
       for (const result of cardResults) {
@@ -212,6 +236,7 @@ export default function BillsScreen({ onBillPaid, onSettings, showToast }) {
         }
       }
 
+      setBanks(banksResult.data ?? [])
       setBills(billsList)
       setCards([...cardsById.values()])
       setLoans(loansResult.data ?? [])
@@ -340,6 +365,7 @@ export default function BillsScreen({ onBillPaid, onSettings, showToast }) {
         onEdit={setEditingBill}
         onPay={setPayingBill}
         onUndo={handleUndo}
+        paymentLabel={billPaymentSourceLabel(bill, banks, cards, t)}
         t={t}
       />
     )

@@ -1,27 +1,28 @@
-import { useState, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabase'
-import { useAuth } from '../../context/AuthContext'
 import { getUserCurrency } from '../../utils/currency'
-import { getBankDropdownLabel, fetchBanks } from '../../utils/bank'
+import BillPaymentMethodFields, {
+  saveBillWithPaymentDefaults,
+  buildPaymentDefaultPayload,
+  paymentDefaultsFromBill,
+} from './BillPaymentMethodFields'
 
 export default function EditBillModal({ bill, onClose, onSaved }) {
   const { t } = useTranslation()
-  const { user } = useAuth()
+  const defaults = paymentDefaultsFromBill(bill)
   const [name, setName] = useState(bill.name ?? '')
   const [amount, setAmount] = useState(String(bill.amount ?? ''))
   const [dueDay, setDueDay] = useState(String(bill.due_day ?? ''))
-  const [bankId, setBankId] = useState(bill.bank_id ?? '')
-  const [banks, setBanks] = useState([])
+  const [paymentSource, setPaymentSource] = useState(defaults.paymentSource)
+  const [defaultBankId, setDefaultBankId] = useState(defaults.defaultBankId)
+  const [defaultCreditCardId, setDefaultCreditCardId] = useState(defaults.defaultCreditCardId)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    fetchBanks(supabase, user.id, { orderByName: true }).then(({ data }) => {
-      if (data) setBanks(data)
-    })
-  }, [user.id])
+  const handleBankId = useCallback(id => setDefaultBankId(id), [])
+  const handleCardId = useCallback(id => setDefaultCreditCardId(id), [])
 
   const handleSave = async () => {
     if (!name.trim()) { setError(t('billNameRequired')); return }
@@ -30,18 +31,26 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
       setError(t('invalidDueDay'))
       return
     }
-    if (!bankId) { setError(t('selectBank')); return }
+    if (paymentSource === 'bank' && !defaultBankId) {
+      setError(t('selectBank'))
+      return
+    }
+    if (paymentSource === 'credit_card' && !defaultCreditCardId) {
+      setError(t('selectCard'))
+      return
+    }
 
     setSaving(true)
-    const { error: dbError } = await supabase
-      .from('bills')
-      .update({
+    const { error: dbError } = await saveBillWithPaymentDefaults(supabase, {
+      mode: 'update',
+      id: bill.id,
+      row: {
         name: name.trim(),
         amount: parseFloat(amount),
         due_day: parseInt(dueDay, 10),
-        bank_id: bankId,
-      })
-      .eq('id', bill.id)
+        ...buildPaymentDefaultPayload(paymentSource, defaultBankId, defaultCreditCardId),
+      },
+    })
 
     if (dbError) {
       setError(dbError.message)
@@ -69,7 +78,7 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 z-[110] flex items-end justify-center">
       <div className="absolute inset-0 bg-black opacity-40" onClick={onClose} style={{ zIndex: 1 }} />
-      <div className="relative bg-white w-full rounded-t-3xl p-6 pb-10" style={{ zIndex: 2 }}>
+      <div className="relative bg-white w-full rounded-t-3xl p-6 pb-10 max-h-[90vh] overflow-y-auto" style={{ zIndex: 2 }}>
         <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-6" />
         <h2 className="text-lg font-bold text-gray-800 mb-6">{t('editBill')}</h2>
 
@@ -110,31 +119,26 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
             />
           </div>
 
-          <div>
-            <label className="text-xs text-gray-400 mb-1 block">{t('deductFrom')}</label>
-            <select
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-              value={bankId}
-              onChange={e => setBankId(e.target.value)}
-            >
-              {banks.length === 0 && (
-                <option value="">{t('noBanksHint')}</option>
-              )}
-              {banks.map(bank => (
-                <option key={bank.id} value={bank.id}>{getBankDropdownLabel(bank)}</option>
-              ))}
-            </select>
-          </div>
+          <BillPaymentMethodFields
+            paymentSource={paymentSource}
+            onPaymentSourceChange={setPaymentSource}
+            defaultBankId={defaultBankId}
+            onDefaultBankIdChange={handleBankId}
+            defaultCreditCardId={defaultCreditCardId}
+            onDefaultCreditCardIdChange={handleCardId}
+          />
         </div>
 
         <div className="flex gap-3 mt-6">
           <button
+            type="button"
             onClick={onClose}
             className="flex-1 py-3 rounded-xl border border-gray-200 text-sm text-gray-500"
           >
             {t('cancel')}
           </button>
           <button
+            type="button"
             onClick={handleSave}
             disabled={saving || deleting}
             className="flex-1 py-3 rounded-xl bg-purple-600 text-white text-sm font-medium disabled:opacity-50"
@@ -144,6 +148,7 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
         </div>
 
         <button
+          type="button"
           onClick={handleDelete}
           disabled={saving || deleting}
           className="w-full mt-3 py-3 rounded-xl border border-red-200 text-sm text-red-500 font-medium disabled:opacity-50"

@@ -31,26 +31,49 @@ export default function PayBillModal({
   const [error, setError] = useState('')
 
   useEffect(() => {
-    fetchBanks(supabase, user.id, { orderByName: true }).then(({ data }) => {
-      if (data?.length) {
-        setBanks(data)
-        setBankId(bill.bank_id || data[0].id)
-      }
-    })
+    let active = true
 
-    supabase
-      .from('credit_cards')
-      .select('id, name, current_balance, issuing_bank')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .order('name')
-      .then(({ data }) => {
-        if (data?.length) {
-          setCreditCards(data)
-          setCreditCardId(data[0].id)
-        }
-      })
-  }, [user.id, bill.bank_id])
+    ;(async () => {
+      const [banksRes, cardsRes] = await Promise.all([
+        fetchBanks(supabase, user.id, { orderByName: true }),
+        supabase
+          .from('credit_cards')
+          .select('id, name, current_balance, issuing_bank')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .order('name'),
+      ])
+
+      if (!active) return
+
+      const bankList = banksRes.data ?? []
+      const cardList = cardsRes.data ?? []
+      setBanks(bankList)
+      setCreditCards(cardList)
+
+      const src = bill.default_payment_source || 'bank'
+      if (src === 'credit_card') {
+        setPaymentSource('card')
+        setCreditCardId(
+          bill.default_credit_card_id
+          || cardList[0]?.id
+          || '',
+        )
+        setBankId(bill.default_bank_id || bill.bank_id || bankList[0]?.id || '')
+      } else {
+        setPaymentSource('bank')
+        setBankId(
+          bill.default_bank_id
+          || bill.bank_id
+          || bankList[0]?.id
+          || '',
+        )
+        setCreditCardId(bill.default_credit_card_id || cardList[0]?.id || '')
+      }
+    })()
+
+    return () => { active = false }
+  }, [user.id, bill])
 
   const mapPaymentError = (err) => {
     if (!err) return t('transferFailed')

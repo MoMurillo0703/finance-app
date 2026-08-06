@@ -88,6 +88,22 @@ export default function QuickPayBillSheet({ onClose, onPaid, showToast }) {
   const cardMap = Object.fromEntries(cards.map(c => [c.id, c]))
   const loanMap = Object.fromEntries(loans.map(l => [l.id, l]))
 
+  useEffect(() => {
+    if (!selectedBill) return
+    const src = selectedBill.default_payment_source || 'bank'
+    if (src === 'credit_card') {
+      setPaymentSourceType('card')
+      if (selectedBill.default_credit_card_id) {
+        setCardId(selectedBill.default_credit_card_id)
+      }
+    } else {
+      setPaymentSourceType('bank')
+      if (selectedBill.default_bank_id || selectedBill.bank_id) {
+        setBankId(selectedBill.default_bank_id || selectedBill.bank_id)
+      }
+    }
+  }, [selectedBill])
+
   const mapPaymentError = (err) => {
     if (!err) return t('transferFailed')
     if (err.message === 'invalid_amount') return t('invalidAmount')
